@@ -800,6 +800,24 @@ from jupiter_webapi_client.api.todo.todo_task_remove import (
 from jupiter_webapi_client.api.todo.todo_task_update import (
     asyncio_detailed as todo_task_update,
 )
+from jupiter_webapi_client.api.vacations.travel_wish_archive import (
+    asyncio_detailed as travel_wish_archive,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_create import (
+    asyncio_detailed as travel_wish_create,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_find import (
+    asyncio_detailed as travel_wish_find,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_load import (
+    asyncio_detailed as travel_wish_load,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_remove import (
+    asyncio_detailed as travel_wish_remove,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_update import (
+    asyncio_detailed as travel_wish_update,
+)
 
 # --- Vacations API ---
 from jupiter_webapi_client.api.vacations.vacation_archive import (
@@ -807,6 +825,9 @@ from jupiter_webapi_client.api.vacations.vacation_archive import (
 )
 from jupiter_webapi_client.api.vacations.vacation_create import (
     asyncio_detailed as vacation_create,
+)
+from jupiter_webapi_client.api.vacations.vacation_create_from_travel_wish import (
+    asyncio_detailed as vacation_create_from_travel_wish,
 )
 from jupiter_webapi_client.api.vacations.vacation_find import (
     asyncio_detailed as vacation_find,
@@ -1485,19 +1506,41 @@ async def main() -> None:
                 ),
             ),
         ),
-        # Vacations
+        # Vacations (vacations under vacations/vacations, travel wishes under vacations/travel-wishes)
         JupiterApiResource.build(
             "vacations",
-            JupiterApiGatewayMethod.get(vacation_find),
-            JupiterApiGatewayMethod.post(vacation_create),
             JupiterApiResource.build(
-                ":ref_id",
-                JupiterApiGatewayMethod.get(vacation_load),
-                JupiterApiGatewayMethod.put(vacation_update),
-                JupiterApiGatewayMethod.delete(vacation_archive),
+                "vacations",
+                JupiterApiGatewayMethod.get(vacation_find),
+                JupiterApiGatewayMethod.post(vacation_create),
                 JupiterApiResource.build(
-                    "remove",
-                    JupiterApiGatewayMethod.delete(vacation_remove),
+                    "from-travel-wish",
+                    JupiterApiGatewayMethod.post(vacation_create_from_travel_wish),
+                ),
+                JupiterApiResource.build(
+                    ":ref_id",
+                    JupiterApiGatewayMethod.get(vacation_load),
+                    JupiterApiGatewayMethod.put(vacation_update),
+                    JupiterApiGatewayMethod.delete(vacation_archive),
+                    JupiterApiResource.build(
+                        "remove",
+                        JupiterApiGatewayMethod.delete(vacation_remove),
+                    ),
+                ),
+            ),
+            JupiterApiResource.build(
+                "travel-wishes",
+                JupiterApiGatewayMethod.get(travel_wish_find),
+                JupiterApiGatewayMethod.post(travel_wish_create),
+                JupiterApiResource.build(
+                    ":ref_id",
+                    JupiterApiGatewayMethod.get(travel_wish_load),
+                    JupiterApiGatewayMethod.put(travel_wish_update),
+                    JupiterApiGatewayMethod.delete(travel_wish_archive),
+                    JupiterApiResource.build(
+                        "remove",
+                        JupiterApiGatewayMethod.delete(travel_wish_remove),
+                    ),
                 ),
             ),
         ),

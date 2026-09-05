@@ -77,6 +77,16 @@ export function resolveShareableEntityFromPath(
       refId: (_m, p) => p.id,
     },
     {
+      re: /^\/app\/workspace\/(?:apps\/)?vacations\/vacation\/([^/]+)$/,
+      entityType: NamedEntityTag.VACATION,
+      refId: (_m, p) => p.id,
+    },
+    {
+      re: /^\/app\/workspace\/(?:apps\/)?vacations\/wish-list\/([^/]+)$/,
+      entityType: NamedEntityTag.TRAVEL_WISH,
+      refId: (_m, p) => p.id,
+    },
+    {
       re: /^\/app\/workspace\/vacations\/([^/]+)$/,
       entityType: NamedEntityTag.VACATION,
       refId: (_m, p) => p.id,
@@ -119,7 +129,10 @@ export function resolveShareableEntityFromPath(
     if (
       entityRefId === "new" ||
       entityRefId === "settings" ||
-      entityRefId === "no-parent"
+      entityRefId === "no-parent" ||
+      entityRefId === "vacation" ||
+      entityRefId === "wish-list" ||
+      entityRefId === "new-from-wish"
     ) {
       return null;
     }

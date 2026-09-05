@@ -48,6 +48,8 @@ export function entityTagName(entityTag: NamedEntityTag): string {
       return "Folder";
     case NamedEntityTag.VACATION:
       return "Vacation";
+    case NamedEntityTag.TRAVEL_WISH:
+      return "Travel Wish";
     case NamedEntityTag.ASPECT:
       return "Aspect";
     case NamedEntityTag.SMART_LIST:

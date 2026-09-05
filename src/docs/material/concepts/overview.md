@@ -23,6 +23,9 @@ As a quick reference, here is the list of the more important concepts:
   Think
   "Pay mortgage" or "Take car in for checks". A chore will generate a task
   periodically  which needs to be acted upon.
+* _Vacation_: a dated period when chores that are not _must do_ are not
+  generated. A _travel wish_ is a place you want to visit, before it becomes a
+  vacation.
 * _Scheduled Event_: an event scheduled in time, that appears in the calendar.
 * _Big plan_: a larger unit of work, consisting of multiple tasks. This is
   normally

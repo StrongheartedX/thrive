@@ -779,6 +779,24 @@ from jupiter_webapi_client.api.todo.todo_task_remove import (
 from jupiter_webapi_client.api.todo.todo_task_update import (
     asyncio_detailed as todo_task_update,
 )
+from jupiter_webapi_client.api.vacations.travel_wish_archive import (
+    asyncio_detailed as travel_wish_archive,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_create import (
+    asyncio_detailed as travel_wish_create,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_find import (
+    asyncio_detailed as travel_wish_find,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_load import (
+    asyncio_detailed as travel_wish_load,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_remove import (
+    asyncio_detailed as travel_wish_remove,
+)
+from jupiter_webapi_client.api.vacations.travel_wish_update import (
+    asyncio_detailed as travel_wish_update,
+)
 
 # --- Vacations API ---
 from jupiter_webapi_client.api.vacations.vacation_archive import (
@@ -786,6 +804,9 @@ from jupiter_webapi_client.api.vacations.vacation_archive import (
 )
 from jupiter_webapi_client.api.vacations.vacation_create import (
     asyncio_detailed as vacation_create,
+)
+from jupiter_webapi_client.api.vacations.vacation_create_from_travel_wish import (
+    asyncio_detailed as vacation_create_from_travel_wish,
 )
 from jupiter_webapi_client.api.vacations.vacation_find import (
     asyncio_detailed as vacation_find,
@@ -1403,13 +1424,38 @@ async def main() -> None:
             "remove-smart-list-item", "Remove a smart list item", smart_list_item_remove
         ),
         # --- Vacations ---
-        JupiterMcpResource.resource("jupiter://vacations", vacation_find),
+        JupiterMcpResource.resource("jupiter://vacations/vacations", vacation_find),
         JupiterMcpTool.tool("find-vacations", "Find vacations", vacation_find),
         JupiterMcpTool.tool("create-vacation", "Create a vacation", vacation_create),
+        JupiterMcpTool.tool(
+            "create-vacation-from-travel-wish",
+            "Create a vacation from a travel wish",
+            vacation_create_from_travel_wish,
+        ),
         JupiterMcpTool.tool("load-vacation", "Load a vacation", vacation_load),
         JupiterMcpTool.tool("update-vacation", "Update a vacation", vacation_update),
         JupiterMcpTool.tool("archive-vacation", "Archive a vacation", vacation_archive),
         JupiterMcpTool.tool("remove-vacation", "Remove a vacation", vacation_remove),
+        # --- Travel wishes ---
+        JupiterMcpResource.resource(
+            "jupiter://vacations/travel-wishes", travel_wish_find
+        ),
+        JupiterMcpTool.tool(
+            "find-travel-wishes", "Find travel wishes", travel_wish_find
+        ),
+        JupiterMcpTool.tool(
+            "create-travel-wish", "Create a travel wish", travel_wish_create
+        ),
+        JupiterMcpTool.tool("load-travel-wish", "Load a travel wish", travel_wish_load),
+        JupiterMcpTool.tool(
+            "update-travel-wish", "Update a travel wish", travel_wish_update
+        ),
+        JupiterMcpTool.tool(
+            "archive-travel-wish", "Archive a travel wish", travel_wish_archive
+        ),
+        JupiterMcpTool.tool(
+            "remove-travel-wish", "Remove a travel wish", travel_wish_remove
+        ),
         # --- Todo ---
         JupiterMcpResource.resource("jupiter://todos", todo_task_find),
         JupiterMcpTool.tool("find-todos", "Find todo tasks", todo_task_find),

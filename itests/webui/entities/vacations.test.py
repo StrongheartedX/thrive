@@ -13,6 +13,9 @@ from jupiter_webapi_client.api.locations.location_create import (
 from jupiter_webapi_client.api.test_helper.workspace_set_feature import (
     sync_detailed as workspace_set_feature_sync,
 )
+from jupiter_webapi_client.api.vacations.travel_wish_create import (
+    sync_detailed as travel_wish_create_sync,
+)
 from jupiter_webapi_client.api.vacations.vacation_create import (
     sync_detailed as vacation_create_sync,
 )
@@ -25,6 +28,11 @@ from jupiter_webapi_client.models.location import Location
 from jupiter_webapi_client.models.location_create_args import LocationCreateArgs
 from jupiter_webapi_client.models.location_create_result import LocationCreateResult
 from jupiter_webapi_client.models.named_entity_tag import NamedEntityTag
+from jupiter_webapi_client.models.travel_wish import TravelWish
+from jupiter_webapi_client.models.travel_wish_create_args import TravelWishCreateArgs
+from jupiter_webapi_client.models.travel_wish_create_result import (
+    TravelWishCreateResult,
+)
 from jupiter_webapi_client.models.vacation import Vacation
 from jupiter_webapi_client.models.vacation_create_args import VacationCreateArgs
 from jupiter_webapi_client.models.vacation_create_result import VacationCreateResult
@@ -93,12 +101,25 @@ def create_location(logged_in_client: AuthenticatedClient):
     return _create
 
 
-def test_webui_vacation_view_all(page: Page, create_vacation) -> None:
+@pytest.fixture()
+def create_travel_wish(logged_in_client: AuthenticatedClient, create_location):
+    def _create_travel_wish(name: str) -> TravelWish:
+        location = create_location(name)
+        result = travel_wish_create_sync(
+            client=logged_in_client,
+            body=TravelWishCreateArgs(location_ref_id=location.ref_id),
+        )
+        return get_parsed_from_response(TravelWishCreateResult, result).new_travel_wish
+
+    return _create_travel_wish
+
+
+def test_webui_vacations_vacation_view_all(page: Page, create_vacation) -> None:
     vacation1 = create_vacation("First Vacation", 12, 10, 12, 15)
     vacation2 = create_vacation("Second Vacation", 12, 20, 12, 25)
     vacation3 = create_vacation("Third Vacation", 12, 22, 12, 27)
 
-    page.goto("/app/workspace/apps/vacations")
+    page.goto("/app/workspace/apps/vacations/vacation")
 
     expect(page.locator(f"#vacation-{vacation1.ref_id}")).to_contain_text(
         "First Vacation"
@@ -111,9 +132,9 @@ def test_webui_vacation_view_all(page: Page, create_vacation) -> None:
     )
 
 
-def test_webui_vacation_view_one(page: Page, create_vacation) -> None:
+def test_webui_vacations_vacation_view_one(page: Page, create_vacation) -> None:
     vacation = create_vacation("First Vacation", 12, 10, 12, 15)
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     expect(page.locator('input[name="name"]')).to_have_value("First Vacation")
@@ -121,8 +142,8 @@ def test_webui_vacation_view_one(page: Page, create_vacation) -> None:
     expect(page.locator('input[name="endDate"]')).to_have_value("2024-12-15")
 
 
-def test_webui_vacation_create(page: Page, browser: Browser) -> None:
-    page.goto("/app/workspace/apps/vacations")
+def test_webui_vacations_vacation_create(page: Page, browser: Browser) -> None:
+    page.goto("/app/workspace/apps/vacations/vacation")
     page.wait_for_selector("#trunk-panel")
     page.locator("a[id='trunk-new-leaf-entity']").click()
     page.locator('input[name="name"]').fill("First Vacation")
@@ -131,7 +152,7 @@ def test_webui_vacation_create(page: Page, browser: Browser) -> None:
 
     page.locator("button[id='vacation-create']").click()
 
-    page.wait_for_url(re.compile(r"/app/workspace/apps/vacations/\d+"))
+    page.wait_for_url(re.compile(r"/app/workspace/apps/vacations/vacation/\d+"))
 
     expect(page.locator('input[name="name"]')).to_have_value("First Vacation")
     expect(page.locator('input[name="startDate"]')).to_have_value("2024-12-10")
@@ -141,10 +162,10 @@ def test_webui_vacation_create(page: Page, browser: Browser) -> None:
     expect(page.locator(f"#vacation-{entity_id}")).to_contain_text("First Vacation")
 
 
-def test_webui_vacation_update(page: Page, create_vacation) -> None:
+def test_webui_vacations_vacation_update(page: Page, create_vacation) -> None:
     vacation = create_vacation("First Vacation", 12, 10, 12, 15)
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     page.locator('input[name="name"]').fill("Updated Vacation")
@@ -153,9 +174,9 @@ def test_webui_vacation_update(page: Page, create_vacation) -> None:
 
     page.locator("button[id='vacation-update']").click()
 
-    page.wait_for_url("/app/workspace/apps/vacations")
+    page.wait_for_url("/app/workspace/apps/vacations/vacation")
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     expect(page.locator('input[name="name"]')).to_have_value("Updated Vacation")
@@ -173,20 +194,22 @@ def test_webui_vacation_update(page: Page, create_vacation) -> None:
     expect(page.locator(f"#vacation-{entity_id}")).to_contain_text("Updated Vacation")
 
 
-def test_webui_vacation_create_note(page: Page, create_vacation) -> None:
+def test_webui_vacations_vacation_create_note(page: Page, create_vacation) -> None:
     vacation = create_vacation("First Vacation", 12, 10, 12, 15)
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     page.locator("button[id='vacation-create-note']").click()
-    page.wait_for_url(re.compile(rf"/app/workspace/apps/vacations/{vacation.ref_id}"))
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
+    )
     page.reload()
     page.wait_for_selector("#leaf-panel")
     page.wait_for_selector("#entity-block-editor")
 
     type_entity_note_editor_and_wait_for_save(page, "This is a note.")
 
-    page.wait_for_url(re.compile(r"/app/workspace/apps/vacations/\d+"))
+    page.wait_for_url(re.compile(r"/app/workspace/apps/vacations/vacation/\d+"))
 
     expect(
         page.locator('#entity-block-editor [contenteditable="true"]').first
@@ -201,17 +224,17 @@ def test_webui_vacation_create_note(page: Page, create_vacation) -> None:
     ).to_contain_text("This is a note.")
 
 
-def test_webui_vacation_archive(page: Page, create_vacation) -> None:
+def test_webui_vacations_vacation_archive(page: Page, create_vacation) -> None:
     vacation = create_vacation("First Vacation", 12, 10, 12, 15)
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     page.locator("button[id='leaf-entity-archive']").click()
     page.locator("button[id='leaf-entity-archive-confirm']").click()
 
-    page.wait_for_url("/app/workspace/apps/vacations")
+    page.wait_for_url("/app/workspace/apps/vacations/vacation")
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
 
     expect(page.locator('input[name="name"]')).to_be_disabled()
     expect(page.locator('input[name="startDate"]')).to_be_disabled()
@@ -224,21 +247,27 @@ def test_webui_vacation_archive(page: Page, create_vacation) -> None:
     expect(page.locator(f"#vacation-{entity_id}")).to_have_count(0)
 
 
-def test_webui_vacation_publish_and_view_public(page: Page, create_vacation) -> None:
+def test_webui_vacations_vacation_publish_and_view_public(
+    page: Page, create_vacation
+) -> None:
     vacation = create_vacation("Published Vacation", 7, 1, 7, 14)
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     open_leaf_publish_panel(page, "Vacation-publish")
     page.locator("button[id='Vacation-publish-create']").click()
-    page.wait_for_url(re.compile(rf"/app/workspace/apps/vacations/{vacation.ref_id}"))
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
+    )
     page.wait_for_selector("#leaf-panel")
 
     open_leaf_publish_panel(page, "Vacation-publish")
     expect(page.locator("#Vacation-publish")).to_contain_text("draft")
 
     page.locator("button[id='Vacation-publish-toggle-status']").click()
-    page.wait_for_url(re.compile(rf"/app/workspace/apps/vacations/{vacation.ref_id}"))
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
+    )
     page.wait_for_selector("#leaf-panel")
 
     open_leaf_publish_panel(page, "Vacation-publish")
@@ -306,6 +335,28 @@ def grant_vacation_access(
     return _grant
 
 
+@pytest.fixture()
+def grant_travel_wish_access(
+    logged_in_client: AuthenticatedClient,
+    another_user_with_vacations_enabled: AnotherUserAndWorkspace,
+):
+    def _grant(travel_wish: TravelWish, access_level: AccessLevel) -> None:
+        response = invite_users_to_entity_sync(
+            client=logged_in_client,
+            body=InviteUsersToEntityArgs(
+                entity_type=NamedEntityTag.TRAVELWISH,
+                entity_ref_id=travel_wish.ref_id,
+                user_ref_ids=[
+                    another_user_with_vacations_enabled.init_result.new_user.ref_id
+                ],
+                access_level=access_level,
+            ),
+        )
+        assert response.status_code == 200
+
+    return _grant
+
+
 def _login_as_other_user(page: Page, other_user: AnotherUserAndWorkspace) -> None:
     page.locator("#account-menu").click()
     page.locator("#logout").click()
@@ -322,14 +373,14 @@ def _assert_other_user_cannot_access_vacation_webui(
     *,
     vacation: Vacation,
 ) -> None:
-    page.goto("/app/workspace/apps/vacations")
+    page.goto("/app/workspace/apps/vacations/vacation")
     expect(page.locator(f"#vacation-{vacation.ref_id}")).to_have_count(0)
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     expect(page.locator("body")).to_contain_text(_ACCESS_DENIED_LABEL)
 
 
-def test_webui_vacation_acl_reader_can_read_but_not_update_or_archive(
+def test_webui_vacations_vacation_acl_reader_can_read_but_not_update_or_archive(
     page: Page,
     create_vacation,
     grant_vacation_access,
@@ -344,10 +395,10 @@ def test_webui_vacation_acl_reader_can_read_but_not_update_or_archive(
 
     _login_as_other_user(page, another_user_with_vacations_enabled)
 
-    page.goto("/app/workspace/apps/vacations")
+    page.goto("/app/workspace/apps/vacations/vacation")
     expect(page.locator("#trunk-panel")).to_contain_text("Reader ACL Vacation")
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     expect(page.locator('input[name="name"]')).to_have_value("Reader ACL Vacation")
@@ -356,7 +407,7 @@ def test_webui_vacation_acl_reader_can_read_but_not_update_or_archive(
     expect(page.locator("button[id='leaf-entity-archive']")).to_be_disabled()
 
 
-def test_webui_vacation_acl_writer_can_read_and_update(
+def test_webui_vacations_vacation_acl_writer_can_read_and_update(
     page: Page,
     create_vacation,
     grant_vacation_access,
@@ -367,21 +418,21 @@ def test_webui_vacation_acl_writer_can_read_and_update(
 
     _login_as_other_user(page, another_user_with_vacations_enabled)
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
     expect(page.locator('input[name="name"]')).to_have_value("Writer Update Vacation")
 
     page.locator('input[name="name"]').fill("Updated By Writer")
     page.locator("button[id='vacation-update']").click()
 
-    page.wait_for_url("/app/workspace/apps/vacations")
+    page.wait_for_url("/app/workspace/apps/vacations/vacation")
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
     expect(page.locator('input[name="name"]')).to_have_value("Updated By Writer")
 
 
-def test_webui_vacation_acl_writer_can_read_and_archive(
+def test_webui_vacations_vacation_acl_writer_can_read_and_archive(
     page: Page,
     create_vacation,
     grant_vacation_access,
@@ -392,16 +443,16 @@ def test_webui_vacation_acl_writer_can_read_and_archive(
 
     _login_as_other_user(page, another_user_with_vacations_enabled)
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
     expect(page.locator('input[name="name"]')).to_have_value("Writer Archive Vacation")
 
     page.locator("button[id='leaf-entity-archive']").click()
     page.locator("button[id='leaf-entity-archive-confirm']").click()
 
-    page.wait_for_url("/app/workspace/apps/vacations")
+    page.wait_for_url("/app/workspace/apps/vacations/vacation")
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     expect(page.locator('input[name="name"]')).to_be_disabled()
@@ -409,7 +460,7 @@ def test_webui_vacation_acl_writer_can_read_and_archive(
     expect(page.locator("button[id='vacation-create-note']")).to_be_disabled()
 
 
-def test_webui_vacation_acl_z_denied_without_grant(
+def test_webui_vacations_vacation_acl_z_denied_without_grant(
     page: Page,
     create_vacation,
     another_user_with_vacations_enabled: AnotherUserAndWorkspace,
@@ -420,14 +471,14 @@ def test_webui_vacation_acl_z_denied_without_grant(
     _assert_other_user_cannot_access_vacation_webui(page, vacation=vacation)
 
 
-def test_webui_vacation_link_multiple_locations(
+def test_webui_vacations_vacation_link_multiple_locations(
     page: Page, create_vacation, create_location
 ) -> None:
     vacation = create_vacation("Grand Tour", 6, 1, 6, 20)
     paris = create_location("Paris")
     rome = create_location("Rome")
 
-    page.goto(f"/app/workspace/apps/vacations/{vacation.ref_id}")
+    page.goto(f"/app/workspace/apps/vacations/vacation/{vacation.ref_id}")
     page.wait_for_selector("#leaf-panel")
 
     page.get_by_label("Locations").click()
@@ -445,3 +496,209 @@ def test_webui_vacation_link_multiple_locations(
     )
     expect(page.locator("#leaf-panel")).to_contain_text("Paris")
     expect(page.locator("#leaf-panel")).to_contain_text("Rome")
+
+
+def test_webui_vacations_travel_wish_view_all(page: Page, create_travel_wish) -> None:
+    wish1 = create_travel_wish("Kyoto")
+    wish2 = create_travel_wish("Lisbon")
+
+    page.goto("/app/workspace/apps/vacations/wish-list")
+
+    expect(page.locator(f"#travel-wish-{wish1.ref_id}")).to_contain_text("Kyoto")
+    expect(page.locator(f"#travel-wish-{wish2.ref_id}")).to_contain_text("Lisbon")
+
+
+def test_webui_vacations_travel_wish_view_one(page: Page, create_travel_wish) -> None:
+    wish = create_travel_wish("Kyoto")
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+
+    expect(page.locator('input[name="name"]')).to_have_value("Kyoto")
+    expect(page.locator('input[name="name"]')).to_be_editable()
+
+
+def test_webui_vacations_travel_wish_create(
+    page: Page, browser: Browser, create_location
+) -> None:
+    osaka = create_location("Osaka")
+
+    page.goto("/app/workspace/apps/vacations/wish-list")
+    page.wait_for_selector("#trunk-panel")
+    page.locator("a[id='trunk-new-leaf-entity']").click()
+    page.get_by_label("Location").click()
+    page.keyboard.type("Osaka")
+    page.get_by_role("option").filter(has_text="Osaka").first.click()
+    expect(page.locator('input[name="locations"]')).to_have_value(osaka.ref_id)
+
+    page.locator("button[id='travel-wish-create']").click()
+
+    page.wait_for_url(re.compile(r"/app/workspace/apps/vacations/wish-list/\d+"))
+
+    expect(page.locator('input[name="name"]')).to_have_value("Osaka")
+    expect(page.locator('input[name="name"]')).to_be_editable()
+    expect(page.locator('input[name="locations"]')).to_have_value(osaka.ref_id)
+
+    entity_id = page.url.split("/")[-1]
+    expect(page.locator(f"#travel-wish-{entity_id}")).to_contain_text("Osaka")
+
+
+def test_webui_vacations_travel_wish_add_location_after_create(
+    page: Page, create_travel_wish, create_location
+) -> None:
+    wish = create_travel_wish("Kyoto")
+    rome = create_location("Rome")
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+
+    page.get_by_label("Locations").click()
+    page.keyboard.type("Rome")
+    page.get_by_role("option").filter(has_text="Rome").first.click()
+    page.keyboard.press("Escape")
+    expect(page.get_by_text("Saved!")).to_be_visible()
+
+    page.reload()
+    page.wait_for_selector("#leaf-panel")
+    expect(page.locator("#leaf-panel")).to_contain_text("Kyoto")
+    expect(page.locator("#leaf-panel")).to_contain_text("Rome")
+    expect(page.locator('input[name="locations"]')).to_have_value(
+        re.compile(rf"{rome.ref_id}")
+    )
+
+
+def test_webui_vacations_travel_wish_create_vacation_from_wish(
+    page: Page, create_travel_wish
+) -> None:
+    wish = create_travel_wish("Grand Tour")
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+    page.locator("a[id='travel-wish-create-vacation']").click()
+
+    page.wait_for_url(
+        re.compile(r"/app/workspace/apps/vacations/vacation/new-from-wish")
+    )
+    page.wait_for_selector("#leaf-panel")
+
+    expect(page.locator('input[name="name"]')).to_have_value("Grand Tour")
+    page.locator('input[name="startDate"]').fill("2024-07-01")
+    page.locator('input[name="endDate"]').fill("2024-07-14")
+    page.locator("button[id='vacation-create-from-wish']").click()
+
+    page.wait_for_url(re.compile(r"/app/workspace/apps/vacations/vacation/\d+"))
+    expect(page.locator('input[name="name"]')).to_have_value("Grand Tour")
+    expect(page.locator('input[name="startDate"]')).to_have_value("2024-07-01")
+    expect(page.locator('input[name="endDate"]')).to_have_value("2024-07-14")
+
+
+def test_webui_vacations_travel_wish_nav_between_all_and_wishlist(page: Page) -> None:
+    page.goto("/app/workspace/apps/vacations/vacation")
+    page.wait_for_selector("#trunk-panel")
+    page.locator("#vacations-wishlist").click()
+    page.wait_for_url("/app/workspace/apps/vacations/wish-list")
+    page.wait_for_selector("#trunk-panel")
+
+    page.locator("#vacations-all").click()
+    page.wait_for_url("/app/workspace/apps/vacations/vacation")
+
+
+def _assert_other_user_cannot_access_travel_wish_webui(
+    page: Page,
+    *,
+    travel_wish: TravelWish,
+) -> None:
+    page.goto("/app/workspace/apps/vacations/wish-list")
+    expect(page.locator(f"#travel-wish-{travel_wish.ref_id}")).to_have_count(0)
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{travel_wish.ref_id}")
+    expect(page.locator("body")).to_contain_text(_ACCESS_DENIED_LABEL)
+
+
+def test_webui_vacations_travel_wish_acl_reader_can_read_but_not_update_or_archive(
+    page: Page,
+    create_travel_wish,
+    grant_travel_wish_access,
+    another_user_with_vacations_enabled: AnotherUserAndWorkspace,
+) -> None:
+    wish = create_travel_wish("Reader ACL Wish")
+
+    _login_as_other_user(page, another_user_with_vacations_enabled)
+    _assert_other_user_cannot_access_travel_wish_webui(page, travel_wish=wish)
+
+    grant_travel_wish_access(wish, AccessLevel.READER)
+
+    _login_as_other_user(page, another_user_with_vacations_enabled)
+
+    page.goto("/app/workspace/apps/vacations/wish-list")
+    expect(page.locator("#trunk-panel")).to_contain_text("Reader ACL Wish")
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+
+    expect(page.locator('input[name="name"]')).to_have_value("Reader ACL Wish")
+    expect(page.locator('input[name="name"]')).to_be_disabled()
+    expect(page.locator("button[id='travel-wish-update']")).to_be_disabled()
+    expect(page.locator("button[id='leaf-entity-archive']")).to_be_disabled()
+    expect(page.locator("#travel-wish-create-vacation")).to_be_disabled()
+
+
+def test_webui_vacations_travel_wish_acl_writer_can_read_and_update(
+    page: Page,
+    create_travel_wish,
+    grant_travel_wish_access,
+    another_user_with_vacations_enabled: AnotherUserAndWorkspace,
+) -> None:
+    wish = create_travel_wish("Writer Update Wish")
+    grant_travel_wish_access(wish, AccessLevel.WRITER)
+
+    _login_as_other_user(page, another_user_with_vacations_enabled)
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+    expect(page.locator('input[name="name"]')).to_have_value("Writer Update Wish")
+
+    page.locator('input[name="name"]').fill("Updated By Writer")
+    page.locator("button[id='travel-wish-update']").click()
+
+    page.wait_for_url("/app/workspace/apps/vacations/wish-list")
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+    expect(page.locator('input[name="name"]')).to_have_value("Updated By Writer")
+
+
+def test_webui_vacations_travel_wish_acl_writer_can_read_and_archive(
+    page: Page,
+    create_travel_wish,
+    grant_travel_wish_access,
+    another_user_with_vacations_enabled: AnotherUserAndWorkspace,
+) -> None:
+    wish = create_travel_wish("Writer Archive Wish")
+    grant_travel_wish_access(wish, AccessLevel.WRITER)
+
+    _login_as_other_user(page, another_user_with_vacations_enabled)
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+    expect(page.locator('input[name="name"]')).to_have_value("Writer Archive Wish")
+
+    page.locator("button[id='leaf-entity-archive']").click()
+    page.locator("button[id='leaf-entity-archive-confirm']").click()
+
+    page.wait_for_url("/app/workspace/apps/vacations/wish-list")
+
+    page.goto(f"/app/workspace/apps/vacations/wish-list/{wish.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+    expect(page.locator('input[name="name"]')).to_be_disabled()
+    expect(page.locator("button[id='travel-wish-update']")).to_be_disabled()
+
+
+def test_webui_vacations_travel_wish_acl_z_denied_without_grant(
+    page: Page,
+    create_travel_wish,
+    another_user_with_vacations_enabled: AnotherUserAndWorkspace,
+) -> None:
+    wish = create_travel_wish("ACL Wish")
+
+    _login_as_other_user(page, another_user_with_vacations_enabled)
+    _assert_other_user_cannot_access_travel_wish_webui(page, travel_wish=wish)

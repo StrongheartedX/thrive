@@ -14,7 +14,7 @@ from jupiter.core.apps.schedule.sub.event_in_day.root import ScheduleEventInDay
 from jupiter.core.apps.schedule.sub.stream.root import ScheduleStream
 from jupiter.core.apps.time_plans.sub.activity.root import TimePlanActivity
 from jupiter.core.apps.todo.root import TodoTask
-from jupiter.core.apps.vacations.root import Vacation
+from jupiter.core.apps.vacations.sub.vacation.root import Vacation
 from jupiter.core.archival_reason import JupiterArchivalReason
 from jupiter.core.common import schedules
 from jupiter.core.common.recurring_task_period import RecurringTaskPeriod

@@ -38,6 +38,7 @@ ALLOWED_TAG_LINK_OWNER_TYPES: Final[frozenset[str]] = frozenset(
         NamedEntityTag.DIR.value,
         NamedEntityTag.JOURNAL.value,
         NamedEntityTag.VACATION.value,
+        NamedEntityTag.TRAVEL_WISH.value,
         NamedEntityTag.ASPECT.value,
         NamedEntityTag.CHAPTER.value,
         NamedEntityTag.GOAL.value,

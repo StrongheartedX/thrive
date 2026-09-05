@@ -7,7 +7,7 @@ from jupiter.cli.command.rendering import (
     start_date_to_rich_text,
 )
 from jupiter.cli.config import JupiterLoggedInReadonlyCommand
-from jupiter.core.apps.vacations.use_case.find import (
+from jupiter.core.apps.vacations.sub.vacation.use_case.find import (
     VacationFindResult,
     VacationFindUseCase,
 )

@@ -335,7 +335,7 @@ def test_api_access_invite_load_and_acknowledge(
     )
 
     vacation_load_response = requests.get(
-        f"{api_url}/v1/vacations/{vacation.ref_id}?allow_archived=false",
+        f"{api_url}/v1/vacations/vacations/{vacation.ref_id}?allow_archived=false",
         headers=_headers(another_user_with_vacations_enabled.api_key),
         timeout=10,
     )
@@ -376,7 +376,7 @@ def test_api_cancel_access_invite_forgets_grant(
     )
 
     load_response = requests.get(
-        f"{api_url}/v1/vacations/{vacation.ref_id}?allow_archived=false",
+        f"{api_url}/v1/vacations/vacations/{vacation.ref_id}?allow_archived=false",
         headers=_headers(another_user_with_vacations_enabled.api_key),
         timeout=10,
     )
@@ -567,7 +567,7 @@ def test_api_request_access_accept_flow(
     )
 
     load_response = requests.get(
-        f"{api_url}/v1/vacations/{vacation.ref_id}?allow_archived=false",
+        f"{api_url}/v1/vacations/vacations/{vacation.ref_id}?allow_archived=false",
         headers=_headers(another_user_with_vacations_enabled.api_key),
         timeout=10,
     )
@@ -614,7 +614,7 @@ def test_api_request_access_reject_flow(
     )
 
     load_response = requests.get(
-        f"{api_url}/v1/vacations/{vacation.ref_id}?allow_archived=false",
+        f"{api_url}/v1/vacations/vacations/{vacation.ref_id}?allow_archived=false",
         headers=_headers(another_user_with_vacations_enabled.api_key),
         timeout=10,
     )

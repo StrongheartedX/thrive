@@ -179,8 +179,19 @@ export function SearchMatchLink({
       );
     case NamedEntityTag.VACATION:
       return (
-        <EntityLink to={`/app/workspace/apps/vacations/${summary.ref_id}`}>
+        <EntityLink
+          to={`/app/workspace/apps/vacations/vacation/${summary.ref_id}`}
+        >
           <SlimChip label={"Vacation"} color={"primary"} />
+          {commonSequence}
+        </EntityLink>
+      );
+    case NamedEntityTag.TRAVEL_WISH:
+      return (
+        <EntityLink
+          to={`/app/workspace/apps/vacations/wish-list/${summary.ref_id}`}
+        >
+          <SlimChip label={"Travel Wish"} color={"primary"} />
           {commonSequence}
         </EntityLink>
       );

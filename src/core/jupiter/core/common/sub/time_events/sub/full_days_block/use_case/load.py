@@ -5,7 +5,7 @@ from jupiter.core.apps.prm.sub.person.sub.occasion.root import Occasion
 from jupiter.core.apps.schedule.sub.event_full_days.root import (
     ScheduleEventFullDays,
 )
-from jupiter.core.apps.vacations.root import Vacation
+from jupiter.core.apps.vacations.sub.vacation.root import Vacation
 from jupiter.core.common.sub.access.access_level import AccessLevel
 from jupiter.core.common.sub.contacts.sub.contact.root import Contact
 from jupiter.core.common.sub.contacts.sub.link.root import ContactLinkRepository

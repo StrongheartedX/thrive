@@ -35,7 +35,7 @@ from jupiter.core.apps.time_plans.service.build_note import (
 )
 from jupiter.core.apps.time_plans.source import TimePlanSource
 from jupiter.core.apps.vacations.collection import VacationCollection
-from jupiter.core.apps.vacations.root import Vacation
+from jupiter.core.apps.vacations.sub.vacation.root import Vacation
 from jupiter.core.apps.working_mem.collection import (
     WorkingMemCollection,
 )

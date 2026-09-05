@@ -32,16 +32,18 @@ ALLOWED_LOCATION_LINK_OWNER_TYPES: Final[frozenset[str]] = frozenset(
         NamedEntityTag.CHORE.value,
         NamedEntityTag.BIG_PLAN.value,
         NamedEntityTag.VACATION.value,
+        NamedEntityTag.TRAVEL_WISH.value,
         NamedEntityTag.DOC.value,
         NamedEntityTag.SMART_LIST_ITEM.value,
         NamedEntityTag.PERSON.value,
     }
 )
 
-# Only vacations may attach more than one location.
+# Only vacations and travel wishes may attach more than one location.
 OWNERS_ALLOWING_MULTIPLE_LOCATIONS: Final[frozenset[str]] = frozenset(
     {
         NamedEntityTag.VACATION.value,
+        NamedEntityTag.TRAVEL_WISH.value,
     }
 )
 
@@ -67,7 +69,7 @@ class LocationLink(LeafSupportEntity):
             and len(unique_location_ref_ids) > 1
         ):
             raise InputValidationError(
-                "Only vacations can be associated with multiple locations"
+                "Only vacations and travel wishes can be associated with multiple locations"
             )
         return unique_location_ref_ids
 

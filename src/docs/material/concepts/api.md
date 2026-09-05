@@ -50,10 +50,14 @@ An example would be `ak_local_2.abcdef0123456789abcdef`.
 As a prerequsite, you should install the excellent [HTTPie](https://httpie.io/).
 Curl, wget, or other CLI tools can work just as well, though!
 
+Vacations live under `/v1/vacations/vacations`. The same app also exposes
+travel wishes at `/v1/vacations/travel-wishes`. You can turn a wish into a
+dated vacation with `POST /v1/vacations/vacations/from-travel-wish`.
+
 To retrieve all vacations you have defined, you can invoke the following:
 
 ```bash
-http get "https://api.get-thriving.com/v1/vacations" -A bearer -a "$YOUR_KEY_HERE"
+http get "https://api.get-thriving.com/v1/vacations/vacations" -A bearer -a "$YOUR_KEY_HERE"
 ```
 
 An example output would be:
@@ -96,7 +100,7 @@ x-jupiter-version: 1.3.2
 To supply some query parameters you can use:
 
 ```bash
-http get "http://api.get-thriving.com/v1/vacations" \
+http get "http://api.get-thriving.com/v1/vacations/vacations" \
     allow_archived==false include_notes==true \
     -A bearer -a "$YOUR_KEY_HERE"
 ```

@@ -237,6 +237,10 @@ class Workspace(RootEntity):
                 WorkspaceFeature.VACATIONS
             ):
                 inferred_entity_tags.append(entity_tag)
+            elif entity_tag is NamedEntityTag.TRAVEL_WISH and self.is_feature_available(
+                WorkspaceFeature.VACATIONS
+            ):
+                inferred_entity_tags.append(entity_tag)
             elif entity_tag is NamedEntityTag.ASPECT and self.is_feature_available(
                 WorkspaceFeature.LIFE_PLAN
             ):

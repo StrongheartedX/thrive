@@ -38,7 +38,9 @@ export function workspacePathForEntityTag(
     case NamedEntityTag.DOC:
       return `/app/workspace/apps/docs/no-parent/${refId}`;
     case NamedEntityTag.VACATION:
-      return `/app/workspace/apps/vacations/${refId}`;
+      return `/app/workspace/apps/vacations/vacation/${refId}`;
+    case NamedEntityTag.TRAVEL_WISH:
+      return `/app/workspace/apps/vacations/wish-list/${refId}`;
     case NamedEntityTag.ASPECT:
       return `/app/workspace/apps/life-plan/aspects/${refId}`;
     case NamedEntityTag.CHAPTER:

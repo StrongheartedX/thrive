@@ -1,6 +1,7 @@
 """A vacation collection."""
 
-from jupiter.core.apps.vacations.root import Vacation
+from jupiter.core.apps.vacations.sub.travel_wish.root import TravelWish
+from jupiter.core.apps.vacations.sub.vacation.root import Vacation
 from jupiter.framework.base.entity_id import EntityId
 from jupiter.framework.context import DomainContext
 from jupiter.framework.entity import (
@@ -20,6 +21,7 @@ class VacationCollection(TrunkEntity):
     workspace: ParentLink
 
     vacations = ContainsMany(Vacation, vacation_collection_ref_id=IsRefId())
+    travel_wishes = ContainsMany(TravelWish, vacation_collection_ref_id=IsRefId())
 
     @staticmethod
     @create_entity_action

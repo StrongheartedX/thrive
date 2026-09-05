@@ -32,6 +32,7 @@ ALLOWED_CONTACT_LINK_OWNER_TYPES: Final[frozenset[str]] = frozenset(
         NamedEntityTag.CHORE.value,
         NamedEntityTag.BIG_PLAN.value,
         NamedEntityTag.VACATION.value,
+        NamedEntityTag.TRAVEL_WISH.value,
         NamedEntityTag.SMART_LIST_ITEM.value,
         NamedEntityTag.METRIC_ENTRY.value,
         NamedEntityTag.PERSON.value,

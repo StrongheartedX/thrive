@@ -21,7 +21,7 @@ Many entity types support collaboration. The common ones include:
 * [Big plans](big-plans.md)
 * Docs and doc folders
 * [Journals](journals.md)
-* [Vacations](vacations.md)
+* [Vacations](vacations.md) and travel wishes
 * [Smart lists](smart-lists.md) and smart list items
 * [Metrics](metrics.md) and metric entries
 * [Persons](prm/persons.md) in the PRM

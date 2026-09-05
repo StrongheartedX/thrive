@@ -39,7 +39,7 @@ from jupiter.core.apps.schedule.sub.stream.name import ScheduleStreamName
 from jupiter.core.apps.schedule.sub.stream.source import ScheduleStreamSource
 from jupiter.core.apps.smart_lists.name import SmartListName
 from jupiter.core.apps.todo.name import TodoTaskName
-from jupiter.core.apps.vacations.name import VacationName
+from jupiter.core.apps.vacations.sub.vacation.name import VacationName
 from jupiter.core.common.entity_icon import EntityIconDatabaseDecoder
 from jupiter.core.common.recurring_task_period import RecurringTaskPeriod
 from jupiter.core.common.sub.access.access_level import AccessLevel

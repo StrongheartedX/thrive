@@ -21,7 +21,7 @@ export function LocationsMultiEditor({
   owner,
   label,
   aloneOnLine = false,
-}: LocationsEditorBaseProps) {
+}: LocationsEditorBaseProps & { owner: string }) {
   const {
     actionResult,
     applySelection,

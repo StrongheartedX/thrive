@@ -34,8 +34,12 @@ export interface LocationsEditorBaseProps {
   inputsEnabled: boolean;
   /** Owner of the entity whose locations are edited; blocks edit when shared. */
   entityOwnerRefId?: string;
-  /** Wire-form owner link ``{theType}:std:{refId}`` (see ``EntityLink``). */
-  owner: string;
+  /**
+   * Wire-form owner link ``{theType}:std:{refId}`` (see ``EntityLink``).
+   * Omit when picking a location before the owning entity exists; selection
+   * is written to the hidden field and not upserted as a link.
+   */
+  owner?: string;
   label?: ReactNode;
   aloneOnLine?: boolean;
 }
@@ -203,25 +207,28 @@ export function useLocationsLinkEditor({
 
   const submitResolvedPlace = useCallback(
     (place: ResolvedPlace) => {
-      candidateFetcher.submit(
-        {
-          owner,
-          name: place.name,
-          addressLine: place.addressLine ?? "",
-          country: place.country ?? "",
-          latitude: place.latitude !== null ? String(place.latitude) : "",
-          longitude: place.longitude !== null ? String(place.longitude) : "",
-        },
-        {
-          method: "post",
-          action: "/app/workspace/core/locations/upsert-from-candidate",
-        },
-      );
+      const fields = {
+        name: place.name,
+        addressLine: place.addressLine ?? "",
+        country: place.country ?? "",
+        latitude: place.latitude !== null ? String(place.latitude) : "",
+        longitude: place.longitude !== null ? String(place.longitude) : "",
+      };
+      candidateFetcher.submit(owner ? { owner, ...fields } : fields, {
+        method: "post",
+        action: owner
+          ? "/app/workspace/core/locations/upsert-from-candidate"
+          : "/app/workspace/core/locations/create-from-candidate",
+      });
     },
     [candidateFetcher, owner],
   );
 
   const act = useCallback(() => {
+    if (!owner) {
+      setDataModified(false);
+      return;
+    }
     setIsActing(true);
     cardActionFetcher.submit(
       {
@@ -237,14 +244,14 @@ export function useLocationsLinkEditor({
   }, [cardActionFetcher, owner, locationsHiddenValue]);
 
   useEffect(() => {
-    if (dataModified && editable) {
+    if (dataModified && editable && owner) {
       if (!isActing) {
         act();
       } else {
         setShouldAct(true);
       }
     }
-  }, [act, dataModified, editable, isActing]);
+  }, [act, dataModified, editable, isActing, owner]);
 
   useEffect(() => {
     if (
@@ -289,9 +296,11 @@ export function useLocationsLinkEditor({
         }
         return next;
       });
-      setDataModified(true);
+      if (owner) {
+        setDataModified(true);
+      }
     }
-  }, [allowMultiple, candidateFetcher.state, candidateFetcher.data]);
+  }, [allowMultiple, candidateFetcher.data, candidateFetcher.state, owner]);
 
   const applySelection = useCallback(
     (values: LocationOption[]) => {

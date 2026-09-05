@@ -39,7 +39,8 @@ from jupiter.core.apps.time_plans.sub.activity.root import TimePlanActivity
 from jupiter.core.apps.todo.domain import TodoDomain
 from jupiter.core.apps.todo.root import TodoTask
 from jupiter.core.apps.vacations.collection import VacationCollection
-from jupiter.core.apps.vacations.root import Vacation
+from jupiter.core.apps.vacations.sub.travel_wish.root import TravelWish
+from jupiter.core.apps.vacations.sub.vacation.root import Vacation
 from jupiter.core.common.search.domain import SearchDomain
 from jupiter.core.common.search.service.entity_index import (
     INDEX_METHOD_VERSION,
@@ -181,6 +182,13 @@ async def _load_workspace_summaries_for_entity_tag(
                 workspace.ref_id
             )
             return await uow.get_for(Vacation).find_summary(
+                vacation_collection.ref_id, allow_archived=True
+            )
+        case NamedEntityTag.TRAVEL_WISH:
+            vacation_collection = await uow.get_for(VacationCollection).load_by_parent(
+                workspace.ref_id
+            )
+            return await uow.get_for(TravelWish).find_summary(
                 vacation_collection.ref_id, allow_archived=True
             )
         case (

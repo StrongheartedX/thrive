@@ -32,6 +32,7 @@ class NamedEntityTag(StrEnum):
     TIMEPLAN = "TimePlan"
     TIMEPLANACTIVITY = "TimePlanActivity"
     TODOTASK = "TodoTask"
+    TRAVELWISH = "TravelWish"
     VACATION = "Vacation"
     VISION = "Vision"
     WORKINGMEM = "WorkingMem"

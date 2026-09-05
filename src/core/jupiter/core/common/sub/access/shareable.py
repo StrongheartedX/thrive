@@ -29,6 +29,7 @@ ALLOWED_SHARED_ACCESS_OWNER_TYPES: Final[frozenset[str]] = frozenset(
         NamedEntityTag.DIR.value,  # done #share
         NamedEntityTag.JOURNAL.value,  # done #share
         NamedEntityTag.VACATION.value,  # done #share
+        NamedEntityTag.TRAVEL_WISH.value,  # done #share
         NamedEntityTag.SMART_LIST.value,  # done #share
         NamedEntityTag.SMART_LIST_ITEM.value,  # cascade from smart list only
         NamedEntityTag.METRIC.value,  # done #share

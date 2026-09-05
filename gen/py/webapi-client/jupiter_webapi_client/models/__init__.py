@@ -1114,6 +1114,18 @@ from .todo_task_update_args_is_key import TodoTaskUpdateArgsIsKey
 from .todo_task_update_args_name import TodoTaskUpdateArgsName
 from .todo_task_update_args_status import TodoTaskUpdateArgsStatus
 from .todo_task_update_result import TodoTaskUpdateResult
+from .travel_wish import TravelWish
+from .travel_wish_archive_args import TravelWishArchiveArgs
+from .travel_wish_create_args import TravelWishCreateArgs
+from .travel_wish_create_result import TravelWishCreateResult
+from .travel_wish_find_args import TravelWishFindArgs
+from .travel_wish_find_result import TravelWishFindResult
+from .travel_wish_find_result_entry import TravelWishFindResultEntry
+from .travel_wish_load_args import TravelWishLoadArgs
+from .travel_wish_load_result import TravelWishLoadResult
+from .travel_wish_remove_args import TravelWishRemoveArgs
+from .travel_wish_update_args import TravelWishUpdateArgs
+from .travel_wish_update_args_name import TravelWishUpdateArgsName
 from .update_grant_for_entity_args import UpdateGrantForEntityArgs
 from .update_grant_for_entity_result import UpdateGrantForEntityResult
 from .user import User
@@ -1139,6 +1151,8 @@ from .vacation import Vacation
 from .vacation_archive_args import VacationArchiveArgs
 from .vacation_collection import VacationCollection
 from .vacation_create_args import VacationCreateArgs
+from .vacation_create_from_travel_wish_args import VacationCreateFromTravelWishArgs
+from .vacation_create_from_travel_wish_result import VacationCreateFromTravelWishResult
 from .vacation_create_result import VacationCreateResult
 from .vacation_entry import VacationEntry
 from .vacation_find_args import VacationFindArgs
@@ -2285,6 +2299,18 @@ __all__ = (
     "TodoTaskUpdateArgsName",
     "TodoTaskUpdateArgsStatus",
     "TodoTaskUpdateResult",
+    "TravelWish",
+    "TravelWishArchiveArgs",
+    "TravelWishCreateArgs",
+    "TravelWishCreateResult",
+    "TravelWishFindArgs",
+    "TravelWishFindResult",
+    "TravelWishFindResultEntry",
+    "TravelWishLoadArgs",
+    "TravelWishLoadResult",
+    "TravelWishRemoveArgs",
+    "TravelWishUpdateArgs",
+    "TravelWishUpdateArgsName",
     "UpdateGrantForEntityArgs",
     "UpdateGrantForEntityResult",
     "User",
@@ -2310,6 +2336,8 @@ __all__ = (
     "VacationArchiveArgs",
     "VacationCollection",
     "VacationCreateArgs",
+    "VacationCreateFromTravelWishArgs",
+    "VacationCreateFromTravelWishResult",
     "VacationCreateResult",
     "VacationEntry",
     "VacationFindArgs",

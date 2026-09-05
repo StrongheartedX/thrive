@@ -103,6 +103,11 @@ export function inferEntityTagsForEnabledFeatures(
     ) {
       inferredEntityTags.push(entityTag);
     } else if (
+      entityTag === NamedEntityTag.TRAVEL_WISH &&
+      isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.VACATIONS)
+    ) {
+      inferredEntityTags.push(entityTag);
+    } else if (
       entityTag === NamedEntityTag.ASPECT &&
       isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.LIFE_PLAN)
     ) {
