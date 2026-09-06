@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from ..models.habit_update_args_repeats_in_period_count import HabitUpdateArgsRepeatsInPeriodCount
     from ..models.habit_update_args_repeats_strategy import HabitUpdateArgsRepeatsStrategy
     from ..models.habit_update_args_skip_rule import HabitUpdateArgsSkipRule
+    from ..models.habit_update_args_stack_ref_id import HabitUpdateArgsStackRefId
 
 
 T = TypeVar("T", bound="HabitUpdateArgs")
@@ -37,6 +38,7 @@ class HabitUpdateArgs:
         aspect_ref_id (HabitUpdateArgsAspectRefId):
         chapter_ref_id (HabitUpdateArgsChapterRefId):
         goal_ref_id (HabitUpdateArgsGoalRefId):
+        stack_ref_id (HabitUpdateArgsStackRefId):
         is_key (HabitUpdateArgsIsKey):
         period (HabitUpdateArgsPeriod):
         eisen (HabitUpdateArgsEisen):
@@ -55,6 +57,7 @@ class HabitUpdateArgs:
     aspect_ref_id: HabitUpdateArgsAspectRefId
     chapter_ref_id: HabitUpdateArgsChapterRefId
     goal_ref_id: HabitUpdateArgsGoalRefId
+    stack_ref_id: HabitUpdateArgsStackRefId
     is_key: HabitUpdateArgsIsKey
     period: HabitUpdateArgsPeriod
     eisen: HabitUpdateArgsEisen
@@ -78,6 +81,8 @@ class HabitUpdateArgs:
         chapter_ref_id = self.chapter_ref_id.to_dict()
 
         goal_ref_id = self.goal_ref_id.to_dict()
+
+        stack_ref_id = self.stack_ref_id.to_dict()
 
         is_key = self.is_key.to_dict()
 
@@ -110,6 +115,7 @@ class HabitUpdateArgs:
                 "aspect_ref_id": aspect_ref_id,
                 "chapter_ref_id": chapter_ref_id,
                 "goal_ref_id": goal_ref_id,
+                "stack_ref_id": stack_ref_id,
                 "is_key": is_key,
                 "period": period,
                 "eisen": eisen,
@@ -145,6 +151,7 @@ class HabitUpdateArgs:
         )
         from ..models.habit_update_args_repeats_strategy import HabitUpdateArgsRepeatsStrategy  # noqa: PLC0415
         from ..models.habit_update_args_skip_rule import HabitUpdateArgsSkipRule  # noqa: PLC0415
+        from ..models.habit_update_args_stack_ref_id import HabitUpdateArgsStackRefId  # noqa: PLC0415
 
         d = dict(src_dict)
         ref_id = d.pop("ref_id")
@@ -156,6 +163,8 @@ class HabitUpdateArgs:
         chapter_ref_id = HabitUpdateArgsChapterRefId.from_dict(d.pop("chapter_ref_id"))
 
         goal_ref_id = HabitUpdateArgsGoalRefId.from_dict(d.pop("goal_ref_id"))
+
+        stack_ref_id = HabitUpdateArgsStackRefId.from_dict(d.pop("stack_ref_id"))
 
         is_key = HabitUpdateArgsIsKey.from_dict(d.pop("is_key"))
 
@@ -185,6 +194,7 @@ class HabitUpdateArgs:
             aspect_ref_id=aspect_ref_id,
             chapter_ref_id=chapter_ref_id,
             goal_ref_id=goal_ref_id,
+            stack_ref_id=stack_ref_id,
             is_key=is_key,
             period=period,
             eisen=eisen,

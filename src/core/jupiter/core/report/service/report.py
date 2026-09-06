@@ -12,7 +12,7 @@ from jupiter.core.apps.big_plans.status import BigPlanStatus
 from jupiter.core.apps.chores.collection import ChoreCollection
 from jupiter.core.apps.chores.root import Chore
 from jupiter.core.apps.habits.collection import HabitCollection
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.habits.sub.habit.root import Habit
 from jupiter.core.apps.life_plan.root import LifePlan
 from jupiter.core.apps.life_plan.sub.aspects.name import AspectName
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect

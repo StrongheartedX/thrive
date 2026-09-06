@@ -24,6 +24,8 @@ import type { TopLevelInfo } from "#/core/infra/top-level-context";
 import { DifficultySelect } from "#/core/common/component/difficulty-select";
 import { EisenhowerSelect } from "#/core/common/component/eisenhower-select";
 import { InboxTaskNamespaceLink } from "#/core/common/sub/inbox_tasks/component/namespace-link";
+import { HabitStackTag } from "#/core/apps/habits/component/habit-stack-tag";
+import { ChoreStackTag } from "#/core/apps/chores/component/chore-stack-tag";
 import {
   BIG_PLAN,
   parentLinkNamespaceFromEntityLinkWire,
@@ -163,6 +165,12 @@ export function InboxTaskPropertiesEditor(
             )}
 
           <InboxTaskNamespaceLink inboxTaskResult={props.inboxTaskInfo} />
+          {props.inboxTaskInfo.habit_stack && (
+            <HabitStackTag habitStack={props.inboxTaskInfo.habit_stack} />
+          )}
+          {props.inboxTaskInfo.chore_stack && (
+            <ChoreStackTag choreStack={props.inboxTaskInfo.chore_stack} />
+          )}
         </Stack>
 
         <FormControl fullWidth>

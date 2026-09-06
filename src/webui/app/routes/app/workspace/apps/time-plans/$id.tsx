@@ -2,7 +2,9 @@ import type {
   BigPlan,
   BigPlanStats,
   Habit,
+  HabitStack,
   Chore,
+  ChoreStack,
   InboxTask,
   TodoTask,
   LifePlan,
@@ -288,6 +290,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       bigPlanStats: result.big_plan_stats,
       targetTodoTasks: result.target_todo_tasks,
       targetHabits: result.target_habits,
+      targetHabitStacks: result.target_habit_stacks,
+      targetChoreStacks: result.target_chore_stacks,
       targetChores: result.target_chores,
       activityDoneness: result.activity_doneness as Record<
         string,
@@ -579,6 +583,16 @@ export default function TimePlanView() {
       ? loaderData.targetHabits.map((h) => [h.ref_id, h])
       : [],
   );
+  const targetHabitStacksByRefId = new Map<string, HabitStack>(
+    loaderData.targetHabitStacks
+      ? loaderData.targetHabitStacks.map((stack) => [stack.ref_id, stack])
+      : [],
+  );
+  const targetChoreStacksByRefId = new Map<string, ChoreStack>(
+    loaderData.targetChoreStacks
+      ? loaderData.targetChoreStacks.map((stack) => [stack.ref_id, stack])
+      : [],
+  );
   const targetChoresByRefId = new Map<string, Chore>(
     loaderData.targetChores
       ? loaderData.targetChores.map((c) => [c.ref_id, c])
@@ -661,6 +675,8 @@ export default function TimePlanView() {
     targetBigPlansByRefId,
     targetTodoTasksByRefId,
     targetHabitsByRefId,
+    targetHabitStacksByRefId,
+    targetChoreStacksByRefId,
     targetChoresByRefId,
   };
 
@@ -755,6 +771,8 @@ export default function TimePlanView() {
             bigPlanStatsByRefId={bigPlanStatsByRefId}
             targetTodoTasksByRefId={targetTodoTasksByRefId}
             targetHabitsByRefId={targetHabitsByRefId}
+            targetHabitStacksByRefId={targetHabitStacksByRefId}
+            targetChoreStacksByRefId={targetChoreStacksByRefId}
             targetChoresByRefId={targetChoresByRefId}
             activityDoneness={loaderData.activityDoneness}
             timeEventsByRefId={timeEventsByRefId}
@@ -775,6 +793,8 @@ export default function TimePlanView() {
             bigPlanStatsByRefId={bigPlanStatsByRefId}
             targetTodoTasksByRefId={targetTodoTasksByRefId}
             targetHabitsByRefId={targetHabitsByRefId}
+            targetHabitStacksByRefId={targetHabitStacksByRefId}
+            targetChoreStacksByRefId={targetChoreStacksByRefId}
             targetChoresByRefId={targetChoresByRefId}
             activityDoneness={loaderData.activityDoneness}
             timeEventsByRefId={timeEventsByRefId}
@@ -800,6 +820,8 @@ export default function TimePlanView() {
             bigPlanStatsByRefId={bigPlanStatsByRefId}
             targetTodoTasksByRefId={targetTodoTasksByRefId}
             targetHabitsByRefId={targetHabitsByRefId}
+            targetHabitStacksByRefId={targetHabitStacksByRefId}
+            targetChoreStacksByRefId={targetChoreStacksByRefId}
             targetChoresByRefId={targetChoresByRefId}
             activityDoneness={loaderData.activityDoneness}
             timeEventsByRefId={timeEventsByRefId}
@@ -918,7 +940,7 @@ export default function TimePlanView() {
                           NavSingle({
                             text: "New Habit",
                             link: withTimePlanDisplay(
-                              `/app/workspace/apps/habits/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
+                              `/app/workspace/apps/habits/habits/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
                               query,
                             ),
                             gatedOn: WorkspaceFeature.HABITS,
@@ -1350,6 +1372,8 @@ export default function TimePlanView() {
                 bigPlanStatsByRefId={bigPlanStatsByRefId}
                 targetTodoTasksByRefId={targetTodoTasksByRefId}
                 targetHabitsByRefId={targetHabitsByRefId}
+                targetHabitStacksByRefId={targetHabitStacksByRefId}
+                targetChoreStacksByRefId={targetChoreStacksByRefId}
                 targetChoresByRefId={targetChoresByRefId}
                 activityDoneness={loaderData.activityDoneness}
                 timeEventsByRefId={timeEventsByRefId}
@@ -1370,6 +1394,8 @@ export default function TimePlanView() {
                 bigPlanStatsByRefId={bigPlanStatsByRefId}
                 targetTodoTasksByRefId={targetTodoTasksByRefId}
                 targetHabitsByRefId={targetHabitsByRefId}
+                targetHabitStacksByRefId={targetHabitStacksByRefId}
+                targetChoreStacksByRefId={targetChoreStacksByRefId}
                 targetChoresByRefId={targetChoresByRefId}
                 activityDoneness={loaderData.activityDoneness}
                 timeEventsByRefId={timeEventsByRefId}
@@ -1395,6 +1421,8 @@ export default function TimePlanView() {
                 bigPlanStatsByRefId={bigPlanStatsByRefId}
                 targetTodoTasksByRefId={targetTodoTasksByRefId}
                 targetHabitsByRefId={targetHabitsByRefId}
+                targetHabitStacksByRefId={targetHabitStacksByRefId}
+                targetChoreStacksByRefId={targetChoreStacksByRefId}
                 targetChoresByRefId={targetChoresByRefId}
                 activityDoneness={loaderData.activityDoneness}
                 timeEventsByRefId={timeEventsByRefId}

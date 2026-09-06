@@ -35,5 +35,6 @@ export type HabitCreateArgs = {
     skip_rule?: (RecurringTaskSkipRule | null);
     repeats_strategy?: (HabitRepeatsStrategy | null);
     repeats_in_period_count?: (number | null);
+    stack_ref_id?: (EntityId | null);
 };
 

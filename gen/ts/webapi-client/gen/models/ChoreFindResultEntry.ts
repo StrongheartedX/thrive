@@ -6,6 +6,7 @@ import type { AccessStatus } from './AccessStatus';
 import type { Aspect } from './Aspect';
 import type { Chapter } from './Chapter';
 import type { Chore } from './Chore';
+import type { ChoreStack } from './ChoreStack';
 import type { Contact } from './Contact';
 import type { Goal } from './Goal';
 import type { InboxTask } from './InboxTask';
@@ -18,6 +19,7 @@ import type { UserLight } from './UserLight';
  */
 export type ChoreFindResultEntry = {
     chore: Chore;
+    stack?: (ChoreStack | null);
     note?: (Note | null);
     aspect?: (Aspect | null);
     chapter?: (Chapter | null);

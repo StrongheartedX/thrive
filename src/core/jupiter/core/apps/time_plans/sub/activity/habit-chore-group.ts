@@ -1,4 +1,6 @@
 import type {
+  Chore,
+  Habit,
   InboxTask,
   TimeEventInDayBlock,
   TimePlanActivity,
@@ -6,6 +8,7 @@ import type {
 import { InboxTaskStatus } from "@jupiter/webapi-client";
 
 import { compareADate } from "#/core/common/adate";
+import { entityLinkStd } from "#/core/common/entity-link";
 import {
   CHORE,
   entityLinkRefIdFromWire,
@@ -13,7 +16,11 @@ import {
   parentLinkNamespaceFromEntityLinkWire,
 } from "#/core/common/sub/inbox_tasks/parent-link-namespace";
 import { isCompleted } from "#/core/common/sub/inbox_tasks/status";
-import { isTimePlanActivityInboxTaskTarget } from "#/core/apps/time_plans/sub/activity/target-wire";
+import {
+  isTimePlanActivityChoreTarget,
+  isTimePlanActivityHabitTarget,
+  isTimePlanActivityInboxTaskTarget,
+} from "#/core/apps/time_plans/sub/activity/target-wire";
 
 export interface HabitChoreInboxTaskStats {
   notStartedCount: number;
@@ -80,6 +87,159 @@ export function habitOrChoreParentTargetForInboxTaskActivity(
   }
 
   return inboxTask.owner;
+}
+
+export function habitActivitiesByStackTarget(
+  activities: TimePlanActivity[],
+  habitsByRefId: Map<string, Habit>,
+  parentActivitiesByTarget: Map<string, TimePlanActivity>,
+): Map<string, TimePlanActivity[]> {
+  const childrenByStack = new Map<string, TimePlanActivity[]>();
+
+  for (const activity of activities) {
+    const stackTarget = stackParentTargetForHabitActivity(
+      activity,
+      habitsByRefId,
+    );
+    if (stackTarget === undefined) {
+      continue;
+    }
+    if (!parentActivitiesByTarget.has(stackTarget)) {
+      continue;
+    }
+
+    const existing = childrenByStack.get(stackTarget) ?? [];
+    existing.push(activity);
+    childrenByStack.set(stackTarget, existing);
+  }
+
+  return childrenByStack;
+}
+
+export function stackParentTargetForHabitActivity(
+  activity: TimePlanActivity,
+  habitsByRefId: Map<string, Habit>,
+): string | undefined {
+  if (!isTimePlanActivityHabitTarget(activity.target)) {
+    return undefined;
+  }
+
+  const habit = habitsByRefId.get(entityLinkRefIdFromWire(activity.target));
+  if (
+    !habit ||
+    habit.stack_ref_id === undefined ||
+    habit.stack_ref_id === null
+  ) {
+    return undefined;
+  }
+
+  return entityLinkStd("HabitStack", habit.stack_ref_id);
+}
+
+export function habitActivitiesForStackMembers(
+  activities: TimePlanActivity[],
+  memberHabits: Habit[],
+): TimePlanActivity[] {
+  const byHabitRefId = new Map<string, TimePlanActivity>();
+  for (const activity of activities) {
+    if (activity.archived || !isTimePlanActivityHabitTarget(activity.target)) {
+      continue;
+    }
+    byHabitRefId.set(entityLinkRefIdFromWire(activity.target), activity);
+  }
+  return memberHabits.flatMap((habit) => {
+    const activity = byHabitRefId.get(habit.ref_id);
+    return activity === undefined ? [] : [activity];
+  });
+}
+
+export function choreActivitiesByStackTarget(
+  activities: TimePlanActivity[],
+  choresByRefId: Map<string, Chore>,
+  parentActivitiesByTarget: Map<string, TimePlanActivity>,
+): Map<string, TimePlanActivity[]> {
+  const childrenByStack = new Map<string, TimePlanActivity[]>();
+
+  for (const activity of activities) {
+    const stackTarget = stackParentTargetForChoreActivity(
+      activity,
+      choresByRefId,
+    );
+    if (stackTarget === undefined) {
+      continue;
+    }
+    if (!parentActivitiesByTarget.has(stackTarget)) {
+      continue;
+    }
+
+    const existing = childrenByStack.get(stackTarget) ?? [];
+    existing.push(activity);
+    childrenByStack.set(stackTarget, existing);
+  }
+
+  return childrenByStack;
+}
+
+export function stackParentTargetForChoreActivity(
+  activity: TimePlanActivity,
+  choresByRefId: Map<string, Chore>,
+): string | undefined {
+  if (!isTimePlanActivityChoreTarget(activity.target)) {
+    return undefined;
+  }
+
+  const chore = choresByRefId.get(entityLinkRefIdFromWire(activity.target));
+  if (
+    !chore ||
+    chore.stack_ref_id === undefined ||
+    chore.stack_ref_id === null
+  ) {
+    return undefined;
+  }
+
+  return entityLinkStd("ChoreStack", chore.stack_ref_id);
+}
+
+export function choreActivitiesForStackMembers(
+  activities: TimePlanActivity[],
+  memberChores: Chore[],
+): TimePlanActivity[] {
+  const byChoreRefId = new Map<string, TimePlanActivity>();
+  for (const activity of activities) {
+    if (activity.archived || !isTimePlanActivityChoreTarget(activity.target)) {
+      continue;
+    }
+    byChoreRefId.set(entityLinkRefIdFromWire(activity.target), activity);
+  }
+  return memberChores.flatMap((chore) => {
+    const activity = byChoreRefId.get(chore.ref_id);
+    return activity === undefined ? [] : [activity];
+  });
+}
+
+export function selectStackPlaceActivities(
+  habitActivities: TimePlanActivity[],
+  inboxTasksByRefId: Map<string, InboxTask>,
+  timeEventsByRefId: Map<string, TimeEventInDayBlock[]>,
+  habitChoreChildrenByParent: Map<string, TimePlanActivity[]>,
+): TimePlanActivity[] {
+  const placements: TimePlanActivity[] = [];
+  for (const habitActivity of habitActivities) {
+    if (habitActivity.archived) {
+      continue;
+    }
+    const children = habitChoreChildrenByParent.get(habitActivity.target) ?? [];
+    const placeActivity =
+      children.length > 0
+        ? (selectHabitOrChorePlaceActivity(
+            children,
+            inboxTasksByRefId,
+            timeEventsByRefId,
+          ) ?? habitActivity)
+        : habitActivity;
+    placements.push(placeActivity);
+  }
+  return placements;
 }
 
 export function habitChoreInboxTaskStats(

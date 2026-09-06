@@ -1,4 +1,4 @@
-import { type Chore } from "@jupiter/webapi-client";
+import { type Chore, type ChoreStack } from "@jupiter/webapi-client";
 
 import { compareDifficulty } from "#/core/common/difficulty";
 import { compareEisen } from "#/core/common/eisen";
@@ -18,6 +18,15 @@ export function sortChoresNaturally(chores: Chore[]): Chore[] {
       comparePeriods(c1.gen_params.period, c2.gen_params.period) ||
       compareEisen(c1.gen_params.eisen, c2.gen_params.eisen) ||
       compareDifficulty(c1.gen_params.difficulty, c2.gen_params.difficulty)
+    );
+  });
+}
+
+export function sortChoreStacksNaturally(stacks: ChoreStack[]): ChoreStack[] {
+  return [...stacks].sort((left, right) => {
+    return (
+      comparePeriods(left.period, right.period) ||
+      left.name.localeCompare(right.name)
     );
   });
 }

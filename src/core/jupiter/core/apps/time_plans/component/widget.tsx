@@ -5,7 +5,9 @@ import {
   TimePlanActivity,
   BigPlan,
   Habit,
+  HabitStack,
   Chore,
+  ChoreStack,
   TodoTask,
   TimePlanActivityFeasability,
   TimePlanActivityKind,
@@ -43,6 +45,8 @@ export function TimePlanViewWidget(props: WidgetProps) {
           targetBigPlans={timePlans.timePlanForToday.targetBigPlans}
           targetTodoTasks={timePlans.timePlanForToday.targetTodoTasks}
           targetHabits={timePlans.timePlanForToday.targetHabits}
+          targetHabitStacks={timePlans.timePlanForToday.targetHabitStacks}
+          targetChoreStacks={timePlans.timePlanForToday.targetChoreStacks}
           targetChores={timePlans.timePlanForToday.targetChores}
           activityDoneness={timePlans.timePlanForToday.activityDoneness}
         />
@@ -55,6 +59,8 @@ export function TimePlanViewWidget(props: WidgetProps) {
           targetBigPlans={timePlans.timePlanForWeek.targetBigPlans}
           targetTodoTasks={timePlans.timePlanForWeek.targetTodoTasks}
           targetHabits={timePlans.timePlanForWeek.targetHabits}
+          targetHabitStacks={timePlans.timePlanForWeek.targetHabitStacks}
+          targetChoreStacks={timePlans.timePlanForWeek.targetChoreStacks}
           targetChores={timePlans.timePlanForWeek.targetChores}
           activityDoneness={timePlans.timePlanForWeek.activityDoneness}
         />
@@ -70,6 +76,8 @@ interface SingleTimePlanProps {
   targetBigPlans: BigPlan[];
   targetTodoTasks: TodoTask[];
   targetHabits: Habit[];
+  targetHabitStacks?: HabitStack[];
+  targetChoreStacks?: ChoreStack[];
   targetChores: Chore[];
   activityDoneness: Record<string, TimePlanActivityDoneness>;
 }
@@ -89,6 +97,12 @@ function SingleTimePlan(props: SingleTimePlanProps) {
   );
   const targetHabitsByRefId = new Map<string, Habit>(
     props.targetHabits.map((h) => [h.ref_id, h]),
+  );
+  const targetHabitStacksByRefId = new Map<string, HabitStack>(
+    (props.targetHabitStacks ?? []).map((stack) => [stack.ref_id, stack]),
+  );
+  const targetChoreStacksByRefId = new Map<string, ChoreStack>(
+    (props.targetChoreStacks ?? []).map((stack) => [stack.ref_id, stack]),
   );
   const targetChoresByRefId = new Map<string, Chore>(
     props.targetChores.map((c) => [c.ref_id, c]),
@@ -132,6 +146,8 @@ function SingleTimePlan(props: SingleTimePlanProps) {
       targetBigPlansByRefId={targetBigPlansByRefId}
       targetTodoTasksByRefId={targetTodoTasksByRefId}
       targetHabitsByRefId={targetHabitsByRefId}
+      targetHabitStacksByRefId={targetHabitStacksByRefId}
+      targetChoreStacksByRefId={targetChoreStacksByRefId}
       targetChoresByRefId={targetChoresByRefId}
       activityDoneness={props.activityDoneness}
       timeEventsByRefId={new Map()}

@@ -7,8 +7,8 @@ from typing import Final, Sequence, cast
 from jupiter.core.apps.chores.collection import ChoreCollection
 from jupiter.core.apps.chores.root import Chore
 from jupiter.core.apps.habits.collection import HabitCollection
-from jupiter.core.apps.habits.root import Habit
-from jupiter.core.apps.habits.service.streak_recorder import (
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.habit.service.streak_recorder import (
     HabitStreakRecorderService,
 )
 from jupiter.core.apps.journals.collection import JournalCollection

@@ -5,7 +5,9 @@ import type {
   EntityId,
   GoalSummary,
   Habit,
+  HabitStack,
   Chore,
+  ChoreStack,
   InboxTask,
   AspectSummary,
   TimeEventInDayBlock,
@@ -33,6 +35,8 @@ interface TimePlanListByAspectAndGoalsActivitiesProps {
   bigPlanStatsByRefId?: Map<string, BigPlanStats>;
   targetTodoTasksByRefId: Map<string, TodoTask>;
   targetHabitsByRefId: Map<string, Habit>;
+  targetHabitStacksByRefId?: Map<string, HabitStack>;
+  targetChoreStacksByRefId?: Map<string, ChoreStack>;
   targetChoresByRefId: Map<string, Chore>;
   activityDoneness: Record<string, TimePlanActivityDoneness>;
   timeEventsByRefId: Map<string, TimeEventInDayBlock[]>;
@@ -56,6 +60,8 @@ export function TimePlanListByAspectAndGoalsActivities(
     targetBigPlansByRefId: props.targetBigPlansByRefId,
     targetTodoTasksByRefId: props.targetTodoTasksByRefId,
     targetHabitsByRefId: props.targetHabitsByRefId,
+    targetHabitStacksByRefId: props.targetHabitStacksByRefId,
+    targetChoreStacksByRefId: props.targetChoreStacksByRefId,
     targetChoresByRefId: props.targetChoresByRefId,
   };
 
@@ -67,6 +73,8 @@ export function TimePlanListByAspectAndGoalsActivities(
       props.targetTodoTasksByRefId,
       props.targetHabitsByRefId,
       props.targetChoresByRefId,
+      props.targetHabitStacksByRefId,
+      props.targetChoreStacksByRefId,
     );
   }
 
@@ -107,6 +115,8 @@ export function TimePlanListByAspectAndGoalsActivities(
             bigPlanStatsByRefId={props.bigPlanStatsByRefId}
             todoTasksByRefId={props.targetTodoTasksByRefId}
             habitsByRefId={props.targetHabitsByRefId}
+            habitStacksByRefId={props.targetHabitStacksByRefId}
+            choreStacksByRefId={props.targetChoreStacksByRefId}
             choresByRefId={props.targetChoresByRefId}
             activityDoneness={props.activityDoneness}
             fullInfo
@@ -181,6 +191,8 @@ export function TimePlanListByAspectAndGoalsActivities(
                     bigPlanStatsByRefId={props.bigPlanStatsByRefId}
                     todoTasksByRefId={props.targetTodoTasksByRefId}
                     habitsByRefId={props.targetHabitsByRefId}
+                    habitStacksByRefId={props.targetHabitStacksByRefId}
+                    choreStacksByRefId={props.targetChoreStacksByRefId}
                     choresByRefId={props.targetChoresByRefId}
                     activityDoneness={props.activityDoneness}
                     fullInfo
@@ -208,6 +220,8 @@ export function TimePlanListByAspectAndGoalsActivities(
                   bigPlanStatsByRefId={props.bigPlanStatsByRefId}
                   todoTasksByRefId={props.targetTodoTasksByRefId}
                   habitsByRefId={props.targetHabitsByRefId}
+                  habitStacksByRefId={props.targetHabitStacksByRefId}
+                  choreStacksByRefId={props.targetChoreStacksByRefId}
                   choresByRefId={props.targetChoresByRefId}
                   activityDoneness={props.activityDoneness}
                   fullInfo

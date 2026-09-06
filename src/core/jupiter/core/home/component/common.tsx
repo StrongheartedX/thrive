@@ -16,7 +16,9 @@ import {
   CalendarEventsEntries,
   RecurringTaskPeriod,
   Habit,
+  HabitStack,
   Chore,
+  ChoreStack,
   HabitStreakMark,
   UserScoreOverview,
   UserScoreHistory,
@@ -130,6 +132,8 @@ export interface WidgetProps {
       targetBigPlans: BigPlan[];
       targetTodoTasks: TodoTask[];
       targetHabits: Habit[];
+      targetHabitStacks?: HabitStack[];
+      targetChoreStacks?: ChoreStack[];
       targetChores: Chore[];
       activityDoneness: Record<string, TimePlanActivityDoneness>;
     };
@@ -140,6 +144,8 @@ export interface WidgetProps {
       targetBigPlans: BigPlan[];
       targetTodoTasks: TodoTask[];
       targetHabits: Habit[];
+      targetHabitStacks?: HabitStack[];
+      targetChoreStacks?: ChoreStack[];
       targetChores: Chore[];
       activityDoneness: Record<string, TimePlanActivityDoneness>;
     };

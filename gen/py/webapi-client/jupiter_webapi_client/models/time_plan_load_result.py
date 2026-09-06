@@ -15,8 +15,10 @@ if TYPE_CHECKING:
     from ..models.big_plan_stats import BigPlanStats
     from ..models.chapter import Chapter
     from ..models.chore import Chore
+    from ..models.chore_stack import ChoreStack
     from ..models.goal import Goal
     from ..models.habit import Habit
+    from ..models.habit_stack import HabitStack
     from ..models.inbox_task import InboxTask
     from ..models.note import Note
     from ..models.publish_entity import PublishEntity
@@ -51,7 +53,9 @@ class TimePlanLoadResult:
         big_plan_stats (list[BigPlanStats] | None | Unset):
         target_todo_tasks (list[TodoTask] | None | Unset):
         target_habits (list[Habit] | None | Unset):
+        target_habit_stacks (list[HabitStack] | None | Unset):
         target_chores (list[Chore] | None | Unset):
+        target_chore_stacks (list[ChoreStack] | None | Unset):
         activity_doneness (None | TimePlanLoadResultActivityDonenessType0 | Unset):
         completed_nontarget_inbox_tasks (list[InboxTask] | None | Unset):
         completed_nottarget_big_plans (list[BigPlan] | None | Unset):
@@ -76,7 +80,9 @@ class TimePlanLoadResult:
     big_plan_stats: list[BigPlanStats] | None | Unset = UNSET
     target_todo_tasks: list[TodoTask] | None | Unset = UNSET
     target_habits: list[Habit] | None | Unset = UNSET
+    target_habit_stacks: list[HabitStack] | None | Unset = UNSET
     target_chores: list[Chore] | None | Unset = UNSET
+    target_chore_stacks: list[ChoreStack] | None | Unset = UNSET
     activity_doneness: None | TimePlanLoadResultActivityDonenessType0 | Unset = UNSET
     completed_nontarget_inbox_tasks: list[InboxTask] | None | Unset = UNSET
     completed_nottarget_big_plans: list[BigPlan] | None | Unset = UNSET
@@ -191,6 +197,18 @@ class TimePlanLoadResult:
         else:
             target_habits = self.target_habits
 
+        target_habit_stacks: list[dict[str, Any]] | None | Unset
+        if isinstance(self.target_habit_stacks, Unset):
+            target_habit_stacks = UNSET
+        elif isinstance(self.target_habit_stacks, list):
+            target_habit_stacks = []
+            for target_habit_stacks_type_0_item_data in self.target_habit_stacks:
+                target_habit_stacks_type_0_item = target_habit_stacks_type_0_item_data.to_dict()
+                target_habit_stacks.append(target_habit_stacks_type_0_item)
+
+        else:
+            target_habit_stacks = self.target_habit_stacks
+
         target_chores: list[dict[str, Any]] | None | Unset
         if isinstance(self.target_chores, Unset):
             target_chores = UNSET
@@ -202,6 +220,18 @@ class TimePlanLoadResult:
 
         else:
             target_chores = self.target_chores
+
+        target_chore_stacks: list[dict[str, Any]] | None | Unset
+        if isinstance(self.target_chore_stacks, Unset):
+            target_chore_stacks = UNSET
+        elif isinstance(self.target_chore_stacks, list):
+            target_chore_stacks = []
+            for target_chore_stacks_type_0_item_data in self.target_chore_stacks:
+                target_chore_stacks_type_0_item = target_chore_stacks_type_0_item_data.to_dict()
+                target_chore_stacks.append(target_chore_stacks_type_0_item)
+
+        else:
+            target_chore_stacks = self.target_chore_stacks
 
         activity_doneness: dict[str, Any] | None | Unset
         if isinstance(self.activity_doneness, Unset):
@@ -304,8 +334,12 @@ class TimePlanLoadResult:
             field_dict["target_todo_tasks"] = target_todo_tasks
         if target_habits is not UNSET:
             field_dict["target_habits"] = target_habits
+        if target_habit_stacks is not UNSET:
+            field_dict["target_habit_stacks"] = target_habit_stacks
         if target_chores is not UNSET:
             field_dict["target_chores"] = target_chores
+        if target_chore_stacks is not UNSET:
+            field_dict["target_chore_stacks"] = target_chore_stacks
         if activity_doneness is not UNSET:
             field_dict["activity_doneness"] = activity_doneness
         if completed_nontarget_inbox_tasks is not UNSET:
@@ -333,8 +367,10 @@ class TimePlanLoadResult:
         from ..models.big_plan_stats import BigPlanStats  # noqa: PLC0415
         from ..models.chapter import Chapter  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
         from ..models.goal import Goal  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.note import Note  # noqa: PLC0415
         from ..models.publish_entity import PublishEntity  # noqa: PLC0415
@@ -507,6 +543,28 @@ class TimePlanLoadResult:
 
         target_habits = _parse_target_habits(d.pop("target_habits", UNSET))
 
+        def _parse_target_habit_stacks(data: object) -> list[HabitStack] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                target_habit_stacks_type_0 = []
+                _target_habit_stacks_type_0 = data
+                for target_habit_stacks_type_0_item_data in _target_habit_stacks_type_0:
+                    target_habit_stacks_type_0_item = HabitStack.from_dict(target_habit_stacks_type_0_item_data)
+
+                    target_habit_stacks_type_0.append(target_habit_stacks_type_0_item)
+
+                return target_habit_stacks_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[HabitStack] | None | Unset, data)
+
+        target_habit_stacks = _parse_target_habit_stacks(d.pop("target_habit_stacks", UNSET))
+
         def _parse_target_chores(data: object) -> list[Chore] | None | Unset:
             if data is None:
                 return data
@@ -528,6 +586,28 @@ class TimePlanLoadResult:
             return cast(list[Chore] | None | Unset, data)
 
         target_chores = _parse_target_chores(d.pop("target_chores", UNSET))
+
+        def _parse_target_chore_stacks(data: object) -> list[ChoreStack] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                target_chore_stacks_type_0 = []
+                _target_chore_stacks_type_0 = data
+                for target_chore_stacks_type_0_item_data in _target_chore_stacks_type_0:
+                    target_chore_stacks_type_0_item = ChoreStack.from_dict(target_chore_stacks_type_0_item_data)
+
+                    target_chore_stacks_type_0.append(target_chore_stacks_type_0_item)
+
+                return target_chore_stacks_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[ChoreStack] | None | Unset, data)
+
+        target_chore_stacks = _parse_target_chore_stacks(d.pop("target_chore_stacks", UNSET))
 
         def _parse_activity_doneness(data: object) -> None | TimePlanLoadResultActivityDonenessType0 | Unset:
             if data is None:
@@ -703,7 +783,9 @@ class TimePlanLoadResult:
             big_plan_stats=big_plan_stats,
             target_todo_tasks=target_todo_tasks,
             target_habits=target_habits,
+            target_habit_stacks=target_habit_stacks,
             target_chores=target_chores,
+            target_chore_stacks=target_chore_stacks,
             activity_doneness=activity_doneness,
             completed_nontarget_inbox_tasks=completed_nontarget_inbox_tasks,
             completed_nottarget_big_plans=completed_nottarget_big_plans,

@@ -7,7 +7,9 @@ from jupiter.core.apps.big_plans.collection import BigPlanCollection
 from jupiter.core.apps.big_plans.root import BigPlan, BigPlanRepository
 from jupiter.core.apps.big_plans.stats import BigPlanStats, BigPlanStatsRepository
 from jupiter.core.apps.chores.root import Chore
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
 from jupiter.core.apps.life_plan.sub.goals.root import Goal
@@ -74,7 +76,9 @@ class TimePlanLoadResult(UseCaseResultBase):
     big_plan_stats: list[BigPlanStats] | None
     target_todo_tasks: list[TodoTask] | None
     target_habits: list[Habit] | None
+    target_habit_stacks: list[HabitStack] | None
     target_chores: list[Chore] | None
+    target_chore_stacks: list[ChoreStack] | None
     activity_doneness: dict[EntityId, TimePlanActivityDoneness] | None
     completed_nontarget_inbox_tasks: list[InboxTask] | None
     completed_nottarget_big_plans: list[BigPlan] | None
@@ -198,7 +202,9 @@ class TimePlanLoadService:
         target_inbox_tasks = None
         target_todo_tasks = None
         target_habits = None
+        target_habit_stacks = None
         target_chores = None
+        target_chore_stacks = None
         inbox_task_collection = await uow.get_for(InboxTaskCollection).load_by_parent(
             workspace.ref_id
         )
@@ -259,6 +265,21 @@ class TimePlanLoadService:
                 else:
                     target_habits = []
 
+            if workspace.is_feature_available(WorkspaceFeature.HABITS):
+                target_habit_stack_ref_ids = list(
+                    {a.target.ref_id for a in activities if a.is_target_habit_stack}
+                )
+                if len(target_habit_stack_ref_ids) > 0:
+                    target_habit_stacks = await uow.get_for(
+                        HabitStack
+                    ).find_all_generic(
+                        parent_ref_id=None,
+                        allow_archived=True,
+                        ref_id=target_habit_stack_ref_ids,
+                    )
+                else:
+                    target_habit_stacks = []
+
             if workspace.is_feature_available(WorkspaceFeature.CHORES):
                 target_chore_ref_ids = list(
                     {a.target.ref_id for a in activities if a.is_target_chore}
@@ -271,6 +292,21 @@ class TimePlanLoadService:
                     )
                 else:
                     target_chores = []
+
+            if workspace.is_feature_available(WorkspaceFeature.CHORES):
+                target_chore_stack_ref_ids = list(
+                    {a.target.ref_id for a in activities if a.is_target_chore_stack}
+                )
+                if len(target_chore_stack_ref_ids) > 0:
+                    target_chore_stacks = await uow.get_for(
+                        ChoreStack
+                    ).find_all_generic(
+                        parent_ref_id=None,
+                        allow_archived=True,
+                        ref_id=target_chore_stack_ref_ids,
+                    )
+                else:
+                    target_chore_stacks = []
 
         completed_nontarget_inbox_tasks = None
         if include_completed_nontarget and target_inbox_tasks is not None:
@@ -369,8 +405,18 @@ class TimePlanLoadService:
             target_habits_by_ref_id = (
                 {h.ref_id: h for h in target_habits} if target_habits else {}
             )
+            target_habit_stacks_by_ref_id = (
+                {s.ref_id: s for s in target_habit_stacks}
+                if target_habit_stacks
+                else {}
+            )
             target_chores_by_ref_id = (
                 {c.ref_id: c for c in target_chores} if target_chores else {}
+            )
+            target_chore_stacks_by_ref_id = (
+                {s.ref_id: s for s in target_chore_stacks}
+                if target_chore_stacks
+                else {}
             )
             activities_by_big_plan_ref_id: defaultdict[EntityId, list[EntityId]] = (
                 defaultdict(list)
@@ -582,6 +628,176 @@ class TimePlanLoadService:
                         )
 
             for activity in activities:
+                if not activity.is_target_habit_stack:
+                    continue
+
+                if activity.target.ref_id not in target_habit_stacks_by_ref_id:
+                    activity_doneness[activity.ref_id] = TimePlanActivityDoneness.DONE
+                    continue
+
+                member_habit_activity_ref_ids = []
+                for habit_activity in activities:
+                    if not habit_activity.is_target_habit:
+                        continue
+                    member_habit = target_habits_by_ref_id.get(
+                        habit_activity.target.ref_id
+                    )
+                    if (
+                        member_habit is None
+                        or member_habit.stack_ref_id != activity.target.ref_id
+                    ):
+                        continue
+                    member_habit_activity_ref_ids.append(habit_activity.ref_id)
+
+                some_subactivity_is_working_or_done = (
+                    any(
+                        activity_doneness[a]
+                        in (
+                            TimePlanActivityDoneness.WORKING,
+                            TimePlanActivityDoneness.DONE,
+                        )
+                        for a in member_habit_activity_ref_ids
+                    )
+                    if len(member_habit_activity_ref_ids) > 0
+                    else False
+                )
+
+                all_subactivities_are_done = (
+                    all(
+                        activity_doneness[a] == TimePlanActivityDoneness.DONE
+                        for a in member_habit_activity_ref_ids
+                    )
+                    if len(member_habit_activity_ref_ids) > 0
+                    else False
+                )
+
+                majority_subactivities_are_done = (
+                    (
+                        sum(
+                            1
+                            for a in member_habit_activity_ref_ids
+                            if activity_doneness[a] == TimePlanActivityDoneness.DONE
+                        )
+                        / len(member_habit_activity_ref_ids)
+                    )
+                    > 0.5
+                    if len(member_habit_activity_ref_ids) > 0
+                    else False
+                )
+
+                if activity.kind == TimePlanActivityKind.FINISH:
+                    if all_subactivities_are_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.DONE
+                        )
+                    elif some_subactivity_is_working_or_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.WORKING
+                        )
+                    else:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.NOT_DONE
+                        )
+                elif activity.kind == TimePlanActivityKind.MAKE_PROGRESS:
+                    if majority_subactivities_are_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.DONE
+                        )
+                    elif some_subactivity_is_working_or_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.WORKING
+                        )
+                    else:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.NOT_DONE
+                        )
+
+            for activity in activities:
+                if not activity.is_target_chore_stack:
+                    continue
+
+                if activity.target.ref_id not in target_chore_stacks_by_ref_id:
+                    activity_doneness[activity.ref_id] = TimePlanActivityDoneness.DONE
+                    continue
+
+                member_chore_activity_ref_ids = []
+                for chore_activity in activities:
+                    if not chore_activity.is_target_chore:
+                        continue
+                    member_chore = target_chores_by_ref_id.get(
+                        chore_activity.target.ref_id
+                    )
+                    if (
+                        member_chore is None
+                        or member_chore.stack_ref_id != activity.target.ref_id
+                    ):
+                        continue
+                    member_chore_activity_ref_ids.append(chore_activity.ref_id)
+
+                some_subactivity_is_working_or_done = (
+                    any(
+                        activity_doneness[a]
+                        in (
+                            TimePlanActivityDoneness.WORKING,
+                            TimePlanActivityDoneness.DONE,
+                        )
+                        for a in member_chore_activity_ref_ids
+                    )
+                    if len(member_chore_activity_ref_ids) > 0
+                    else False
+                )
+
+                all_subactivities_are_done = (
+                    all(
+                        activity_doneness[a] == TimePlanActivityDoneness.DONE
+                        for a in member_chore_activity_ref_ids
+                    )
+                    if len(member_chore_activity_ref_ids) > 0
+                    else False
+                )
+
+                majority_subactivities_are_done = (
+                    (
+                        sum(
+                            1
+                            for a in member_chore_activity_ref_ids
+                            if activity_doneness[a] == TimePlanActivityDoneness.DONE
+                        )
+                        / len(member_chore_activity_ref_ids)
+                    )
+                    > 0.5
+                    if len(member_chore_activity_ref_ids) > 0
+                    else False
+                )
+
+                if activity.kind == TimePlanActivityKind.FINISH:
+                    if all_subactivities_are_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.DONE
+                        )
+                    elif some_subactivity_is_working_or_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.WORKING
+                        )
+                    else:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.NOT_DONE
+                        )
+                elif activity.kind == TimePlanActivityKind.MAKE_PROGRESS:
+                    if majority_subactivities_are_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.DONE
+                        )
+                    elif some_subactivity_is_working_or_done:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.WORKING
+                        )
+                    else:
+                        activity_doneness[activity.ref_id] = (
+                            TimePlanActivityDoneness.NOT_DONE
+                        )
+
+            for activity in activities:
                 if not activity.is_target_chore:
                     continue
 
@@ -747,7 +963,9 @@ class TimePlanLoadService:
             big_plan_stats=big_plan_stats,
             target_todo_tasks=target_todo_tasks,
             target_habits=target_habits,
+            target_habit_stacks=target_habit_stacks,
             target_chores=target_chores,
+            target_chore_stacks=target_chore_stacks,
             activity_doneness=activity_doneness,
             completed_nontarget_inbox_tasks=completed_nontarget_inbox_tasks,
             completed_nottarget_big_plans=completed_nontarget_big_plans,

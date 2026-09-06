@@ -26,9 +26,13 @@ export function workspacePathForEntityTag(
     case NamedEntityTag.SCHEDULE_EVENT_FULL_DAYS:
       return `/app/workspace/calendar/schedule/event-full-days/${refId}`;
     case NamedEntityTag.HABIT:
-      return `/app/workspace/apps/habits/${refId}`;
+      return `/app/workspace/apps/habits/habits/${refId}`;
+    case NamedEntityTag.HABIT_STACK:
+      return `/app/workspace/apps/habits/stacks/${refId}`;
     case NamedEntityTag.CHORE:
       return `/app/workspace/apps/chores/${refId}`;
+    case NamedEntityTag.CHORE_STACK:
+      return `/app/workspace/apps/chores/stacks/${refId}`;
     case NamedEntityTag.BIG_PLAN:
       return `/app/workspace/apps/big-plans/${refId}`;
     case NamedEntityTag.JOURNAL:

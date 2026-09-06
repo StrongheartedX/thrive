@@ -70,6 +70,24 @@ from jupiter_webapi_client.api.chores.chore_load import (
 from jupiter_webapi_client.api.chores.chore_remove import (
     asyncio_detailed as chore_remove,
 )
+from jupiter_webapi_client.api.chores.chore_stack_archive import (
+    asyncio_detailed as chore_stack_archive,
+)
+from jupiter_webapi_client.api.chores.chore_stack_create import (
+    asyncio_detailed as chore_stack_create,
+)
+from jupiter_webapi_client.api.chores.chore_stack_find import (
+    asyncio_detailed as chore_stack_find,
+)
+from jupiter_webapi_client.api.chores.chore_stack_load import (
+    asyncio_detailed as chore_stack_load,
+)
+from jupiter_webapi_client.api.chores.chore_stack_remove import (
+    asyncio_detailed as chore_stack_remove,
+)
+from jupiter_webapi_client.api.chores.chore_stack_update import (
+    asyncio_detailed as chore_stack_update,
+)
 from jupiter_webapi_client.api.chores.chore_suspend import (
     asyncio_detailed as chore_suspend,
 )
@@ -156,6 +174,24 @@ from jupiter_webapi_client.api.habits.habit_load import (
 )
 from jupiter_webapi_client.api.habits.habit_remove import (
     asyncio_detailed as habit_remove,
+)
+from jupiter_webapi_client.api.habits.habit_stack_archive import (
+    asyncio_detailed as habit_stack_archive,
+)
+from jupiter_webapi_client.api.habits.habit_stack_create import (
+    asyncio_detailed as habit_stack_create,
+)
+from jupiter_webapi_client.api.habits.habit_stack_find import (
+    asyncio_detailed as habit_stack_find,
+)
+from jupiter_webapi_client.api.habits.habit_stack_load import (
+    asyncio_detailed as habit_stack_load,
+)
+from jupiter_webapi_client.api.habits.habit_stack_remove import (
+    asyncio_detailed as habit_stack_remove,
+)
+from jupiter_webapi_client.api.habits.habit_stack_update import (
+    asyncio_detailed as habit_stack_update,
 )
 from jupiter_webapi_client.api.habits.habit_suspend import (
     asyncio_detailed as habit_suspend,
@@ -1144,6 +1180,22 @@ async def main() -> None:
         JupiterMcpTool.tool("remove-habit", "Remove a habit", habit_remove),
         JupiterMcpTool.tool("suspend-habit", "Suspend a habit", habit_suspend),
         JupiterMcpTool.tool("unsuspend-habit", "Unsuspend a habit", habit_unsuspend),
+        # --- Habit Stacks ---
+        JupiterMcpResource.resource("jupiter://habit-stacks", habit_stack_find),
+        JupiterMcpTool.tool("find-habit-stacks", "Find habit stacks", habit_stack_find),
+        JupiterMcpTool.tool(
+            "create-habit-stack", "Create a habit stack", habit_stack_create
+        ),
+        JupiterMcpTool.tool("load-habit-stack", "Load a habit stack", habit_stack_load),
+        JupiterMcpTool.tool(
+            "update-habit-stack", "Update a habit stack", habit_stack_update
+        ),
+        JupiterMcpTool.tool(
+            "archive-habit-stack", "Archive a habit stack", habit_stack_archive
+        ),
+        JupiterMcpTool.tool(
+            "remove-habit-stack", "Remove a habit stack", habit_stack_remove
+        ),
         # --- Chores ---
         JupiterMcpResource.resource("jupiter://chores", chore_find),
         JupiterMcpTool.tool("find-chores", "Find chores", chore_find),
@@ -1154,6 +1206,22 @@ async def main() -> None:
         JupiterMcpTool.tool("remove-chore", "Remove a chore", chore_remove),
         JupiterMcpTool.tool("suspend-chore", "Suspend a chore", chore_suspend),
         JupiterMcpTool.tool("unsuspend-chore", "Unsuspend a chore", chore_unsuspend),
+        # --- Chore Stacks ---
+        JupiterMcpResource.resource("jupiter://chore-stacks", chore_stack_find),
+        JupiterMcpTool.tool("find-chore-stacks", "Find chore stacks", chore_stack_find),
+        JupiterMcpTool.tool(
+            "create-chore-stack", "Create a chore stack", chore_stack_create
+        ),
+        JupiterMcpTool.tool("load-chore-stack", "Load a chore stack", chore_stack_load),
+        JupiterMcpTool.tool(
+            "update-chore-stack", "Update a chore stack", chore_stack_update
+        ),
+        JupiterMcpTool.tool(
+            "archive-chore-stack", "Archive a chore stack", chore_stack_archive
+        ),
+        JupiterMcpTool.tool(
+            "remove-chore-stack", "Remove a chore stack", chore_stack_remove
+        ),
         # --- Big Plans ---
         JupiterMcpResource.resource("jupiter://big-plans", big_plan_find),
         JupiterMcpTool.tool("find-big-plans", "Find big plans", big_plan_find),

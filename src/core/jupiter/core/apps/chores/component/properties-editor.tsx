@@ -4,6 +4,7 @@ import type {
   Chapter,
   ChapterSummary,
   Chore,
+  ChoreStack,
   Contact,
   Goal,
   GoalSummary,
@@ -13,7 +14,11 @@ import type {
   Tag,
   UserLight,
 } from "@jupiter/webapi-client";
-import { NamedEntityTag, WorkspaceFeature } from "@jupiter/webapi-client";
+import {
+  NamedEntityTag,
+  RecurringTaskPeriod,
+  WorkspaceFeature,
+} from "@jupiter/webapi-client";
 import {
   FormControl,
   FormControlLabel,
@@ -29,6 +34,7 @@ import { aDateToDate } from "#/core/common/adate";
 import { entityLinkStd } from "#/core/common/entity-link";
 import { IsKeySelect } from "#/core/common/component/is-key-select";
 import { RecurringTaskGenParamsBlock } from "#/core/common/component/recurring-task-gen-params-block";
+import { ChoreStackSelectSingle } from "#/core/apps/chores/component/stack-select-single";
 import { ContactsEditor } from "#/core/common/sub/contacts/component/contacts-editor";
 import { EntityLocationMapSection } from "#/core/common/sub/locations/component/entity-location-map-section";
 import { LocationsEditor } from "#/core/common/sub/locations/component/locations-editor";
@@ -71,6 +77,7 @@ interface ChorePropertiesEditorProps {
   inputsEnabled: boolean;
   entityOwner?: UserLight;
   chore: Chore;
+  allStacks?: ChoreStack[];
   actionData?: SomeErrorNoData;
 }
 
@@ -82,6 +89,12 @@ export function ChorePropertiesEditor(props: ChorePropertiesEditorProps) {
   const [selectedAspectRefId, setSelectedAspectRefId] = useState(
     props.chore.aspect_ref_id,
   );
+  const [selectedPeriod, setSelectedPeriod] = useState(
+    props.chore.gen_params.period,
+  );
+  const [selectedStackRefId, setSelectedStackRefId] = useState<
+    string | undefined
+  >(props.chore.stack_ref_id ?? undefined);
   const showGen = props.showGen ?? true;
 
   // Shared chores may reference life-plan entities from another workspace.
@@ -163,8 +176,13 @@ export function ChorePropertiesEditor(props: ChorePropertiesEditorProps) {
           value={props.chore.ref_id}
         />
 
-        <Stack direction="row" useFlexGap spacing={1}>
-          <FormControl fullWidth sx={{ flexGrow: 3 }}>
+        <Stack
+          direction="row"
+          useFlexGap
+          spacing={1}
+          sx={{ flexWrap: "nowrap" }}
+        >
+          <FormControl sx={{ flex: "1 1 0", minWidth: 0 }}>
             <InputLabel id="name">Name</InputLabel>
             <OutlinedInput
               label="Name"
@@ -176,7 +194,28 @@ export function ChorePropertiesEditor(props: ChorePropertiesEditorProps) {
             <FieldError actionResult={props.actionData} fieldName="/name" />
           </FormControl>
 
-          <FormControl sx={{ flexGrow: 1 }}>
+          <FormControl
+            sx={{ flex: "0 1 10rem", minWidth: 0, maxWidth: "10rem" }}
+          >
+            <ChoreStackSelectSingle
+              name={constructFieldName(props.namePrefix, "stack")}
+              label="Stack"
+              allowNone
+              allStacks={(props.allStacks ?? []).filter(
+                (stack) => stack.period === selectedPeriod,
+              )}
+              value={selectedStackRefId}
+              defaultValue={props.chore.stack_ref_id}
+              inputsEnabled={props.inputsEnabled}
+              onChange={(value) => setSelectedStackRefId(value)}
+            />
+            <FieldError
+              actionResult={props.actionData}
+              fieldName="/stack_ref_id"
+            />
+          </FormControl>
+
+          <FormControl sx={{ flex: "0 0 auto" }}>
             <IsKeySelect
               name={constructFieldName(props.namePrefix, "isKey")}
               defaultValue={props.chore.is_key}
@@ -280,7 +319,22 @@ export function ChorePropertiesEditor(props: ChorePropertiesEditorProps) {
           inputsEnabled={props.inputsEnabled}
           allowSkipRule
           namePrefix={props.namePrefix}
-          period={props.chore.gen_params.period}
+          period={selectedPeriod}
+          onChangePeriod={(newPeriod) => {
+            if (newPeriod === "none") {
+              setSelectedPeriod(RecurringTaskPeriod.DAILY);
+            } else {
+              setSelectedPeriod(newPeriod);
+            }
+            const nextPeriod =
+              newPeriod === "none" ? RecurringTaskPeriod.DAILY : newPeriod;
+            const selectedStack = (props.allStacks ?? []).find(
+              (stack) => stack.ref_id === selectedStackRefId,
+            );
+            if (selectedStack && selectedStack.period !== nextPeriod) {
+              setSelectedStackRefId(undefined);
+            }
+          }}
           eisen={props.chore.gen_params.eisen}
           difficulty={props.chore.gen_params.difficulty}
           actionableFromDay={props.chore.gen_params.actionable_from_day}

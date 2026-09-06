@@ -6,6 +6,7 @@ import type {
   InboxTask,
   LifePlan,
   MilestoneSummary,
+  ChoreStack,
   Tag,
 } from "@jupiter/webapi-client";
 import {
@@ -89,6 +90,7 @@ const UpdateFormSchema = z.discriminatedUnion("intent", [
     skipRule: z.string().optional(),
     startAtDate: z.string().optional(),
     endAtDate: z.string().optional(),
+    stack: z.string().optional(),
   }),
   z.object({
     intent: z.literal("gen"),
@@ -140,6 +142,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const allContacts = await apiClient.contacts.contactFind({
     allow_archived: false,
   });
+  const stacksResponse = await apiClient.chores.choreStackFind({
+    allow_archived: false,
+    include_tags: false,
+    include_notes: false,
+    include_life_plan: false,
+    include_chores: false,
+  });
 
   try {
     const result = await apiClient.chores.choreLoad({
@@ -188,6 +197,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         ).contacts ?? [],
       location: result.location ?? null,
       allContacts: allContacts.contacts as Array<Contact>,
+      allStacks: mergeCurrentStack(
+        stacksResponse.entries.map((entry) => entry.chore_stack),
+        result.stack ?? null,
+      ),
       timeEventBlocks: result.time_event_blocks,
       publishEntity: result.publish_entity ?? null,
       owner: result.owner,
@@ -241,6 +254,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
                       : undefined,
                 }
               : { should_change: false },
+          stack_ref_id: {
+            should_change: true,
+            value:
+              form.stack !== undefined && form.stack !== "" ? form.stack : null,
+          },
           period: {
             should_change: true,
             value: form.period,
@@ -485,6 +503,7 @@ export default function Chore() {
         inputsEnabled={inputsEnabled}
         entityOwner={loaderData.owner}
         chore={loaderData.chore}
+        allStacks={loaderData.allStacks}
         aspect={loaderData.aspect}
         chapter={loaderData.chapter}
         goal={loaderData.goal}
@@ -620,3 +639,16 @@ export const ErrorBoundary = makeLeafErrorBoundary(
       `There was an error loading chore #${params.id}! Please try again!`,
   },
 );
+
+function mergeCurrentStack(
+  stacks: ChoreStack[],
+  current: ChoreStack | null,
+): ChoreStack[] {
+  if (current === null) {
+    return stacks;
+  }
+  if (stacks.some((stack) => stack.ref_id === current.ref_id)) {
+    return stacks;
+  }
+  return [...stacks, current];
+}

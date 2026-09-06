@@ -3,6 +3,7 @@
 from jupiter.core.apps.chores.collection import ChoreCollection
 from jupiter.core.apps.chores.name import ChoreName
 from jupiter.core.apps.chores.root import Chore
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.core.apps.life_plan.root import LifePlan
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect, AspectRepository
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
@@ -85,6 +86,7 @@ class ChoreCreateArgs(JupiterCreateCrownEntityArgs):
     skip_rule: RecurringTaskSkipRule | None
     start_at_date: ADate | None
     end_at_date: ADate | None
+    stack_ref_id: EntityId | None
 
 
 @use_case_result
@@ -163,12 +165,21 @@ class ChoreCreateUseCase(
                     "Chores can only be added to daily or weekly time plans"
                 )
 
+        stack_ref_id = args.stack_ref_id
+        if stack_ref_id is not None:
+            stack = await self.load_entity(
+                uow, context.user.ref_id, ChoreStack, stack_ref_id
+            )
+            if stack.period != args.period:
+                raise InputValidationError("Chore period must match the stack period")
+
         new_chore = Chore.new_chore(
             ctx=context.domain_context,
             chore_collection_ref_id=chore_collection.ref_id,
             aspect_ref_id=the_aspect.ref_id,
             chapter_ref_id=args.chapter_ref_id,
             goal_ref_id=args.goal_ref_id,
+            stack_ref_id=stack_ref_id,
             name=args.name,
             is_key=args.is_key,
             gen_params=RecurringTaskGenParams(

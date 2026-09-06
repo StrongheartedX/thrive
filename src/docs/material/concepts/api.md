@@ -54,6 +54,9 @@ Vacations live under `/v1/vacations/vacations`. The same app also exposes
 travel wishes at `/v1/vacations/travel-wishes`. You can turn a wish into a
 dated vacation with `POST /v1/vacations/vacations/from-travel-wish`.
 
+Habits live under `/v1/habits`. Habit stacks — groups of habits done together —
+are at `/v1/habits/stacks`.
+
 To retrieve all vacations you have defined, you can invoke the following:
 
 ```bash

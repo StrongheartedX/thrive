@@ -2,7 +2,9 @@ import type {
   BigPlan,
   BigPlanStats,
   Chore,
+  ChoreStack,
   Habit,
+  HabitStack,
   InboxTask,
   TimeEventInDayBlock,
   TimePlan,
@@ -25,7 +27,9 @@ import { bigPlanDonePct } from "#/core/apps/big_plans/root";
 import { withTimePlanView } from "#/core/apps/time_plans/view-mode";
 import {
   isTimePlanActivityBigPlanTarget,
+  isTimePlanActivityChoreStackTarget,
   isTimePlanActivityChoreTarget,
+  isTimePlanActivityHabitStackTarget,
   isTimePlanActivityHabitTarget,
   isTimePlanActivityInboxTaskTarget,
   isTimePlanActivityTodoTaskTarget,
@@ -41,6 +45,8 @@ import { parentActivitiesByTargetRefId } from "#/core/apps/time_plans/sub/activi
 import {
   habitAndChoreChildActivitiesByParentTarget,
   habitOrChoreParentTargetForInboxTaskActivity,
+  stackParentTargetForChoreActivity,
+  stackParentTargetForHabitActivity,
 } from "#/core/apps/time_plans/sub/activity/habit-chore-group";
 import { timePlanActivityTargetNameForEvent } from "#/core/apps/time_plans/sub/activity/root";
 
@@ -52,6 +58,8 @@ interface TimePlanTimelineActivityBarsProps {
   bigPlanStatsByRefId?: Map<string, BigPlanStats>;
   todoTasksByRefId: Map<string, TodoTask>;
   habitsByRefId: Map<string, Habit>;
+  habitStacksByRefId?: Map<string, HabitStack>;
+  choreStacksByRefId?: Map<string, ChoreStack>;
   choresByRefId: Map<string, Chore>;
   activityDoneness: Record<string, TimePlanActivityDoneness>;
   timeEventsByRefId: Map<string, TimeEventInDayBlock[]>;
@@ -120,6 +128,15 @@ export function TimePlanTimelineActivityBars(
       )
       .map((activity) => activity.target),
   );
+  const visibleStackParentTargets = new Set(
+    filteredActivities
+      .filter(
+        (activity) =>
+          isTimePlanActivityHabitStackTarget(activity.target) ||
+          isTimePlanActivityChoreStackTarget(activity.target),
+      )
+      .map((activity) => activity.target),
+  );
 
   const rows = filteredActivities
     .filter((activity) => {
@@ -127,10 +144,22 @@ export function TimePlanTimelineActivityBars(
         activity,
         props.inboxTasksByRefId,
       );
-      if (parentTarget === undefined) {
-        return true;
+      if (
+        parentTarget !== undefined &&
+        visibleHabitChoreParentTargets.has(parentTarget)
+      ) {
+        return false;
       }
-      return !visibleHabitChoreParentTargets.has(parentTarget);
+      const stackParentTarget =
+        stackParentTargetForHabitActivity(activity, props.habitsByRefId) ??
+        stackParentTargetForChoreActivity(activity, props.choresByRefId);
+      if (
+        stackParentTarget !== undefined &&
+        visibleStackParentTargets.has(stackParentTarget)
+      ) {
+        return false;
+      }
+      return true;
     })
     .map((activity) => {
       const { label, start, end } = inferActivityInterval({
@@ -139,6 +168,8 @@ export function TimePlanTimelineActivityBars(
         bigPlansByRefId: props.bigPlansByRefId,
         todoTasksByRefId: props.todoTasksByRefId,
         habitsByRefId: props.habitsByRefId,
+        habitStacksByRefId: props.habitStacksByRefId,
+        choreStacksByRefId: props.choreStacksByRefId,
         choresByRefId: props.choresByRefId,
         planStart,
         planEnd,
@@ -390,6 +421,8 @@ function inferActivityInterval(input: {
   bigPlansByRefId: Map<string, BigPlan>;
   todoTasksByRefId: Map<string, TodoTask>;
   habitsByRefId: Map<string, Habit>;
+  habitStacksByRefId?: Map<string, HabitStack>;
+  choreStacksByRefId?: Map<string, ChoreStack>;
   choresByRefId: Map<string, Chore>;
   planStart: DateTime;
   planEnd: DateTime;
@@ -462,6 +495,37 @@ function inferActivityInterval(input: {
       ? DateTime.fromISO(String(ownedInboxTask.due_date))
       : start;
     return { label, start, end };
+  }
+  if (isTimePlanActivityHabitStackTarget(target)) {
+    const habitStack = input.habitStacksByRefId?.get(
+      entityLinkRefIdFromWire(target),
+    );
+    const label = timePlanActivityTargetNameForEvent(
+      undefined,
+      undefined,
+      input.activity.ref_id,
+      undefined,
+      undefined,
+      undefined,
+      habitStack,
+    );
+    return { label, start: fallback.start, end: input.planEnd };
+  }
+  if (isTimePlanActivityChoreStackTarget(target)) {
+    const choreStack = input.choreStacksByRefId?.get(
+      entityLinkRefIdFromWire(target),
+    );
+    const label = timePlanActivityTargetNameForEvent(
+      undefined,
+      undefined,
+      input.activity.ref_id,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      choreStack,
+    );
+    return { label, start: fallback.start, end: input.planEnd };
   }
   if (isTimePlanActivityChoreTarget(target)) {
     const chore = input.choresByRefId.get(entityLinkRefIdFromWire(target));

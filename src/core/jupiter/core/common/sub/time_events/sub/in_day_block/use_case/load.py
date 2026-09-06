@@ -2,7 +2,7 @@
 
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.chores.root import Chore
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.habits.sub.habit.root import Habit
 from jupiter.core.apps.schedule.sub.event_in_day.root import (
     ScheduleEventInDay,
 )

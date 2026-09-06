@@ -12,9 +12,11 @@ if TYPE_CHECKING:
     from ..models.access_status import AccessStatus
     from ..models.big_plan import BigPlan
     from ..models.chore import Chore
+    from ..models.chore_stack import ChoreStack
     from ..models.contact import Contact
     from ..models.email_task import EmailTask
     from ..models.habit import Habit
+    from ..models.habit_stack import HabitStack
     from ..models.inbox_task import InboxTask
     from ..models.journal import Journal
     from ..models.metric import Metric
@@ -40,7 +42,9 @@ class InboxTaskFindResultEntry:
         working_mem_collection (None | Unset | WorkingMemCollection):
         time_plan (None | TimePlan | Unset):
         habit (Habit | None | Unset):
+        habit_stack (HabitStack | None | Unset):
         chore (Chore | None | Unset):
+        chore_stack (ChoreStack | None | Unset):
         big_plan (BigPlan | None | Unset):
         journal (Journal | None | Unset):
         metric (Metric | None | Unset):
@@ -58,7 +62,9 @@ class InboxTaskFindResultEntry:
     working_mem_collection: None | Unset | WorkingMemCollection = UNSET
     time_plan: None | TimePlan | Unset = UNSET
     habit: Habit | None | Unset = UNSET
+    habit_stack: HabitStack | None | Unset = UNSET
     chore: Chore | None | Unset = UNSET
+    chore_stack: ChoreStack | None | Unset = UNSET
     big_plan: BigPlan | None | Unset = UNSET
     journal: Journal | None | Unset = UNSET
     metric: Metric | None | Unset = UNSET
@@ -75,9 +81,11 @@ class InboxTaskFindResultEntry:
         from ..models.access_status import AccessStatus  # noqa: PLC0415
         from ..models.big_plan import BigPlan  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
         from ..models.contact import Contact  # noqa: PLC0415
         from ..models.email_task import EmailTask  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
         from ..models.journal import Journal  # noqa: PLC0415
         from ..models.metric import Metric  # noqa: PLC0415
         from ..models.occasion import Occasion  # noqa: PLC0415
@@ -115,6 +123,14 @@ class InboxTaskFindResultEntry:
         else:
             habit = self.habit
 
+        habit_stack: dict[str, Any] | None | Unset
+        if isinstance(self.habit_stack, Unset):
+            habit_stack = UNSET
+        elif isinstance(self.habit_stack, HabitStack):
+            habit_stack = self.habit_stack.to_dict()
+        else:
+            habit_stack = self.habit_stack
+
         chore: dict[str, Any] | None | Unset
         if isinstance(self.chore, Unset):
             chore = UNSET
@@ -122,6 +138,14 @@ class InboxTaskFindResultEntry:
             chore = self.chore.to_dict()
         else:
             chore = self.chore
+
+        chore_stack: dict[str, Any] | None | Unset
+        if isinstance(self.chore_stack, Unset):
+            chore_stack = UNSET
+        elif isinstance(self.chore_stack, ChoreStack):
+            chore_stack = self.chore_stack.to_dict()
+        else:
+            chore_stack = self.chore_stack
 
         big_plan: dict[str, Any] | None | Unset
         if isinstance(self.big_plan, Unset):
@@ -217,8 +241,12 @@ class InboxTaskFindResultEntry:
             field_dict["time_plan"] = time_plan
         if habit is not UNSET:
             field_dict["habit"] = habit
+        if habit_stack is not UNSET:
+            field_dict["habit_stack"] = habit_stack
         if chore is not UNSET:
             field_dict["chore"] = chore
+        if chore_stack is not UNSET:
+            field_dict["chore_stack"] = chore_stack
         if big_plan is not UNSET:
             field_dict["big_plan"] = big_plan
         if journal is not UNSET:
@@ -247,9 +275,11 @@ class InboxTaskFindResultEntry:
         from ..models.access_status import AccessStatus  # noqa: PLC0415
         from ..models.big_plan import BigPlan  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
         from ..models.contact import Contact  # noqa: PLC0415
         from ..models.email_task import EmailTask  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.journal import Journal  # noqa: PLC0415
         from ..models.metric import Metric  # noqa: PLC0415
@@ -317,6 +347,23 @@ class InboxTaskFindResultEntry:
 
         habit = _parse_habit(d.pop("habit", UNSET))
 
+        def _parse_habit_stack(data: object) -> HabitStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                habit_stack_type_0 = HabitStack.from_dict(data)
+
+                return habit_stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(HabitStack | None | Unset, data)
+
+        habit_stack = _parse_habit_stack(d.pop("habit_stack", UNSET))
+
         def _parse_chore(data: object) -> Chore | None | Unset:
             if data is None:
                 return data
@@ -333,6 +380,23 @@ class InboxTaskFindResultEntry:
             return cast(Chore | None | Unset, data)
 
         chore = _parse_chore(d.pop("chore", UNSET))
+
+        def _parse_chore_stack(data: object) -> ChoreStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                chore_stack_type_0 = ChoreStack.from_dict(data)
+
+                return chore_stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ChoreStack | None | Unset, data)
+
+        chore_stack = _parse_chore_stack(d.pop("chore_stack", UNSET))
 
         def _parse_big_plan(data: object) -> BigPlan | None | Unset:
             if data is None:
@@ -510,7 +574,9 @@ class InboxTaskFindResultEntry:
             working_mem_collection=working_mem_collection,
             time_plan=time_plan,
             habit=habit,
+            habit_stack=habit_stack,
             chore=chore,
+            chore_stack=chore_stack,
             big_plan=big_plan,
             journal=journal,
             metric=metric,

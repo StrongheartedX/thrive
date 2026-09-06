@@ -36,6 +36,7 @@ class Chore(LeafEntity):
     aspect_ref_id: EntityId
     chapter_ref_id: EntityId | None
     goal_ref_id: EntityId | None
+    stack_ref_id: EntityId | None
     name: ChoreName
     is_key: bool
     gen_params: RecurringTaskGenParams
@@ -69,6 +70,7 @@ class Chore(LeafEntity):
         aspect_ref_id: EntityId,
         chapter_ref_id: EntityId | None,
         goal_ref_id: EntityId | None,
+        stack_ref_id: EntityId | None,
         name: ChoreName,
         is_key: bool,
         gen_params: RecurringTaskGenParams,
@@ -97,6 +99,7 @@ class Chore(LeafEntity):
             aspect_ref_id=aspect_ref_id,
             chapter_ref_id=chapter_ref_id,
             goal_ref_id=goal_ref_id,
+            stack_ref_id=stack_ref_id,
             name=name,
             is_key=is_key,
             gen_params=gen_params,
@@ -114,6 +117,7 @@ class Chore(LeafEntity):
         aspect_ref_id: UpdateAction[EntityId],
         chapter_ref_id: UpdateAction[EntityId | None],
         goal_ref_id: UpdateAction[EntityId | None],
+        stack_ref_id: UpdateAction[EntityId | None],
         is_key: UpdateAction[bool],
         gen_params: UpdateAction[RecurringTaskGenParams],
         must_do: UpdateAction[bool],
@@ -143,11 +147,24 @@ class Chore(LeafEntity):
             aspect_ref_id=aspect_ref_id.or_else(self.aspect_ref_id),
             chapter_ref_id=chapter_ref_id.or_else(self.chapter_ref_id),
             goal_ref_id=goal_ref_id.or_else(self.goal_ref_id),
+            stack_ref_id=stack_ref_id.or_else(self.stack_ref_id),
             is_key=is_key.or_else(self.is_key),
             gen_params=the_gen_params,
             must_do=must_do.or_else(self.must_do),
             start_at_date=the_start_at_date,
             end_at_date=the_end_at_date,
+        )
+
+    @update_entity_action
+    def change_stack(
+        self, ctx: DomainContext, stack_ref_id: EntityId | None
+    ) -> "Chore":
+        """Assign or clear the chore stack."""
+        if self.stack_ref_id == stack_ref_id:
+            return self
+        return self._new_version(
+            ctx,
+            stack_ref_id=stack_ref_id,
         )
 
     @update_entity_action

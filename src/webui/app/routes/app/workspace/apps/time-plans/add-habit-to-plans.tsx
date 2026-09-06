@@ -103,7 +103,9 @@ export async function action({ request }: ActionFunctionArgs) {
           feasability: form.feasability,
         });
 
-        return redirect(`/app/workspace/apps/habits/${query.habitRefId}`);
+        return redirect(
+          `/app/workspace/apps/habits/habits/${query.habitRefId}`,
+        );
       }
 
       default:
@@ -146,7 +148,7 @@ export default function AddHabitToPlans() {
     <LeafPanel
       key="add-habit-to-plans"
       fakeKey={`add-habit-to-plans/${searchParams.get("habitRefId")}`}
-      returnLocation={`/app/workspace/apps/habits/${searchParams.get("habitRefId")}`}
+      returnLocation={`/app/workspace/apps/habits/habits/${searchParams.get("habitRefId")}`}
       returnLocationDiscriminator="add-habit-to-plans"
       inputsEnabled={inputsEnabled}
       initialExpansionState={LeafPanelExpansionState.MEDIUM}
@@ -248,7 +250,7 @@ export default function AddHabitToPlans() {
 
 export const ErrorBoundary = makeLeafErrorBoundary(
   (params, searchParams) =>
-    `/app/workspace/apps/habits/${searchParams.get("habitRefId")}`,
+    `/app/workspace/apps/habits/habits/${searchParams.get("habitRefId")}`,
   ParamsSchema,
   {
     error: () =>

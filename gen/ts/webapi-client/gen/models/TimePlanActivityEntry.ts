@@ -4,7 +4,9 @@
 /* eslint-disable */
 import type { BigPlan } from './BigPlan';
 import type { Chore } from './Chore';
+import type { ChoreStack } from './ChoreStack';
 import type { Habit } from './Habit';
+import type { HabitStack } from './HabitStack';
 import type { InboxTask } from './InboxTask';
 import type { TimeEventInDayBlock } from './TimeEventInDayBlock';
 import type { TimePlanActivity } from './TimePlanActivity';
@@ -18,7 +20,9 @@ export type TimePlanActivityEntry = {
     target_big_plan?: (BigPlan | null);
     target_todo_task?: (TodoTask | null);
     target_habit?: (Habit | null);
+    target_habit_stack?: (HabitStack | null);
     target_chore?: (Chore | null);
+    target_chore_stack?: (ChoreStack | null);
     time_events: Array<TimeEventInDayBlock>;
 };
 

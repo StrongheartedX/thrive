@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from ..models.chore_update_args_name import ChoreUpdateArgsName
     from ..models.chore_update_args_period import ChoreUpdateArgsPeriod
     from ..models.chore_update_args_skip_rule import ChoreUpdateArgsSkipRule
+    from ..models.chore_update_args_stack_ref_id import ChoreUpdateArgsStackRefId
     from ..models.chore_update_args_start_at_date import ChoreUpdateArgsStartAtDate
 
 
@@ -38,6 +39,7 @@ class ChoreUpdateArgs:
         aspect_ref_id (ChoreUpdateArgsAspectRefId):
         chapter_ref_id (ChoreUpdateArgsChapterRefId):
         goal_ref_id (ChoreUpdateArgsGoalRefId):
+        stack_ref_id (ChoreUpdateArgsStackRefId):
         is_key (ChoreUpdateArgsIsKey):
         period (ChoreUpdateArgsPeriod):
         eisen (ChoreUpdateArgsEisen):
@@ -57,6 +59,7 @@ class ChoreUpdateArgs:
     aspect_ref_id: ChoreUpdateArgsAspectRefId
     chapter_ref_id: ChoreUpdateArgsChapterRefId
     goal_ref_id: ChoreUpdateArgsGoalRefId
+    stack_ref_id: ChoreUpdateArgsStackRefId
     is_key: ChoreUpdateArgsIsKey
     period: ChoreUpdateArgsPeriod
     eisen: ChoreUpdateArgsEisen
@@ -81,6 +84,8 @@ class ChoreUpdateArgs:
         chapter_ref_id = self.chapter_ref_id.to_dict()
 
         goal_ref_id = self.goal_ref_id.to_dict()
+
+        stack_ref_id = self.stack_ref_id.to_dict()
 
         is_key = self.is_key.to_dict()
 
@@ -115,6 +120,7 @@ class ChoreUpdateArgs:
                 "aspect_ref_id": aspect_ref_id,
                 "chapter_ref_id": chapter_ref_id,
                 "goal_ref_id": goal_ref_id,
+                "stack_ref_id": stack_ref_id,
                 "is_key": is_key,
                 "period": period,
                 "eisen": eisen,
@@ -149,6 +155,7 @@ class ChoreUpdateArgs:
         from ..models.chore_update_args_name import ChoreUpdateArgsName  # noqa: PLC0415
         from ..models.chore_update_args_period import ChoreUpdateArgsPeriod  # noqa: PLC0415
         from ..models.chore_update_args_skip_rule import ChoreUpdateArgsSkipRule  # noqa: PLC0415
+        from ..models.chore_update_args_stack_ref_id import ChoreUpdateArgsStackRefId  # noqa: PLC0415
         from ..models.chore_update_args_start_at_date import ChoreUpdateArgsStartAtDate  # noqa: PLC0415
 
         d = dict(src_dict)
@@ -161,6 +168,8 @@ class ChoreUpdateArgs:
         chapter_ref_id = ChoreUpdateArgsChapterRefId.from_dict(d.pop("chapter_ref_id"))
 
         goal_ref_id = ChoreUpdateArgsGoalRefId.from_dict(d.pop("goal_ref_id"))
+
+        stack_ref_id = ChoreUpdateArgsStackRefId.from_dict(d.pop("stack_ref_id"))
 
         is_key = ChoreUpdateArgsIsKey.from_dict(d.pop("is_key"))
 
@@ -192,6 +201,7 @@ class ChoreUpdateArgs:
             aspect_ref_id=aspect_ref_id,
             chapter_ref_id=chapter_ref_id,
             goal_ref_id=goal_ref_id,
+            stack_ref_id=stack_ref_id,
             is_key=is_key,
             period=period,
             eisen=eisen,

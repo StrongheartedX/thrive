@@ -36,5 +36,6 @@ export type ChoreCreateArgs = {
     skip_rule?: (RecurringTaskSkipRule | null);
     start_at_date?: (ADate | null);
     end_at_date?: (ADate | null);
+    stack_ref_id?: (EntityId | null);
 };
 

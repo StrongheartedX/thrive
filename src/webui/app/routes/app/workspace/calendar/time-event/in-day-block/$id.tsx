@@ -3,6 +3,7 @@ import type {
   ChapterSummary,
   GoalSummary,
   InboxTask,
+  InboxTaskFindResultEntry,
   LifePlan,
   MilestoneSummary,
   AspectSummary,
@@ -58,8 +59,10 @@ import {
 } from "@jupiter/core/common/select-form";
 import { InboxTaskPropertiesEditor } from "@jupiter/core/common/sub/inbox_tasks/component/properties-editor";
 import {
+  inboxTaskFindEntryToParent,
   isInboxTaskCoreFieldEditable,
   sortInboxTasksNaturally,
+  type InboxTaskParent,
 } from "#/core/common/sub/inbox_tasks/root";
 import { InboxTaskStack } from "@jupiter/core/common/sub/inbox_tasks/component/stack";
 import { TodoTaskPropertiesEditor } from "@jupiter/core/apps/todo/components/properties-editor";
@@ -331,6 +334,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     const chore = response.chore ?? activityResult?.target_chore ?? null;
 
     let habitInboxTasks: InboxTask[] = [];
+    let habitInboxTaskEntries: InboxTaskFindResultEntry[] = [];
     if (habit) {
       const habitInboxTaskResult = await apiClient.inboxTasks.inboxTaskFind({
         allow_archived: false,
@@ -338,6 +342,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         filter_namespace: [HABIT],
         filter_source_entity_ref_ids: [habit.ref_id],
       });
+      habitInboxTaskEntries = habitInboxTaskResult.entries;
       habitInboxTasks = habitInboxTaskResult.entries.map((e) => e.inbox_task);
     }
 
@@ -401,7 +406,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         null,
       todoTaskInfo: todoTaskResult,
       habit: habit,
+      habitStack: activityResult?.target_habit_stack ?? null,
       habitInboxTasks: habitInboxTasks,
+      habitInboxTaskEntries: habitInboxTaskEntries,
       chore: chore,
       choreInboxTasks: choreInboxTasks,
       timePlanActivity: timePlanActivity,
@@ -909,6 +916,11 @@ export default function TimeEventInDayBlockViewOne() {
   const sortedHabitInboxTasks = sortInboxTasksNaturally(
     loaderData.habitInboxTasks,
   );
+  const habitMoreInfoByRefId: { [key: string]: InboxTaskParent } = {};
+  for (const entry of loaderData.habitInboxTaskEntries) {
+    habitMoreInfoByRefId[entry.inbox_task.ref_id] =
+      inboxTaskFindEntryToParent(entry);
+  }
   const sortedBigPlanInboxTasks = sortInboxTasksNaturally(
     loaderData.bigPlanInboxTasks,
   );
@@ -946,6 +958,7 @@ export default function TimeEventInDayBlockViewOne() {
         loaderData.todoTask,
         loaderData.habit,
         loaderData.chore,
+        loaderData.habitStack,
       );
       break;
 
@@ -1246,6 +1259,7 @@ export default function TimeEventInDayBlockViewOne() {
               showHandleMarkNotDone: true,
             }}
             inboxTasks={sortedHabitInboxTasks}
+            moreInfoByRefId={habitMoreInfoByRefId}
             onCardMarkDone={handleCardMarkDone}
             onCardMarkNotDone={handleCardMarkNotDone}
           />

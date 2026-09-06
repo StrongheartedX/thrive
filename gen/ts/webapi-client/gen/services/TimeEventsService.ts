@@ -9,8 +9,12 @@ import type { TimeEventInDayBlockCreateForBigPlanArgs } from '../models/TimeEven
 import type { TimeEventInDayBlockCreateForBigPlanResult } from '../models/TimeEventInDayBlockCreateForBigPlanResult';
 import type { TimeEventInDayBlockCreateForChoreArgs } from '../models/TimeEventInDayBlockCreateForChoreArgs';
 import type { TimeEventInDayBlockCreateForChoreResult } from '../models/TimeEventInDayBlockCreateForChoreResult';
+import type { TimeEventInDayBlockCreateForChoreStackArgs } from '../models/TimeEventInDayBlockCreateForChoreStackArgs';
+import type { TimeEventInDayBlockCreateForChoreStackResult } from '../models/TimeEventInDayBlockCreateForChoreStackResult';
 import type { TimeEventInDayBlockCreateForHabitArgs } from '../models/TimeEventInDayBlockCreateForHabitArgs';
 import type { TimeEventInDayBlockCreateForHabitResult } from '../models/TimeEventInDayBlockCreateForHabitResult';
+import type { TimeEventInDayBlockCreateForHabitStackArgs } from '../models/TimeEventInDayBlockCreateForHabitStackArgs';
+import type { TimeEventInDayBlockCreateForHabitStackResult } from '../models/TimeEventInDayBlockCreateForHabitStackResult';
 import type { TimeEventInDayBlockCreateForTimePlanActivityArgs } from '../models/TimeEventInDayBlockCreateForTimePlanActivityArgs';
 import type { TimeEventInDayBlockCreateForTimePlanActivityResult } from '../models/TimeEventInDayBlockCreateForTimePlanActivityResult';
 import type { TimeEventInDayBlockCreateForTodoTaskArgs } from '../models/TimeEventInDayBlockCreateForTodoTaskArgs';
@@ -136,6 +140,34 @@ export class TimeEventsService {
         });
     }
     /**
+     * Use case for creating time events for every chore in a stack.
+     * @param requestBody The input data
+     * @returns TimeEventInDayBlockCreateForChoreStackResult Successful response
+     * @throws ApiError
+     */
+    public timeEventInDayBlockCreateForChoreStack(
+        requestBody?: TimeEventInDayBlockCreateForChoreStackArgs,
+    ): CancelablePromise<TimeEventInDayBlockCreateForChoreStackResult> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/time-event-in-day-block-create-for-chore-stack',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Error response for EntityAlreadyExistsError`,
+                401: `Error response for ExpiredAuthTokenError, UserNotAllowedAccessToEntityError`,
+                404: `Error response for EntityNotFoundError`,
+                406: `Error response for UnavailableGloballyError, UnavailableForComponentError, UnavailableForContextError`,
+                409: `Error response for UserAlreadyExistsButIsArchivedError, TimePlanExistsForDatePeriodCombinationError, BigPlanMilestoneAlreadyExistsForDateError, JournalExistsForDatePeriodCombinationError, ContactAlreadyExistsError, TagAlreadyExistsError, EntityIsAlreadyActiveError, EntityIsAlreadyDraftError`,
+                410: `Error response for UserNotFoundError, WorkspaceNotFoundError`,
+                422: `Error response for JSONDecodeError, InputValidationError, MultiInputValidationError, RealmDecodingError, UserAlreadyExistsError, WorkspaceAlreadyExistsError, InvalidLoginCredentialsError, InvalidLoginMethodError, InvalidAPIKeyError, AspectInSignificantUseError, UserEmailAlreadyVerifiedError, ContactInSignificantUseError, InvalidEmailAttemptVerificationStateError, EmailAttemptVerificationExpiredError, NoActiveEmailVerificationAttemptError`,
+                426: `Error response for InvalidAuthTokenError`,
+                429: `Error response for TooManyEmailVerificationAttemptsError`,
+                502: `Error response for EmailSendError`,
+            },
+        });
+    }
+    /**
      * Use case for creating a time event associated with a habit.
      * @param requestBody The input data
      * @returns TimeEventInDayBlockCreateForHabitResult Successful response
@@ -147,6 +179,34 @@ export class TimeEventsService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/time-event-in-day-block-create-for-habit',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Error response for EntityAlreadyExistsError`,
+                401: `Error response for ExpiredAuthTokenError, UserNotAllowedAccessToEntityError`,
+                404: `Error response for EntityNotFoundError`,
+                406: `Error response for UnavailableGloballyError, UnavailableForComponentError, UnavailableForContextError`,
+                409: `Error response for UserAlreadyExistsButIsArchivedError, TimePlanExistsForDatePeriodCombinationError, BigPlanMilestoneAlreadyExistsForDateError, JournalExistsForDatePeriodCombinationError, ContactAlreadyExistsError, TagAlreadyExistsError, EntityIsAlreadyActiveError, EntityIsAlreadyDraftError`,
+                410: `Error response for UserNotFoundError, WorkspaceNotFoundError`,
+                422: `Error response for JSONDecodeError, InputValidationError, MultiInputValidationError, RealmDecodingError, UserAlreadyExistsError, WorkspaceAlreadyExistsError, InvalidLoginCredentialsError, InvalidLoginMethodError, InvalidAPIKeyError, AspectInSignificantUseError, UserEmailAlreadyVerifiedError, ContactInSignificantUseError, InvalidEmailAttemptVerificationStateError, EmailAttemptVerificationExpiredError, NoActiveEmailVerificationAttemptError`,
+                426: `Error response for InvalidAuthTokenError`,
+                429: `Error response for TooManyEmailVerificationAttemptsError`,
+                502: `Error response for EmailSendError`,
+            },
+        });
+    }
+    /**
+     * Use case for creating time events for every habit in a stack.
+     * @param requestBody The input data
+     * @returns TimeEventInDayBlockCreateForHabitStackResult Successful response
+     * @throws ApiError
+     */
+    public timeEventInDayBlockCreateForHabitStack(
+        requestBody?: TimeEventInDayBlockCreateForHabitStackArgs,
+    ): CancelablePromise<TimeEventInDayBlockCreateForHabitStackResult> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/time-event-in-day-block-create-for-habit-stack',
             body: requestBody,
             mediaType: 'application/json',
             errors: {

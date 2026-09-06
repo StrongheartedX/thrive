@@ -2,7 +2,9 @@
 
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.chores.root import Chore
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.journals.root import Journal
 from jupiter.core.apps.metrics.root import Metric
 from jupiter.core.apps.prm.sub.person.root import Person
@@ -92,7 +94,9 @@ class InboxTaskFindResultEntry(UseCaseResultBase):
     working_mem_collection: WorkingMemCollection | None
     time_plan: TimePlan | None
     habit: Habit | None
+    habit_stack: HabitStack | None
     chore: Chore | None
+    chore_stack: ChoreStack | None
     big_plan: BigPlan | None
     journal: Journal | None
     metric: Metric | None
@@ -271,6 +275,20 @@ class InboxTaskFindUseCase(
         )
         habits_by_ref_id = {rt.ref_id: rt for rt in habits}
 
+        stack_ref_ids = list(
+            {h.stack_ref_id for h in habits if h.stack_ref_id is not None}
+        )
+        stacks = (
+            await uow.get_for(HabitStack).find_all_generic(
+                parent_ref_id=None,
+                allow_archived=True,
+                ref_id=stack_ref_ids,
+            )
+            if stack_ref_ids
+            else []
+        )
+        stacks_by_ref_id = {stack.ref_id: stack for stack in stacks}
+
         chores = await uow.get_for(Chore).find_all_generic(
             parent_ref_id=None,
             allow_archived=True,
@@ -281,6 +299,20 @@ class InboxTaskFindUseCase(
             ],
         )
         chores_by_ref_id = {rt.ref_id: rt for rt in chores}
+
+        chore_stack_ref_ids = list(
+            {c.stack_ref_id for c in chores if c.stack_ref_id is not None}
+        )
+        chore_stacks = (
+            await uow.get_for(ChoreStack).find_all_generic(
+                parent_ref_id=None,
+                allow_archived=True,
+                ref_id=chore_stack_ref_ids,
+            )
+            if chore_stack_ref_ids
+            else []
+        )
+        chore_stacks_by_ref_id = {stack.ref_id: stack for stack in chore_stacks}
 
         big_plans = await uow.get_for(BigPlan).find_all_generic(
             parent_ref_id=None,
@@ -437,9 +469,31 @@ class InboxTaskFindUseCase(
                         if it.owner.the_type == NamedEntityTag.HABIT.value
                         else None
                     ),
+                    habit_stack=(
+                        stacks_by_ref_id.get(habit_stack_ref_id)
+                        if it.owner.the_type == NamedEntityTag.HABIT.value
+                        and (
+                            habit_stack_ref_id := habits_by_ref_id[
+                                it.owner.ref_id
+                            ].stack_ref_id
+                        )
+                        is not None
+                        else None
+                    ),
                     chore=(
                         chores_by_ref_id[it.owner.ref_id]
                         if it.owner.the_type == NamedEntityTag.CHORE.value
+                        else None
+                    ),
+                    chore_stack=(
+                        chore_stacks_by_ref_id.get(chore_stack_ref_id)
+                        if it.owner.the_type == NamedEntityTag.CHORE.value
+                        and (
+                            chore_stack_ref_id := chores_by_ref_id[
+                                it.owner.ref_id
+                            ].stack_ref_id
+                        )
+                        is not None
                         else None
                     ),
                     big_plan=(

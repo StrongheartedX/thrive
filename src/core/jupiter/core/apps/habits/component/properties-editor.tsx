@@ -8,6 +8,7 @@ import type {
   GoalSummary,
   Habit,
   HabitRepeatsStrategy,
+  HabitStack,
   LifePlan,
   Location,
   MilestoneSummary,
@@ -32,6 +33,7 @@ import { EntityLocationMapSection } from "#/core/common/sub/locations/component/
 import { LocationsEditor } from "#/core/common/sub/locations/component/locations-editor";
 import { TagsEditor } from "#/core/common/sub/tags/component/tags-editor";
 import { HabitRepeatStrategySelect } from "#/core/apps/habits/component/repeat-strategy-select";
+import { HabitStackSelectSingle } from "#/core/apps/habits/component/stack-select-single";
 import type { SomeErrorNoData } from "#/core/infra/action-result";
 import { FieldError } from "#/core/infra/component/errors";
 import {
@@ -70,6 +72,7 @@ interface HabitPropertiesEditorProps {
   inputsEnabled: boolean;
   entityOwner?: UserLight;
   habit: Habit;
+  allStacks?: HabitStack[];
   actionData?: SomeErrorNoData;
 }
 
@@ -84,6 +87,9 @@ export function HabitPropertiesEditor(props: HabitPropertiesEditorProps) {
   const [selectedPeriod, setSelectedPeriod] = useState(
     props.habit.gen_params.period,
   );
+  const [selectedStackRefId, setSelectedStackRefId] = useState<
+    string | undefined
+  >(props.habit.stack_ref_id ?? undefined);
   const [selectedRepeatsStrategy, setSelectedRepeatsStrategy] = useState<
     HabitRepeatsStrategy | "none"
   >(props.habit.repeats_strategy ?? "none");
@@ -153,7 +159,7 @@ export function HabitPropertiesEditor(props: HabitPropertiesEditorProps) {
                 ? [
                     NavSingle({
                       text: "Habit",
-                      link: `/app/workspace/apps/habits/${props.habit.ref_id}`,
+                      link: `/app/workspace/apps/habits/habits/${props.habit.ref_id}`,
                       icon: <LaunchIcon />,
                     }),
                   ]
@@ -168,8 +174,13 @@ export function HabitPropertiesEditor(props: HabitPropertiesEditorProps) {
           value={props.habit.ref_id}
         />
 
-        <Stack direction="row" useFlexGap spacing={1}>
-          <FormControl fullWidth sx={{ flexGrow: 3 }}>
+        <Stack
+          direction="row"
+          useFlexGap
+          spacing={1}
+          sx={{ flexWrap: "nowrap" }}
+        >
+          <FormControl sx={{ flex: "1 1 0", minWidth: 0 }}>
             <InputLabel id="name">Name</InputLabel>
             <OutlinedInput
               label="Name"
@@ -181,7 +192,28 @@ export function HabitPropertiesEditor(props: HabitPropertiesEditorProps) {
             <FieldError actionResult={props.actionData} fieldName="/name" />
           </FormControl>
 
-          <FormControl sx={{ flexGrow: 1 }}>
+          <FormControl
+            sx={{ flex: "0 1 10rem", minWidth: 0, maxWidth: "10rem" }}
+          >
+            <HabitStackSelectSingle
+              name={constructFieldName(props.namePrefix, "stack")}
+              label="Stack"
+              allowNone
+              allStacks={(props.allStacks ?? []).filter(
+                (stack) => stack.period === selectedPeriod,
+              )}
+              value={selectedStackRefId}
+              defaultValue={props.habit.stack_ref_id}
+              inputsEnabled={props.inputsEnabled}
+              onChange={(value) => setSelectedStackRefId(value)}
+            />
+            <FieldError
+              actionResult={props.actionData}
+              fieldName="/stack_ref_id"
+            />
+          </FormControl>
+
+          <FormControl sx={{ flex: "0 0 auto" }}>
             <IsKeySelect
               name={constructFieldName(props.namePrefix, "isKey")}
               defaultValue={props.habit.is_key}
@@ -291,6 +323,14 @@ export function HabitPropertiesEditor(props: HabitPropertiesEditorProps) {
               setSelectedPeriod(RecurringTaskPeriod.DAILY);
             } else {
               setSelectedPeriod(newPeriod);
+            }
+            const nextPeriod =
+              newPeriod === "none" ? RecurringTaskPeriod.DAILY : newPeriod;
+            const selectedStack = (props.allStacks ?? []).find(
+              (stack) => stack.ref_id === selectedStackRefId,
+            );
+            if (selectedStack && selectedStack.period !== nextPeriod) {
+              setSelectedStackRefId(undefined);
             }
           }}
           eisen={props.habit.gen_params.eisen}

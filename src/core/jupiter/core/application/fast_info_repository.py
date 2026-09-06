@@ -6,7 +6,7 @@ from collections.abc import Collection
 from jupiter.core.apps.big_plans.name import BigPlanName
 from jupiter.core.apps.chores.name import ChoreName
 from jupiter.core.apps.docs.sub.dir.name import DirName
-from jupiter.core.apps.habits.name import HabitName
+from jupiter.core.apps.habits.sub.habit.name import HabitName
 from jupiter.core.apps.life_plan.partial_date import PartialDate
 from jupiter.core.apps.life_plan.sub.aspects.name import AspectName
 from jupiter.core.apps.life_plan.sub.chapters.name import ChapterName

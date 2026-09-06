@@ -69,7 +69,7 @@ export function InboxTaskNamespaceLink(props: InboxTaskNamespaceLinkProps) {
           variant="outlined"
           size="small"
           component={Link}
-          to={`/app/workspace/apps/habits/${props.inboxTaskResult.habit?.ref_id}`}
+          to={`/app/workspace/apps/habits/habits/${props.inboxTaskResult.habit?.ref_id}`}
           sx={{ flexGrow: 1 }}
         >
           {isBigScreen ? "Habit" : "H"}

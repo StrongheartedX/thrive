@@ -8,7 +8,9 @@ import type {
   BigPlan,
   BigPlanStats,
   Habit,
+  HabitStack,
   Chore,
+  ChoreStack,
   TodoTask,
   TimeEventInDayBlock,
 } from "@jupiter/webapi-client";
@@ -26,6 +28,8 @@ interface TimePlanListMergedActivitiesProps {
   bigPlanStatsByRefId?: Map<string, BigPlanStats>;
   targetTodoTasksByRefId: Map<string, TodoTask>;
   targetHabitsByRefId: Map<string, Habit>;
+  targetHabitStacksByRefId?: Map<string, HabitStack>;
+  targetChoreStacksByRefId?: Map<string, ChoreStack>;
   targetChoresByRefId: Map<string, Chore>;
   activityDoneness: Record<string, TimePlanActivityDoneness>;
   timeEventsByRefId: Map<string, TimeEventInDayBlock[]>;
@@ -55,6 +59,8 @@ export function TimePlanListMergedActivities(
             bigPlanStatsByRefId={props.bigPlanStatsByRefId}
             todoTasksByRefId={props.targetTodoTasksByRefId}
             habitsByRefId={props.targetHabitsByRefId}
+            habitStacksByRefId={props.targetHabitStacksByRefId}
+            choreStacksByRefId={props.targetChoreStacksByRefId}
             choresByRefId={props.targetChoresByRefId}
             activityDoneness={props.activityDoneness}
             fullInfo
@@ -81,6 +87,8 @@ export function TimePlanListMergedActivities(
             bigPlanStatsByRefId={props.bigPlanStatsByRefId}
             todoTasksByRefId={props.targetTodoTasksByRefId}
             habitsByRefId={props.targetHabitsByRefId}
+            habitStacksByRefId={props.targetHabitStacksByRefId}
+            choreStacksByRefId={props.targetChoreStacksByRefId}
             choresByRefId={props.targetChoresByRefId}
             activityDoneness={props.activityDoneness}
             fullInfo
@@ -107,6 +115,8 @@ export function TimePlanListMergedActivities(
             bigPlanStatsByRefId={props.bigPlanStatsByRefId}
             todoTasksByRefId={props.targetTodoTasksByRefId}
             habitsByRefId={props.targetHabitsByRefId}
+            habitStacksByRefId={props.targetHabitStacksByRefId}
+            choreStacksByRefId={props.targetChoreStacksByRefId}
             choresByRefId={props.targetChoresByRefId}
             activityDoneness={props.activityDoneness}
             fullInfo

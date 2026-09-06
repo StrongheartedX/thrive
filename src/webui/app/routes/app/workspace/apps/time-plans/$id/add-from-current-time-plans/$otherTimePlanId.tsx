@@ -1,7 +1,9 @@
 import type {
   BigPlan,
   Habit,
+  HabitStack,
   Chore,
+  ChoreStack,
   InboxTask,
   TimePlan,
   TimePlanActivityDoneness,
@@ -151,6 +153,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       otherTargetBigPlans: otherResult.target_big_plans,
       otherTargetTodoTasks: otherResult.target_todo_tasks,
       otherTargetHabits: otherResult.target_habits,
+      otherTargetHabitStacks: otherResult.target_habit_stacks,
+      otherTargetChoreStacks: otherResult.target_chore_stacks,
       otherTargetChores: otherResult.target_chores,
       otherActivityDoneness: otherResult.activity_doneness as Record<
         string,
@@ -273,6 +277,16 @@ export default function TimePlanAddFromCurrentTimePlans() {
       ? loaderData.otherTargetHabits.map((h) => [h.ref_id, h])
       : [],
   );
+  const otherTargetHabitStacksByRefId = new Map<string, HabitStack>(
+    loaderData.otherTargetHabitStacks
+      ? loaderData.otherTargetHabitStacks.map((stack) => [stack.ref_id, stack])
+      : [],
+  );
+  const otherTargetChoreStacksByRefId = new Map<string, ChoreStack>(
+    loaderData.otherTargetChoreStacks
+      ? loaderData.otherTargetChoreStacks.map((stack) => [stack.ref_id, stack])
+      : [],
+  );
   const otherTargetChoresByRefId = new Map<string, Chore>(
     loaderData.otherTargetChores
       ? loaderData.otherTargetChores.map((c) => [c.ref_id, c])
@@ -301,6 +315,8 @@ export default function TimePlanAddFromCurrentTimePlans() {
     otherTargetTodoTasksByRefId,
     otherTargetHabitsByRefId,
     otherTargetChoresByRefId,
+    otherTargetHabitStacksByRefId,
+    otherTargetChoreStacksByRefId,
   ).filter(
     (activity) =>
       !isTimePlanActivityInboxTaskTarget(activity.target) ||
@@ -457,6 +473,8 @@ export default function TimePlanAddFromCurrentTimePlans() {
               bigPlansByRefId={otherTargetBigPlansByRefId}
               todoTasksByRefId={otherTargetTodoTasksByRefId}
               habitsByRefId={otherTargetHabitsByRefId}
+              habitStacksByRefId={otherTargetHabitStacksByRefId}
+              choreStacksByRefId={otherTargetChoreStacksByRefId}
               choresByRefId={otherTargetChoresByRefId}
               activityDoneness={loaderData.otherActivityDoneness}
               timeEventsByRefId={otherTimeEventsByRefId}

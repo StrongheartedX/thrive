@@ -6,8 +6,8 @@ from jupiter.core.apps.big_plans.collection import BigPlanCollection
 from jupiter.core.apps.big_plans.root import BigPlan, BigPlanRepository
 from jupiter.core.apps.big_plans.stats import BigPlanStats, BigPlanStatsRepository
 from jupiter.core.apps.habits.collection import HabitCollection
-from jupiter.core.apps.habits.root import Habit
-from jupiter.core.apps.habits.service.streak_recorder import (
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.habit.service.streak_recorder import (
     HabitStreakRecorderService,
 )
 from jupiter.core.apps.journals.collection import JournalCollection

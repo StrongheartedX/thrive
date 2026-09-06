@@ -18,6 +18,18 @@ from jupiter_webapi_client.api.big_plans.big_plan_create_inbox_task import (
 from jupiter_webapi_client.api.big_plans.big_plan_update import (
     sync_detailed as big_plan_update_sync,
 )
+from jupiter_webapi_client.api.chores.chore_create import (
+    sync_detailed as chore_create_sync,
+)
+from jupiter_webapi_client.api.chores.chore_stack_create import (
+    sync_detailed as chore_stack_create_sync,
+)
+from jupiter_webapi_client.api.habits.habit_create import (
+    sync_detailed as habit_create_sync,
+)
+from jupiter_webapi_client.api.habits.habit_stack_create import (
+    sync_detailed as habit_stack_create_sync,
+)
 from jupiter_webapi_client.api.inbox_tasks.inbox_task_update import (
     sync_detailed as inbox_task_update_sync,
 )
@@ -26,6 +38,12 @@ from jupiter_webapi_client.api.test_helper.workspace_set_feature import (
 )
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_big_plans import (
     sync_detailed as time_plan_activity_create_big_plan_sync,
+)
+from jupiter_webapi_client.api.time_plans.time_plan_associate_with_chore_stacks import (
+    sync_detailed as time_plan_associate_with_chore_stacks_sync,
+)
+from jupiter_webapi_client.api.time_plans.time_plan_associate_with_habit_stacks import (
+    sync_detailed as time_plan_associate_with_habit_stacks_sync,
 )
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_inbox_tasks import (
     sync_detailed as time_plan_activity_associate_inbox_task_sync,
@@ -83,8 +101,24 @@ from jupiter_webapi_client.models.big_plan_update_args_name import BigPlanUpdate
 from jupiter_webapi_client.models.big_plan_update_args_status import (
     BigPlanUpdateArgsStatus,
 )
+from jupiter_webapi_client.models.chore import Chore
+from jupiter_webapi_client.models.chore_create_args import ChoreCreateArgs
+from jupiter_webapi_client.models.chore_create_result import ChoreCreateResult
+from jupiter_webapi_client.models.chore_stack import ChoreStack
+from jupiter_webapi_client.models.chore_stack_create_args import ChoreStackCreateArgs
+from jupiter_webapi_client.models.chore_stack_create_result import (
+    ChoreStackCreateResult,
+)
 from jupiter_webapi_client.models.difficulty import Difficulty
 from jupiter_webapi_client.models.eisen import Eisen
+from jupiter_webapi_client.models.habit import Habit
+from jupiter_webapi_client.models.habit_create_args import HabitCreateArgs
+from jupiter_webapi_client.models.habit_create_result import HabitCreateResult
+from jupiter_webapi_client.models.habit_stack import HabitStack
+from jupiter_webapi_client.models.habit_stack_create_args import HabitStackCreateArgs
+from jupiter_webapi_client.models.habit_stack_create_result import (
+    HabitStackCreateResult,
+)
 from jupiter_webapi_client.models.inbox_task import InboxTask
 from jupiter_webapi_client.models.inbox_task_status import InboxTaskStatus
 from jupiter_webapi_client.models.inbox_task_update_args import InboxTaskUpdateArgs
@@ -125,6 +159,18 @@ from jupiter_webapi_client.models.time_plan_associate_with_big_plans_args import
 )
 from jupiter_webapi_client.models.time_plan_associate_with_big_plans_result import (
     TimePlanAssociateWithBigPlansResult,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_chore_stacks_args import (
+    TimePlanAssociateWithChoreStacksArgs,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_chore_stacks_result import (
+    TimePlanAssociateWithChoreStacksResult,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_habit_stacks_args import (
+    TimePlanAssociateWithHabitStacksArgs,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_habit_stacks_result import (
+    TimePlanAssociateWithHabitStacksResult,
 )
 from jupiter_webapi_client.models.time_plan_associate_with_inbox_tasks_args import (
     TimePlanAssociateWithInboxTasksArgs,
@@ -374,6 +420,117 @@ def create_big_plan(logged_in_client: AuthenticatedClient):
         return get_parsed_from_response(BigPlanCreateResult, result).new_big_plan
 
     return _create_big_plan
+
+
+@pytest.fixture()
+def _with_habits_enabled(logged_in_client: AuthenticatedClient) -> Iterator[None]:
+    try:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.HABITS, value=True),
+        )
+        yield
+    finally:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.HABITS, value=False),
+        )
+
+
+@pytest.fixture()
+def create_habit(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str, period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY
+    ) -> Habit:
+        result = habit_create_sync(
+            client=logged_in_client,
+            body=HabitCreateArgs(
+                name=name,
+                period=period,
+                is_key=False,
+                eisen=Eisen.REGULAR,
+                difficulty=Difficulty.EASY,
+            ),
+        )
+        return get_parsed_from_response(HabitCreateResult, result).new_habit
+
+    return _create
+
+
+@pytest.fixture()
+def create_habit_stack(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str,
+        habit_ref_ids: list[str] | None = None,
+        period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY,
+    ) -> HabitStack:
+        result = habit_stack_create_sync(
+            client=logged_in_client,
+            body=HabitStackCreateArgs(
+                name=name,
+                period=period,
+                habit_ref_ids=habit_ref_ids or [],
+            ),
+        )
+        return get_parsed_from_response(HabitStackCreateResult, result).new_habit_stack
+
+    return _create
+
+
+@pytest.fixture()
+def _with_chores_enabled(logged_in_client: AuthenticatedClient) -> Iterator[None]:
+    try:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.CHORES, value=True),
+        )
+        yield
+    finally:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.CHORES, value=False),
+        )
+
+
+@pytest.fixture()
+def create_chore(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str, period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY
+    ) -> Chore:
+        result = chore_create_sync(
+            client=logged_in_client,
+            body=ChoreCreateArgs(
+                name=name,
+                period=period,
+                is_key=False,
+                eisen=Eisen.REGULAR,
+                difficulty=Difficulty.EASY,
+                must_do=False,
+            ),
+        )
+        return get_parsed_from_response(ChoreCreateResult, result).new_chore
+
+    return _create
+
+
+@pytest.fixture()
+def create_chore_stack(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str,
+        chore_ref_ids: list[str] | None = None,
+        period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY,
+    ) -> ChoreStack:
+        result = chore_stack_create_sync(
+            client=logged_in_client,
+            body=ChoreStackCreateArgs(
+                name=name,
+                period=period,
+                chore_ref_ids=chore_ref_ids or [],
+            ),
+        )
+        return get_parsed_from_response(ChoreStackCreateResult, result).new_chore_stack
+
+    return _create
 
 
 def test_webui_time_plan_view_all(page: Page, create_time_plan) -> None:
@@ -3184,6 +3341,184 @@ def test_webui_time_plan_activity_acl(
 
     page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
     expect(page.locator("body")).to_contain_text(_ACCESS_DENIED_LABEL)
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_webui_time_plan_associate_with_habit_stack(
+    page: Page,
+    create_time_plan,
+    create_habit,
+    create_habit_stack,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    stacked_habit = create_habit("Stacked Habit")
+    unstacked_habit = create_habit("Solo Habit")
+    stack = create_habit_stack("Morning Stack", [stacked_habit.ref_id])
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
+
+    page.locator("#section-action-nav-multiple-compact-button").click()
+    page.get_by_role("menuitem", name="From Existing Habits").click()
+
+    page.wait_for_url(
+        re.compile(r"/app/workspace/apps/time-plans/\d+/add-from-current-habits")
+    )
+
+    current_habits = page.locator("#time-plan-current-habits")
+    expect(current_habits.locator(f"#habit-stack-{stack.ref_id}")).to_contain_text(
+        "Morning Stack"
+    )
+    expect(current_habits.locator(f"#habit-{unstacked_habit.ref_id}")).to_contain_text(
+        "Solo Habit"
+    )
+    expect(current_habits.locator(f"#habit-{stacked_habit.ref_id}")).to_have_count(0)
+
+    stack_box = current_habits.locator(f"#habit-stack-{stack.ref_id}")
+    unstacked_box = current_habits.locator(f"#habit-{unstacked_habit.ref_id}")
+    stack_pos = stack_box.bounding_box()
+    unstacked_pos = unstacked_box.bounding_box()
+    assert stack_pos is not None
+    assert unstacked_pos is not None
+    assert stack_pos["y"] < unstacked_pos["y"]
+
+    current_habits.locator("p", has_text="Morning Stack").click()
+    current_habits.locator("button", has_text=re.compile(r"^Add$")).click()
+
+    page.wait_for_url(re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}"))
+
+    expect(page.locator("#time-plan-activities")).to_contain_text("Morning Stack")
+    expect(page.locator("#time-plan-activities")).to_contain_text("Stacked Habit")
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_webui_time_plan_habit_stack_activity_view(
+    page: Page,
+    create_time_plan,
+    create_habit,
+    create_habit_stack,
+    logged_in_client: AuthenticatedClient,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    habit = create_habit("Leaf Habit")
+    stack = create_habit_stack("Leaf Stack", [habit.ref_id])
+
+    result = time_plan_associate_with_habit_stacks_sync(
+        client=logged_in_client,
+        body=TimePlanAssociateWithHabitStacksArgs(
+            ref_id=time_plan.ref_id,
+            habit_stack_ref_ids=[stack.ref_id],
+            kind=TimePlanActivityKind.FINISH,
+            feasability=TimePlanActivityFeasability.MUST_DO,
+        ),
+    )
+    activities = get_parsed_from_response(
+        TimePlanAssociateWithHabitStacksResult, result
+    ).new_time_plan_activities
+    stack_activity = next(
+        activity
+        for activity in activities
+        if activity.target == f"HabitStack:std:{stack.ref_id}"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{stack_activity.ref_id}"
+    )
+    page.wait_for_selector("#leaf-panel")
+
+    expect(page.locator('input[name="targetHabitStackName"]')).to_have_value(
+        "Leaf Stack"
+    )
+    expect(page.locator("#leaf-panel")).to_contain_text("Leaf Habit")
+    expect(page.locator("#target-habit-stack-inbox-tasks")).to_be_visible()
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_webui_time_plan_associate_with_chore_stack(
+    page: Page,
+    create_time_plan,
+    create_chore,
+    create_chore_stack,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    stacked_chore = create_chore("Stacked Chore")
+    unstacked_chore = create_chore("Solo Chore")
+    stack = create_chore_stack("Morning Stack", [stacked_chore.ref_id])
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
+
+    page.locator("#section-action-nav-multiple-compact-button").click()
+    page.get_by_role("menuitem", name="From Existing Chores").click()
+
+    page.wait_for_url(
+        re.compile(r"/app/workspace/apps/time-plans/\d+/add-from-current-chores")
+    )
+
+    current_chores = page.locator("#time-plan-current-chores")
+    expect(current_chores.locator(f"#chore-stack-{stack.ref_id}")).to_contain_text(
+        "Morning Stack"
+    )
+    expect(current_chores.locator(f"#chore-{unstacked_chore.ref_id}")).to_contain_text(
+        "Solo Chore"
+    )
+    expect(current_chores.locator(f"#chore-{stacked_chore.ref_id}")).to_have_count(0)
+
+    stack_box = current_chores.locator(f"#chore-stack-{stack.ref_id}")
+    unstacked_box = current_chores.locator(f"#chore-{unstacked_chore.ref_id}")
+    stack_pos = stack_box.bounding_box()
+    unstacked_pos = unstacked_box.bounding_box()
+    assert stack_pos is not None
+    assert unstacked_pos is not None
+    assert stack_pos["y"] < unstacked_pos["y"]
+
+    current_chores.locator("p", has_text="Morning Stack").click()
+    current_chores.locator("button", has_text=re.compile(r"^Add$")).click()
+
+    page.wait_for_url(re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}"))
+
+    expect(page.locator("#time-plan-activities")).to_contain_text("Morning Stack")
+    expect(page.locator("#time-plan-activities")).to_contain_text("Stacked Chore")
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_webui_time_plan_chore_stack_activity_view(
+    page: Page,
+    create_time_plan,
+    create_chore,
+    create_chore_stack,
+    logged_in_client: AuthenticatedClient,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    chore = create_chore("Leaf Chore")
+    stack = create_chore_stack("Leaf Stack", [chore.ref_id])
+
+    result = time_plan_associate_with_chore_stacks_sync(
+        client=logged_in_client,
+        body=TimePlanAssociateWithChoreStacksArgs(
+            ref_id=time_plan.ref_id,
+            chore_stack_ref_ids=[stack.ref_id],
+            kind=TimePlanActivityKind.FINISH,
+            feasability=TimePlanActivityFeasability.MUST_DO,
+        ),
+    )
+    activities = get_parsed_from_response(
+        TimePlanAssociateWithChoreStacksResult, result
+    ).new_time_plan_activities
+    stack_activity = next(
+        activity
+        for activity in activities
+        if activity.target == f"ChoreStack:std:{stack.ref_id}"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{stack_activity.ref_id}"
+    )
+    page.wait_for_selector("#leaf-panel")
+
+    expect(page.locator('input[name="targetChoreStackName"]')).to_have_value(
+        "Leaf Stack"
+    )
+    expect(page.locator("#leaf-panel")).to_contain_text("Leaf Chore")
+    expect(page.locator("#target-chore-stack-inbox-tasks")).to_be_visible()
 
 
 # ideas

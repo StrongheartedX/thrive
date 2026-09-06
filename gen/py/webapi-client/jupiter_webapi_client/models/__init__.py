@@ -167,6 +167,26 @@ from .chore_load_public_args import ChoreLoadPublicArgs
 from .chore_load_result import ChoreLoadResult
 from .chore_regen_args import ChoreRegenArgs
 from .chore_remove_args import ChoreRemoveArgs
+from .chore_stack import ChoreStack
+from .chore_stack_archive_args import ChoreStackArchiveArgs
+from .chore_stack_create_args import ChoreStackCreateArgs
+from .chore_stack_create_result import ChoreStackCreateResult
+from .chore_stack_find_args import ChoreStackFindArgs
+from .chore_stack_find_result import ChoreStackFindResult
+from .chore_stack_find_result_entry import ChoreStackFindResultEntry
+from .chore_stack_find_suitable_for_time_plan_args import ChoreStackFindSuitableForTimePlanArgs
+from .chore_stack_find_suitable_for_time_plan_result import ChoreStackFindSuitableForTimePlanResult
+from .chore_stack_find_suitable_for_time_plan_result_entry import ChoreStackFindSuitableForTimePlanResultEntry
+from .chore_stack_load_args import ChoreStackLoadArgs
+from .chore_stack_load_public_args import ChoreStackLoadPublicArgs
+from .chore_stack_load_result import ChoreStackLoadResult
+from .chore_stack_remove_args import ChoreStackRemoveArgs
+from .chore_stack_update_args import ChoreStackUpdateArgs
+from .chore_stack_update_args_aspect_ref_id import ChoreStackUpdateArgsAspectRefId
+from .chore_stack_update_args_chapter_ref_id import ChoreStackUpdateArgsChapterRefId
+from .chore_stack_update_args_chore_ref_ids import ChoreStackUpdateArgsChoreRefIds
+from .chore_stack_update_args_goal_ref_id import ChoreStackUpdateArgsGoalRefId
+from .chore_stack_update_args_name import ChoreStackUpdateArgsName
 from .chore_summary import ChoreSummary
 from .chore_suspend_args import ChoreSuspendArgs
 from .chore_unsuspend_args import ChoreUnsuspendArgs
@@ -186,6 +206,7 @@ from .chore_update_args_must_do import ChoreUpdateArgsMustDo
 from .chore_update_args_name import ChoreUpdateArgsName
 from .chore_update_args_period import ChoreUpdateArgsPeriod
 from .chore_update_args_skip_rule import ChoreUpdateArgsSkipRule
+from .chore_update_args_stack_ref_id import ChoreUpdateArgsStackRefId
 from .chore_update_args_start_at_date import ChoreUpdateArgsStartAtDate
 from .circle import Circle
 from .circle_archive_args import CircleArchiveArgs
@@ -367,6 +388,26 @@ from .habit_load_result import HabitLoadResult
 from .habit_regen_args import HabitRegenArgs
 from .habit_remove_args import HabitRemoveArgs
 from .habit_repeats_strategy import HabitRepeatsStrategy
+from .habit_stack import HabitStack
+from .habit_stack_archive_args import HabitStackArchiveArgs
+from .habit_stack_create_args import HabitStackCreateArgs
+from .habit_stack_create_result import HabitStackCreateResult
+from .habit_stack_find_args import HabitStackFindArgs
+from .habit_stack_find_result import HabitStackFindResult
+from .habit_stack_find_result_entry import HabitStackFindResultEntry
+from .habit_stack_find_suitable_for_time_plan_args import HabitStackFindSuitableForTimePlanArgs
+from .habit_stack_find_suitable_for_time_plan_result import HabitStackFindSuitableForTimePlanResult
+from .habit_stack_find_suitable_for_time_plan_result_entry import HabitStackFindSuitableForTimePlanResultEntry
+from .habit_stack_load_args import HabitStackLoadArgs
+from .habit_stack_load_public_args import HabitStackLoadPublicArgs
+from .habit_stack_load_result import HabitStackLoadResult
+from .habit_stack_remove_args import HabitStackRemoveArgs
+from .habit_stack_update_args import HabitStackUpdateArgs
+from .habit_stack_update_args_aspect_ref_id import HabitStackUpdateArgsAspectRefId
+from .habit_stack_update_args_chapter_ref_id import HabitStackUpdateArgsChapterRefId
+from .habit_stack_update_args_goal_ref_id import HabitStackUpdateArgsGoalRefId
+from .habit_stack_update_args_habit_ref_ids import HabitStackUpdateArgsHabitRefIds
+from .habit_stack_update_args_name import HabitStackUpdateArgsName
 from .habit_streak_mark import HabitStreakMark
 from .habit_streak_mark_statuses import HabitStreakMarkStatuses
 from .habit_summary import HabitSummary
@@ -388,6 +429,7 @@ from .habit_update_args_period import HabitUpdateArgsPeriod
 from .habit_update_args_repeats_in_period_count import HabitUpdateArgsRepeatsInPeriodCount
 from .habit_update_args_repeats_strategy import HabitUpdateArgsRepeatsStrategy
 from .habit_update_args_skip_rule import HabitUpdateArgsSkipRule
+from .habit_update_args_stack_ref_id import HabitUpdateArgsStackRefId
 from .heading_block import HeadingBlock
 from .heading_block_kind import HeadingBlockKind
 from .history_entry import HistoryEntry
@@ -974,8 +1016,12 @@ from .time_event_in_day_block_create_for_big_plan_args import TimeEventInDayBloc
 from .time_event_in_day_block_create_for_big_plan_result import TimeEventInDayBlockCreateForBigPlanResult
 from .time_event_in_day_block_create_for_chore_args import TimeEventInDayBlockCreateForChoreArgs
 from .time_event_in_day_block_create_for_chore_result import TimeEventInDayBlockCreateForChoreResult
+from .time_event_in_day_block_create_for_chore_stack_args import TimeEventInDayBlockCreateForChoreStackArgs
+from .time_event_in_day_block_create_for_chore_stack_result import TimeEventInDayBlockCreateForChoreStackResult
 from .time_event_in_day_block_create_for_habit_args import TimeEventInDayBlockCreateForHabitArgs
 from .time_event_in_day_block_create_for_habit_result import TimeEventInDayBlockCreateForHabitResult
+from .time_event_in_day_block_create_for_habit_stack_args import TimeEventInDayBlockCreateForHabitStackArgs
+from .time_event_in_day_block_create_for_habit_stack_result import TimeEventInDayBlockCreateForHabitStackResult
 from .time_event_in_day_block_create_for_time_plan_activity_args import TimeEventInDayBlockCreateForTimePlanActivityArgs
 from .time_event_in_day_block_create_for_time_plan_activity_result import (
     TimeEventInDayBlockCreateForTimePlanActivityResult,
@@ -1014,8 +1060,12 @@ from .time_plan_archive_args import TimePlanArchiveArgs
 from .time_plan_aspect_link import TimePlanAspectLink
 from .time_plan_associate_big_plan_with_plan_args import TimePlanAssociateBigPlanWithPlanArgs
 from .time_plan_associate_big_plan_with_plan_result import TimePlanAssociateBigPlanWithPlanResult
+from .time_plan_associate_chore_stack_with_plan_args import TimePlanAssociateChoreStackWithPlanArgs
+from .time_plan_associate_chore_stack_with_plan_result import TimePlanAssociateChoreStackWithPlanResult
 from .time_plan_associate_chore_with_plan_args import TimePlanAssociateChoreWithPlanArgs
 from .time_plan_associate_chore_with_plan_result import TimePlanAssociateChoreWithPlanResult
+from .time_plan_associate_habit_stack_with_plan_args import TimePlanAssociateHabitStackWithPlanArgs
+from .time_plan_associate_habit_stack_with_plan_result import TimePlanAssociateHabitStackWithPlanResult
 from .time_plan_associate_habit_with_plan_args import TimePlanAssociateHabitWithPlanArgs
 from .time_plan_associate_habit_with_plan_result import TimePlanAssociateHabitWithPlanResult
 from .time_plan_associate_inbox_task_with_plan_args import TimePlanAssociateInboxTaskWithPlanArgs
@@ -1026,8 +1076,12 @@ from .time_plan_associate_with_activities_args import TimePlanAssociateWithActiv
 from .time_plan_associate_with_activities_result import TimePlanAssociateWithActivitiesResult
 from .time_plan_associate_with_big_plans_args import TimePlanAssociateWithBigPlansArgs
 from .time_plan_associate_with_big_plans_result import TimePlanAssociateWithBigPlansResult
+from .time_plan_associate_with_chore_stacks_args import TimePlanAssociateWithChoreStacksArgs
+from .time_plan_associate_with_chore_stacks_result import TimePlanAssociateWithChoreStacksResult
 from .time_plan_associate_with_chores_args import TimePlanAssociateWithChoresArgs
 from .time_plan_associate_with_chores_result import TimePlanAssociateWithChoresResult
+from .time_plan_associate_with_habit_stacks_args import TimePlanAssociateWithHabitStacksArgs
+from .time_plan_associate_with_habit_stacks_result import TimePlanAssociateWithHabitStacksResult
 from .time_plan_associate_with_habits_args import TimePlanAssociateWithHabitsArgs
 from .time_plan_associate_with_habits_result import TimePlanAssociateWithHabitsResult
 from .time_plan_associate_with_inbox_tasks_args import TimePlanAssociateWithInboxTasksArgs
@@ -1374,6 +1428,26 @@ __all__ = (
     "ChoreLoadResult",
     "ChoreRegenArgs",
     "ChoreRemoveArgs",
+    "ChoreStack",
+    "ChoreStackArchiveArgs",
+    "ChoreStackCreateArgs",
+    "ChoreStackCreateResult",
+    "ChoreStackFindArgs",
+    "ChoreStackFindResult",
+    "ChoreStackFindResultEntry",
+    "ChoreStackFindSuitableForTimePlanArgs",
+    "ChoreStackFindSuitableForTimePlanResult",
+    "ChoreStackFindSuitableForTimePlanResultEntry",
+    "ChoreStackLoadArgs",
+    "ChoreStackLoadPublicArgs",
+    "ChoreStackLoadResult",
+    "ChoreStackRemoveArgs",
+    "ChoreStackUpdateArgs",
+    "ChoreStackUpdateArgsAspectRefId",
+    "ChoreStackUpdateArgsChapterRefId",
+    "ChoreStackUpdateArgsChoreRefIds",
+    "ChoreStackUpdateArgsGoalRefId",
+    "ChoreStackUpdateArgsName",
     "ChoreSummary",
     "ChoreSuspendArgs",
     "ChoreUnsuspendArgs",
@@ -1393,6 +1467,7 @@ __all__ = (
     "ChoreUpdateArgsName",
     "ChoreUpdateArgsPeriod",
     "ChoreUpdateArgsSkipRule",
+    "ChoreUpdateArgsStackRefId",
     "ChoreUpdateArgsStartAtDate",
     "Circle",
     "CircleArchiveArgs",
@@ -1574,6 +1649,26 @@ __all__ = (
     "HabitRegenArgs",
     "HabitRemoveArgs",
     "HabitRepeatsStrategy",
+    "HabitStack",
+    "HabitStackArchiveArgs",
+    "HabitStackCreateArgs",
+    "HabitStackCreateResult",
+    "HabitStackFindArgs",
+    "HabitStackFindResult",
+    "HabitStackFindResultEntry",
+    "HabitStackFindSuitableForTimePlanArgs",
+    "HabitStackFindSuitableForTimePlanResult",
+    "HabitStackFindSuitableForTimePlanResultEntry",
+    "HabitStackLoadArgs",
+    "HabitStackLoadPublicArgs",
+    "HabitStackLoadResult",
+    "HabitStackRemoveArgs",
+    "HabitStackUpdateArgs",
+    "HabitStackUpdateArgsAspectRefId",
+    "HabitStackUpdateArgsChapterRefId",
+    "HabitStackUpdateArgsGoalRefId",
+    "HabitStackUpdateArgsHabitRefIds",
+    "HabitStackUpdateArgsName",
     "HabitStreakMark",
     "HabitStreakMarkStatuses",
     "HabitSummary",
@@ -1595,6 +1690,7 @@ __all__ = (
     "HabitUpdateArgsRepeatsInPeriodCount",
     "HabitUpdateArgsRepeatsStrategy",
     "HabitUpdateArgsSkipRule",
+    "HabitUpdateArgsStackRefId",
     "HeadingBlock",
     "HeadingBlockKind",
     "HistoryEntry",
@@ -2163,8 +2259,12 @@ __all__ = (
     "TimeEventInDayBlockCreateForBigPlanResult",
     "TimeEventInDayBlockCreateForChoreArgs",
     "TimeEventInDayBlockCreateForChoreResult",
+    "TimeEventInDayBlockCreateForChoreStackArgs",
+    "TimeEventInDayBlockCreateForChoreStackResult",
     "TimeEventInDayBlockCreateForHabitArgs",
     "TimeEventInDayBlockCreateForHabitResult",
+    "TimeEventInDayBlockCreateForHabitStackArgs",
+    "TimeEventInDayBlockCreateForHabitStackResult",
     "TimeEventInDayBlockCreateForTimePlanActivityArgs",
     "TimeEventInDayBlockCreateForTimePlanActivityResult",
     "TimeEventInDayBlockCreateForTodoTaskArgs",
@@ -2201,8 +2301,12 @@ __all__ = (
     "TimePlanAspectLink",
     "TimePlanAssociateBigPlanWithPlanArgs",
     "TimePlanAssociateBigPlanWithPlanResult",
+    "TimePlanAssociateChoreStackWithPlanArgs",
+    "TimePlanAssociateChoreStackWithPlanResult",
     "TimePlanAssociateChoreWithPlanArgs",
     "TimePlanAssociateChoreWithPlanResult",
+    "TimePlanAssociateHabitStackWithPlanArgs",
+    "TimePlanAssociateHabitStackWithPlanResult",
     "TimePlanAssociateHabitWithPlanArgs",
     "TimePlanAssociateHabitWithPlanResult",
     "TimePlanAssociateInboxTaskWithPlanArgs",
@@ -2215,8 +2319,12 @@ __all__ = (
     "TimePlanAssociateWithBigPlansResult",
     "TimePlanAssociateWithChoresArgs",
     "TimePlanAssociateWithChoresResult",
+    "TimePlanAssociateWithChoreStacksArgs",
+    "TimePlanAssociateWithChoreStacksResult",
     "TimePlanAssociateWithHabitsArgs",
     "TimePlanAssociateWithHabitsResult",
+    "TimePlanAssociateWithHabitStacksArgs",
+    "TimePlanAssociateWithHabitStacksResult",
     "TimePlanAssociateWithInboxTasksArgs",
     "TimePlanAssociateWithInboxTasksResult",
     "TimePlanAssociateWithTodoTasksArgs",

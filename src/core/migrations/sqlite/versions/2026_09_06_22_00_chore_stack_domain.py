@@ -1,0 +1,81 @@
+"""chore stack domain
+
+Revision ID: c8d9e0f1a2b3
+Revises: b7c8d9e0f1a2
+Create Date: 2026-09-06 22:00:00.000000
+
+"""
+
+from alembic import op
+
+revision = "c8d9e0f1a2b3"
+down_revision = "b7c8d9e0f1a2"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.execute(
+        """
+        CREATE TABLE chore_stack (
+            ref_id INTEGER NOT NULL,
+            version INTEGER NOT NULL,
+            archived BOOLEAN NOT NULL,
+            created_time DATETIME NOT NULL,
+            last_modified_time DATETIME NOT NULL,
+            archived_time DATETIME,
+            name VARCHAR(100) NOT NULL,
+            period VARCHAR(16) NOT NULL,
+            chore_collection_ref_id INTEGER NOT NULL,
+            aspect_ref_id INTEGER NOT NULL,
+            chapter_ref_id INTEGER,
+            goal_ref_id INTEGER,
+            archival_reason VARCHAR,
+            CONSTRAINT pk_chore_stack PRIMARY KEY (ref_id),
+            CONSTRAINT fk_chore_stack_chore_collection_ref_id_chore_collection
+                FOREIGN KEY (chore_collection_ref_id) REFERENCES chore_collection (ref_id),
+            CONSTRAINT fk_chore_stack_aspect_ref_id_aspect
+                FOREIGN KEY (aspect_ref_id) REFERENCES aspect (ref_id),
+            CONSTRAINT fk_chore_stack_chapter_ref_id_chapter
+                FOREIGN KEY (chapter_ref_id) REFERENCES chapter (ref_id),
+            CONSTRAINT fk_chore_stack_goal_ref_id_goal
+                FOREIGN KEY (goal_ref_id) REFERENCES goal (ref_id)
+        )
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_chore_stack_chore_collection_ref_id
+            ON chore_stack (chore_collection_ref_id)
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_chore_stack_aspect_ref_id
+            ON chore_stack (aspect_ref_id)
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_chore_stack_chapter_ref_id
+            ON chore_stack (chapter_ref_id)
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_chore_stack_goal_ref_id
+            ON chore_stack (goal_ref_id)
+        """
+    )
+    op.execute("ALTER TABLE chore ADD COLUMN stack_ref_id INTEGER")
+    op.execute("CREATE INDEX ix_chore_stack_ref_id ON chore (stack_ref_id)")
+
+
+def downgrade() -> None:
+    op.execute("DROP INDEX ix_chore_stack_ref_id")
+    op.execute("ALTER TABLE chore DROP COLUMN stack_ref_id")
+    op.execute("DROP INDEX ix_chore_stack_goal_ref_id")
+    op.execute("DROP INDEX ix_chore_stack_chapter_ref_id")
+    op.execute("DROP INDEX ix_chore_stack_aspect_ref_id")
+    op.execute("DROP INDEX ix_chore_stack_chore_collection_ref_id")
+    op.execute("DROP TABLE chore_stack")

@@ -3,7 +3,9 @@ import {
   BigPlan,
   BigPlanStats,
   Chore,
+  ChoreStack,
   Habit,
+  HabitStack,
   InboxTask,
   TimeEventInDayBlock,
   TimePlan,
@@ -38,11 +40,14 @@ import { TimePlanActivityTargetTypeChip } from "#/core/apps/time_plans/sub/activ
 import {
   habitChoreInboxTaskStats,
   selectHabitOrChorePlaceActivity,
+  selectStackPlaceActivities,
 } from "#/core/apps/time_plans/sub/activity/habit-chore-group";
 import { inferDurationMinsForTimePlanActivity } from "#/core/apps/time_plans/sub/activity/root";
 import {
   isTimePlanActivityBigPlanTarget,
+  isTimePlanActivityChoreStackTarget,
   isTimePlanActivityChoreTarget,
+  isTimePlanActivityHabitStackTarget,
   isTimePlanActivityHabitTarget,
   isTimePlanActivityInboxTaskTarget,
   isTimePlanActivityTodoTaskTarget,
@@ -70,6 +75,8 @@ interface TimePlanActivityCardProps {
   bigPlanStatsByRefId?: Map<string, BigPlanStats>;
   todoTasksByRefId: Map<string, TodoTask>;
   habitsByRefId: Map<string, Habit>;
+  habitStacksByRefId?: Map<string, HabitStack>;
+  choreStacksByRefId?: Map<string, ChoreStack>;
   choresByRefId: Map<string, Chore>;
   activityDoneness: Record<string, TimePlanActivityDoneness>;
   timeEventsByRefId: Map<string, Array<TimeEventInDayBlock>>;
@@ -88,6 +95,9 @@ interface TimePlanActivityCardProps {
   // Inbox-task activities that belong to this habit or chore on the same
   // plan. When present, the card stands for the whole group until expanded.
   associatedInboxTaskActivities?: TimePlanActivity[];
+  associatedHabitActivities?: TimePlanActivity[];
+  associatedChoreActivities?: TimePlanActivity[];
+  habitChoreChildrenByParent?: Map<string, TimePlanActivity[]>;
   expanded?: boolean;
   onToggleExpand?: () => void;
 }
@@ -96,25 +106,64 @@ export function TimePlanActivityCard(props: TimePlanActivityCardProps) {
   const isBigScreen = useBigScreen();
   const associatedInboxTaskActivities =
     props.associatedInboxTaskActivities ?? [];
-  const placeActivity =
-    associatedInboxTaskActivities.length > 0
-      ? (selectHabitOrChorePlaceActivity(
-          associatedInboxTaskActivities,
+  const associatedHabitActivities = props.associatedHabitActivities ?? [];
+  const associatedChoreActivities = props.associatedChoreActivities ?? [];
+  const associatedStackMemberActivities =
+    associatedHabitActivities.length > 0
+      ? associatedHabitActivities
+      : associatedChoreActivities;
+  const stackPlaceActivities =
+    associatedStackMemberActivities.length > 0
+      ? selectStackPlaceActivities(
+          associatedStackMemberActivities,
           props.inboxTasksByRefId,
           props.timeEventsByRefId,
-        ) ?? props.activity)
-      : props.activity;
+          props.habitChoreChildrenByParent ?? new Map(),
+        )
+      : [];
+  const placeActivity =
+    stackPlaceActivities.length > 0
+      ? stackPlaceActivities[0]
+      : associatedInboxTaskActivities.length > 0
+        ? (selectHabitOrChorePlaceActivity(
+            associatedInboxTaskActivities,
+            props.inboxTasksByRefId,
+            props.timeEventsByRefId,
+          ) ?? props.activity)
+        : props.activity;
+  const extraPlacements =
+    stackPlaceActivities.length > 0
+      ? stackPlaceActivities.map((activity) => ({
+          activityRefId: activity.ref_id,
+          durationMins: inferDurationMinsForTimePlanActivity(
+            activity,
+            props.inboxTasksByRefId,
+            props.bigPlansByRefId,
+            props.habitsByRefId,
+            props.choresByRefId,
+            props.habitStacksByRefId,
+            props.choreStacksByRefId,
+          ),
+        }))
+      : undefined;
+  const placeDurationMins =
+    extraPlacements !== undefined && extraPlacements.length > 0
+      ? Math.max(...extraPlacements.map((placement) => placement.durationMins))
+      : inferDurationMinsForTimePlanActivity(
+          placeActivity,
+          props.inboxTasksByRefId,
+          props.bigPlansByRefId,
+          props.habitsByRefId,
+          props.choresByRefId,
+          props.habitStacksByRefId,
+          props.choreStacksByRefId,
+        );
   const place = useCalendarPlaceActivity({
     activityRefId: placeActivity.ref_id,
     timePlanRefId: placeActivity.time_plan_ref_id,
     archived: props.activity.archived,
-    durationMins: inferDurationMinsForTimePlanActivity(
-      placeActivity,
-      props.inboxTasksByRefId,
-      props.bigPlansByRefId,
-      props.habitsByRefId,
-      props.choresByRefId,
-    ),
+    durationMins: placeDurationMins,
+    extraPlacements: extraPlacements,
   });
 
   // Top-level todos, big plans, habits, chores, and inbox tasks show a
@@ -179,7 +228,12 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
   const showFeasability = props.showFeasability ?? true;
   const associatedInboxTaskActivities =
     props.associatedInboxTaskActivities ?? [];
-  const expandable = associatedInboxTaskActivities.length > 0;
+  const associatedHabitActivities = props.associatedHabitActivities ?? [];
+  const associatedChoreActivities = props.associatedChoreActivities ?? [];
+  const expandable =
+    associatedInboxTaskActivities.length > 0 ||
+    associatedHabitActivities.length > 0 ||
+    associatedChoreActivities.length > 0;
   const cardOnClick = props.onClick
     ? () => props.onClick && props.onClick(props.activity)
     : props.onToggleExpand;
@@ -374,6 +428,204 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
       </EntityCard>
     );
   } else if (
+    isTimePlanActivityHabitStackTarget(props.activity.target) &&
+    isWorkspaceFeatureAvailable(
+      props.topLevelInfo.workspace,
+      WorkspaceFeature.HABITS,
+    )
+  ) {
+    const habitStack = props.habitStacksByRefId?.get(
+      entityLinkRefIdFromWire(props.activity.target),
+    );
+    const activityTimeEvents =
+      props.timeEventsByRefId.get(`tpa:${props.activity.ref_id}`) ?? [];
+    const associatedStats = expandable
+      ? habitChoreInboxTaskStats(
+          associatedInboxTaskActivities.length > 0
+            ? associatedInboxTaskActivities
+            : associatedHabitActivities.flatMap(
+                (habitActivity) =>
+                  props.habitChoreChildrenByParent?.get(habitActivity.target) ??
+                  [],
+              ),
+          props.inboxTasksByRefId,
+        )
+      : undefined;
+    return (
+      <EntityCard
+        entityId={`time-plan-activity-${props.activity.ref_id}`}
+        allowSelect={props.allowSelect}
+        selected={props.selected}
+        onClick={cardOnClick}
+        backgroundHint={
+          props.activityDoneness[props.activity.ref_id] ===
+          TimePlanActivityDoneness.DONE
+            ? "success"
+            : props.activityDoneness[props.activity.ref_id] ===
+                TimePlanActivityDoneness.WORKING
+              ? "warning"
+              : "neutral"
+        }
+      >
+        <CardCornerChipStack>
+          <TimePlanActivityTargetTypeChip target={props.activity.target} />
+        </CardCornerChipStack>
+        <ActivityCardContents
+          activityLocation={activityLocation}
+          blockLink={props.onClick !== undefined}
+          expandable={expandable}
+          expanded={props.expanded}
+        >
+          <ActivityCardName
+            compact={props.compact}
+            fontWeight={
+              habitStack
+                ? props.activityDoneness[props.activity.ref_id] ===
+                  TimePlanActivityDoneness.DONE
+                  ? "bold"
+                  : "normal"
+                : "lighter"
+            }
+          >
+            {props.showTimePlanName && timePlan
+              ? timePlan.name
+              : habitStack
+                ? habitStack.name
+                : "Archived Habit Stack"}
+          </ActivityCardName>
+
+          {props.fullInfo && expandable && associatedStats && (
+            <HabitChoreTaskStatsView
+              activities={
+                associatedInboxTaskActivities.length > 0
+                  ? associatedInboxTaskActivities
+                  : associatedHabitActivities.flatMap(
+                      (habitActivity) =>
+                        props.habitChoreChildrenByParent?.get(
+                          habitActivity.target,
+                        ) ?? [],
+                    )
+              }
+              inboxTasksByRefId={props.inboxTasksByRefId}
+              compact={props.compact}
+            />
+          )}
+
+          {props.fullInfo && !expandable && activityTimeEvents.length > 0 && (
+            <>📅</>
+          )}
+
+          <TimePlanActivityKindTag kind={props.activity.kind} format="icon" />
+          {showFeasability && (
+            <TimePlanActivityFeasabilityTag
+              feasability={props.activity.feasability}
+            />
+          )}
+
+          {timePlan && <TimePlanTag timePlan={timePlan} />}
+        </ActivityCardContents>
+      </EntityCard>
+    );
+  } else if (
+    isTimePlanActivityChoreStackTarget(props.activity.target) &&
+    isWorkspaceFeatureAvailable(
+      props.topLevelInfo.workspace,
+      WorkspaceFeature.CHORES,
+    )
+  ) {
+    const choreStack = props.choreStacksByRefId?.get(
+      entityLinkRefIdFromWire(props.activity.target),
+    );
+    const activityTimeEvents =
+      props.timeEventsByRefId.get(`tpa:${props.activity.ref_id}`) ?? [];
+    const associatedStats = expandable
+      ? habitChoreInboxTaskStats(
+          associatedInboxTaskActivities.length > 0
+            ? associatedInboxTaskActivities
+            : associatedChoreActivities.flatMap(
+                (choreActivity) =>
+                  props.habitChoreChildrenByParent?.get(choreActivity.target) ??
+                  [],
+              ),
+          props.inboxTasksByRefId,
+        )
+      : undefined;
+    return (
+      <EntityCard
+        entityId={`time-plan-activity-${props.activity.ref_id}`}
+        allowSelect={props.allowSelect}
+        selected={props.selected}
+        onClick={cardOnClick}
+        backgroundHint={
+          props.activityDoneness[props.activity.ref_id] ===
+          TimePlanActivityDoneness.DONE
+            ? "success"
+            : props.activityDoneness[props.activity.ref_id] ===
+                TimePlanActivityDoneness.WORKING
+              ? "warning"
+              : "neutral"
+        }
+      >
+        <CardCornerChipStack>
+          <TimePlanActivityTargetTypeChip target={props.activity.target} />
+        </CardCornerChipStack>
+        <ActivityCardContents
+          activityLocation={activityLocation}
+          blockLink={props.onClick !== undefined}
+          expandable={expandable}
+          expanded={props.expanded}
+        >
+          <ActivityCardName
+            compact={props.compact}
+            fontWeight={
+              choreStack
+                ? props.activityDoneness[props.activity.ref_id] ===
+                  TimePlanActivityDoneness.DONE
+                  ? "bold"
+                  : "normal"
+                : "lighter"
+            }
+          >
+            {props.showTimePlanName && timePlan
+              ? timePlan.name
+              : choreStack
+                ? choreStack.name
+                : "Archived Chore Stack"}
+          </ActivityCardName>
+
+          {props.fullInfo && expandable && associatedStats && (
+            <HabitChoreTaskStatsView
+              activities={
+                associatedInboxTaskActivities.length > 0
+                  ? associatedInboxTaskActivities
+                  : associatedChoreActivities.flatMap(
+                      (choreActivity) =>
+                        props.habitChoreChildrenByParent?.get(
+                          choreActivity.target,
+                        ) ?? [],
+                    )
+              }
+              inboxTasksByRefId={props.inboxTasksByRefId}
+              compact={props.compact}
+            />
+          )}
+
+          {props.fullInfo && !expandable && activityTimeEvents.length > 0 && (
+            <>📅</>
+          )}
+
+          <TimePlanActivityKindTag kind={props.activity.kind} format="icon" />
+          {showFeasability && (
+            <TimePlanActivityFeasabilityTag
+              feasability={props.activity.feasability}
+            />
+          )}
+
+          {timePlan && <TimePlanTag timePlan={timePlan} />}
+        </ActivityCardContents>
+      </EntityCard>
+    );
+  } else if (
     isTimePlanActivityHabitTarget(props.activity.target) &&
     isWorkspaceFeatureAvailable(
       props.topLevelInfo.workspace,
@@ -400,6 +652,7 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
         entityId={`time-plan-activity-${props.activity.ref_id}`}
         allowSelect={props.allowSelect}
         selected={props.selected}
+        indent={props.indent}
         onClick={cardOnClick}
         backgroundHint={
           props.activityDoneness[props.activity.ref_id] ===
@@ -411,9 +664,11 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
               : "neutral"
         }
       >
-        <CardCornerChipStack>
-          <TimePlanActivityTargetTypeChip target={props.activity.target} />
-        </CardCornerChipStack>
+        {(props.indent ?? 0) === 0 && (
+          <CardCornerChipStack>
+            <TimePlanActivityTargetTypeChip target={props.activity.target} />
+          </CardCornerChipStack>
+        )}
         <ActivityCardContents
           activityLocation={activityLocation}
           blockLink={props.onClick !== undefined}
@@ -492,6 +747,7 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
         entityId={`time-plan-activity-${props.activity.ref_id}`}
         allowSelect={props.allowSelect}
         selected={props.selected}
+        indent={props.indent}
         onClick={cardOnClick}
         backgroundHint={
           props.activityDoneness[props.activity.ref_id] ===
@@ -510,9 +766,11 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
               : "neutral"
         }
       >
-        <CardCornerChipStack>
-          <TimePlanActivityTargetTypeChip target={props.activity.target} />
-        </CardCornerChipStack>
+        {(props.indent ?? 0) === 0 && (
+          <CardCornerChipStack>
+            <TimePlanActivityTargetTypeChip target={props.activity.target} />
+          </CardCornerChipStack>
+        )}
         <ActivityCardContents
           activityLocation={activityLocation}
           blockLink={props.onClick !== undefined}

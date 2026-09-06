@@ -3,7 +3,9 @@
 from jupiter.core.app import AppCore
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.chores.root import Chore
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.time_plans.root import TimePlan
 from jupiter.core.apps.time_plans.sub.activity.feasability import (
     TimePlanActivityFeasability,
@@ -193,6 +195,56 @@ class TimePlanAssociateWithActivitiesUseCase(
 
             await self.check_entity(
                 uow, context.user.ref_id, Habit, activity.target.ref_id
+            )
+
+            new_time_plan_activity = TimePlanActivity.new_activity_from_existing(
+                context.domain_context,
+                time_plan_ref_id=args.ref_id,
+                existing_activity_name=activity.name,
+                existing_activity_target=activity.target,
+                existing_activity_kind=args.kind,
+                existing_activity_feasability=args.feasability,
+            )
+            new_time_plan_activity = await self.create_entity(
+                context.domain_context,
+                uow,
+                progress_reporter,
+                context.user.ref_id,
+                new_time_plan_activity,
+            )
+            new_time_plan_actitivies.append(new_time_plan_activity)
+
+        for activity in activities:
+            if not activity.is_target_habit_stack:
+                continue
+
+            await self.check_entity(
+                uow, context.user.ref_id, HabitStack, activity.target.ref_id
+            )
+
+            new_time_plan_activity = TimePlanActivity.new_activity_from_existing(
+                context.domain_context,
+                time_plan_ref_id=args.ref_id,
+                existing_activity_name=activity.name,
+                existing_activity_target=activity.target,
+                existing_activity_kind=args.kind,
+                existing_activity_feasability=args.feasability,
+            )
+            new_time_plan_activity = await self.create_entity(
+                context.domain_context,
+                uow,
+                progress_reporter,
+                context.user.ref_id,
+                new_time_plan_activity,
+            )
+            new_time_plan_actitivies.append(new_time_plan_activity)
+
+        for activity in activities:
+            if not activity.is_target_chore_stack:
+                continue
+
+            await self.check_entity(
+                uow, context.user.ref_id, ChoreStack, activity.target.ref_id
             )
 
             new_time_plan_activity = TimePlanActivity.new_activity_from_existing(

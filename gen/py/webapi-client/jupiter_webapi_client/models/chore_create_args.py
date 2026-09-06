@@ -40,6 +40,7 @@ class ChoreCreateArgs:
         skip_rule (None | str | Unset):
         start_at_date (None | str | Unset):
         end_at_date (None | str | Unset):
+        stack_ref_id (None | str | Unset):
     """
 
     name: str
@@ -61,6 +62,7 @@ class ChoreCreateArgs:
     skip_rule: None | str | Unset = UNSET
     start_at_date: None | str | Unset = UNSET
     end_at_date: None | str | Unset = UNSET
+    stack_ref_id: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -158,6 +160,12 @@ class ChoreCreateArgs:
         else:
             end_at_date = self.end_at_date
 
+        stack_ref_id: None | str | Unset
+        if isinstance(self.stack_ref_id, Unset):
+            stack_ref_id = UNSET
+        else:
+            stack_ref_id = self.stack_ref_id
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -196,6 +204,8 @@ class ChoreCreateArgs:
             field_dict["start_at_date"] = start_at_date
         if end_at_date is not UNSET:
             field_dict["end_at_date"] = end_at_date
+        if stack_ref_id is not UNSET:
+            field_dict["stack_ref_id"] = stack_ref_id
 
         return field_dict
 
@@ -349,6 +359,15 @@ class ChoreCreateArgs:
 
         end_at_date = _parse_end_at_date(d.pop("end_at_date", UNSET))
 
+        def _parse_stack_ref_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        stack_ref_id = _parse_stack_ref_id(d.pop("stack_ref_id", UNSET))
+
         chore_create_args = cls(
             name=name,
             period=period,
@@ -369,6 +388,7 @@ class ChoreCreateArgs:
             skip_rule=skip_rule,
             start_at_date=start_at_date,
             end_at_date=end_at_date,
+            stack_ref_id=stack_ref_id,
         )
 
         chore_create_args.additional_properties = d

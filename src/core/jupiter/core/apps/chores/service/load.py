@@ -1,6 +1,7 @@
 """Shared service for loading a chore and its dependent entities."""
 
 from jupiter.core.apps.chores.root import Chore
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
 from jupiter.core.apps.life_plan.sub.goals.root import Goal
@@ -45,6 +46,7 @@ class ChoreLoadResult(UseCaseResultBase):
     """ChoreLoadResult."""
 
     chore: Chore
+    stack: ChoreStack | None
     aspect: Aspect
     chapter: Chapter | None
     goal: Goal | None
@@ -95,6 +97,13 @@ class ChoreLoadService:
         goal = (
             await uow.get_for(Goal).load_by_id(chore.goal_ref_id)
             if chore.goal_ref_id
+            else None
+        )
+        stack = (
+            await uow.get_for(ChoreStack).load_by_id(
+                chore.stack_ref_id, allow_archived=allow_archived
+            )
+            if chore.stack_ref_id
             else None
         )
         inbox_tasks_total_cnt = await uow.get(InboxTaskRepository).count_all_for_owner(
@@ -165,6 +174,7 @@ class ChoreLoadService:
 
         return ChoreLoadResult(
             chore=chore,
+            stack=stack,
             aspect=aspect,
             chapter=chapter,
             goal=goal,

@@ -2,6 +2,7 @@ import {
   HabitSummary,
   AspectSummary,
   type Habit,
+  type HabitStack,
 } from "@jupiter/webapi-client";
 
 import { compareDifficulty } from "#/core/common/difficulty";
@@ -49,5 +50,14 @@ export function sortHabitSummariesByPeriod(
 ): HabitSummary[] {
   return [...habits].sort((c1, c2) => {
     return comparePeriods(c1.period, c2.period);
+  });
+}
+
+export function sortHabitStacksNaturally(stacks: HabitStack[]): HabitStack[] {
+  return [...stacks].sort((left, right) => {
+    return (
+      comparePeriods(left.period, right.period) ||
+      left.name.localeCompare(right.name)
+    );
   });
 }

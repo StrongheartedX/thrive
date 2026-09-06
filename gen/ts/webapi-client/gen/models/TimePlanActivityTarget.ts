@@ -9,6 +9,8 @@ export enum TimePlanActivityTarget {
     INBOX_TASK = 'inbox-task',
     TODO_TASK = 'todo-task',
     HABIT = 'habit',
+    HABIT_STACK = 'habit-stack',
     CHORE = 'chore',
+    CHORE_STACK = 'chore-stack',
     BIG_PLAN = 'big-plan',
 }

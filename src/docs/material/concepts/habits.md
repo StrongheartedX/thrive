@@ -161,3 +161,18 @@ Similarly, a habit can have the Eisenhower properties. These will be copied
 toall the instantiated tasks that are created.
 
 Habit inbox tasks are created via [task generation](tasks-generation.md).
+
+## Stacks
+
+A _habit stack_ is a group of habits you do together, at the same cadence. Each
+stack has a name and a period (daily, weekly, and so on). A habit belongs to at
+most one stack, and only if that habit's period matches the stack.
+
+Create stacks from the Stacks view (linked from Habits), then add existing
+habits to them. Changing a
+habit's period removes it from its stack. Archiving or removing a stack leaves
+the member habits in place and simply detaches them.
+
+Stacks can be associated with a life-plan aspect, chapter, and goal. They can
+also be [shared with other Thrive users](collaboration.md) and
+[published](publish.md) as a public page.

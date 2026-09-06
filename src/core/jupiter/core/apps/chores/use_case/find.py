@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import cast
 
 from jupiter.core.apps.chores.root import Chore
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
 from jupiter.core.apps.life_plan.sub.goals.root import Goal
@@ -68,6 +69,7 @@ class ChoreFindResultEntry(UseCaseResultBase):
     """A single entry in the load all chores response."""
 
     chore: Chore
+    stack: ChoreStack | None
     note: Note | None
     aspect: Aspect | None
     chapter: Chapter | None
@@ -136,6 +138,19 @@ class ChoreFindUseCase(JupiterFindCrownEntityUseCase[ChoreFindArgs, ChoreFindRes
         chore_owner_links = [
             EntityLink.std(NamedEntityTag.CHORE.value, c.ref_id) for c in chores
         ]
+
+        stack_ref_ids = list(
+            {c.stack_ref_id for c in chores if c.stack_ref_id is not None}
+        )
+        stacks = (
+            await uow.get_for(ChoreStack).find_all_generic(
+                allow_archived=allow_archived,
+                ref_id=stack_ref_ids,
+            )
+            if stack_ref_ids
+            else []
+        )
+        stack_by_ref_id = {it.ref_id: it for it in stacks}
 
         if include_life_plan:
             aspect_ref_ids = list({c.aspect_ref_id for c in chores})
@@ -273,6 +288,11 @@ class ChoreFindUseCase(JupiterFindCrownEntityUseCase[ChoreFindArgs, ChoreFindRes
             entries=[
                 ChoreFindResultEntry(
                     chore=rt,
+                    stack=(
+                        stack_by_ref_id.get(rt.stack_ref_id)
+                        if rt.stack_ref_id is not None
+                        else None
+                    ),
                     aspect=(
                         aspect_by_ref_id.get(rt.aspect_ref_id)
                         if aspect_by_ref_id is not None

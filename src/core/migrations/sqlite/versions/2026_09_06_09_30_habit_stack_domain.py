@@ -1,0 +1,81 @@
+"""habit stack domain
+
+Revision ID: b7c8d9e0f1a2
+Revises: e8f91a2b3c4d
+Create Date: 2026-09-06 09:30:00.000000
+
+"""
+
+from alembic import op
+
+revision = "b7c8d9e0f1a2"
+down_revision = "e8f91a2b3c4d"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.execute(
+        """
+        CREATE TABLE habit_stack (
+            ref_id INTEGER NOT NULL,
+            version INTEGER NOT NULL,
+            archived BOOLEAN NOT NULL,
+            created_time DATETIME NOT NULL,
+            last_modified_time DATETIME NOT NULL,
+            archived_time DATETIME,
+            name VARCHAR(100) NOT NULL,
+            period VARCHAR(16) NOT NULL,
+            habit_collection_ref_id INTEGER NOT NULL,
+            aspect_ref_id INTEGER NOT NULL,
+            chapter_ref_id INTEGER,
+            goal_ref_id INTEGER,
+            archival_reason VARCHAR,
+            CONSTRAINT pk_habit_stack PRIMARY KEY (ref_id),
+            CONSTRAINT fk_habit_stack_habit_collection_ref_id_habit_collection
+                FOREIGN KEY (habit_collection_ref_id) REFERENCES habit_collection (ref_id),
+            CONSTRAINT fk_habit_stack_aspect_ref_id_aspect
+                FOREIGN KEY (aspect_ref_id) REFERENCES aspect (ref_id),
+            CONSTRAINT fk_habit_stack_chapter_ref_id_chapter
+                FOREIGN KEY (chapter_ref_id) REFERENCES chapter (ref_id),
+            CONSTRAINT fk_habit_stack_goal_ref_id_goal
+                FOREIGN KEY (goal_ref_id) REFERENCES goal (ref_id)
+        )
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_habit_stack_habit_collection_ref_id
+            ON habit_stack (habit_collection_ref_id)
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_habit_stack_aspect_ref_id
+            ON habit_stack (aspect_ref_id)
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_habit_stack_chapter_ref_id
+            ON habit_stack (chapter_ref_id)
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX ix_habit_stack_goal_ref_id
+            ON habit_stack (goal_ref_id)
+        """
+    )
+    op.execute("ALTER TABLE habit ADD COLUMN stack_ref_id INTEGER")
+    op.execute("CREATE INDEX ix_habit_stack_ref_id ON habit (stack_ref_id)")
+
+
+def downgrade() -> None:
+    op.execute("DROP INDEX ix_habit_stack_ref_id")
+    op.execute("ALTER TABLE habit DROP COLUMN stack_ref_id")
+    op.execute("DROP INDEX ix_habit_stack_goal_ref_id")
+    op.execute("DROP INDEX ix_habit_stack_chapter_ref_id")
+    op.execute("DROP INDEX ix_habit_stack_aspect_ref_id")
+    op.execute("DROP INDEX ix_habit_stack_habit_collection_ref_id")
+    op.execute("DROP TABLE habit_stack")

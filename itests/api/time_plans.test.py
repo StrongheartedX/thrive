@@ -15,8 +15,20 @@ from jupiter_webapi_client.api.application.invite_users_to_entity import (
 from jupiter_webapi_client.api.big_plans.big_plan_create import (
     sync_detailed as big_plan_create_sync,
 )
+from jupiter_webapi_client.api.chores.chore_create import (
+    sync_detailed as chore_create_sync,
+)
+from jupiter_webapi_client.api.chores.chore_stack_create import (
+    sync_detailed as chore_stack_create_sync,
+)
 from jupiter_webapi_client.api.gen.gen_do import (
     sync_detailed as gen_do_sync,
+)
+from jupiter_webapi_client.api.habits.habit_create import (
+    sync_detailed as habit_create_sync,
+)
+from jupiter_webapi_client.api.habits.habit_stack_create import (
+    sync_detailed as habit_stack_create_sync,
 )
 from jupiter_webapi_client.api.life_plan.aspect_create import (
     sync_detailed as aspect_create_sync,
@@ -74,6 +86,14 @@ from jupiter_webapi_client.models.aspect_create_result import AspectCreateResult
 from jupiter_webapi_client.models.big_plan import BigPlan
 from jupiter_webapi_client.models.big_plan_create_args import BigPlanCreateArgs
 from jupiter_webapi_client.models.big_plan_create_result import BigPlanCreateResult
+from jupiter_webapi_client.models.chore import Chore
+from jupiter_webapi_client.models.chore_create_args import ChoreCreateArgs
+from jupiter_webapi_client.models.chore_create_result import ChoreCreateResult
+from jupiter_webapi_client.models.chore_stack import ChoreStack
+from jupiter_webapi_client.models.chore_stack_create_args import ChoreStackCreateArgs
+from jupiter_webapi_client.models.chore_stack_create_result import (
+    ChoreStackCreateResult,
+)
 from jupiter_webapi_client.models.difficulty import Difficulty
 from jupiter_webapi_client.models.eisen import Eisen
 from jupiter_webapi_client.models.gen_do_args import GenDoArgs
@@ -82,6 +102,14 @@ from jupiter_webapi_client.models.get_summaries_result import GetSummariesResult
 from jupiter_webapi_client.models.goal import Goal
 from jupiter_webapi_client.models.goal_create_args import GoalCreateArgs
 from jupiter_webapi_client.models.goal_create_result import GoalCreateResult
+from jupiter_webapi_client.models.habit import Habit
+from jupiter_webapi_client.models.habit_create_args import HabitCreateArgs
+from jupiter_webapi_client.models.habit_create_result import HabitCreateResult
+from jupiter_webapi_client.models.habit_stack import HabitStack
+from jupiter_webapi_client.models.habit_stack_create_args import HabitStackCreateArgs
+from jupiter_webapi_client.models.habit_stack_create_result import (
+    HabitStackCreateResult,
+)
 from jupiter_webapi_client.models.heading_block import HeadingBlock
 from jupiter_webapi_client.models.inbox_task import InboxTask
 from jupiter_webapi_client.models.invite_users_to_entity_args import (
@@ -370,6 +398,117 @@ def associate_big_plan(logged_in_client: AuthenticatedClient):
         ).new_time_plan_activities[0]
 
     return _associate
+
+
+@pytest.fixture()
+def _with_habits_enabled(logged_in_client: AuthenticatedClient) -> Iterator[None]:
+    try:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.HABITS, value=True),
+        )
+        yield
+    finally:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.HABITS, value=False),
+        )
+
+
+@pytest.fixture()
+def create_habit(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str, period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY
+    ) -> Habit:
+        result = habit_create_sync(
+            client=logged_in_client,
+            body=HabitCreateArgs(
+                name=name,
+                period=period,
+                is_key=False,
+                eisen=Eisen.REGULAR,
+                difficulty=Difficulty.EASY,
+            ),
+        )
+        return get_parsed_from_response(HabitCreateResult, result).new_habit
+
+    return _create
+
+
+@pytest.fixture()
+def create_habit_stack(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str,
+        habit_ref_ids: list[str] | None = None,
+        period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY,
+    ) -> HabitStack:
+        result = habit_stack_create_sync(
+            client=logged_in_client,
+            body=HabitStackCreateArgs(
+                name=name,
+                period=period,
+                habit_ref_ids=habit_ref_ids or [],
+            ),
+        )
+        return get_parsed_from_response(HabitStackCreateResult, result).new_habit_stack
+
+    return _create
+
+
+@pytest.fixture()
+def _with_chores_enabled(logged_in_client: AuthenticatedClient) -> Iterator[None]:
+    try:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.CHORES, value=True),
+        )
+        yield
+    finally:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.CHORES, value=False),
+        )
+
+
+@pytest.fixture()
+def create_chore(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str, period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY
+    ) -> Chore:
+        result = chore_create_sync(
+            client=logged_in_client,
+            body=ChoreCreateArgs(
+                name=name,
+                period=period,
+                is_key=False,
+                eisen=Eisen.REGULAR,
+                difficulty=Difficulty.EASY,
+                must_do=False,
+            ),
+        )
+        return get_parsed_from_response(ChoreCreateResult, result).new_chore
+
+    return _create
+
+
+@pytest.fixture()
+def create_chore_stack(logged_in_client: AuthenticatedClient):
+    def _create(
+        name: str,
+        chore_ref_ids: list[str] | None = None,
+        period: RecurringTaskPeriod = RecurringTaskPeriod.WEEKLY,
+    ) -> ChoreStack:
+        result = chore_stack_create_sync(
+            client=logged_in_client,
+            body=ChoreStackCreateArgs(
+                name=name,
+                period=period,
+                chore_ref_ids=chore_ref_ids or [],
+            ),
+        )
+        return get_parsed_from_response(ChoreStackCreateResult, result).new_chore_stack
+
+    return _create
 
 
 def _headers(api_key: str) -> dict[str, str]:
@@ -1612,6 +1751,198 @@ def test_api_time_plan_question_rest_create_and_find(
 
 
 # --- Auth test ---
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_api_time_plan_associate_with_habit_stacks(
+    api_url: str,
+    api_key: str,
+    create_time_plan,
+    create_habit,
+    create_habit_stack,
+) -> None:
+    tp = create_time_plan("2024-12-02")
+    habit1 = create_habit("Stacked Habit One")
+    habit2 = create_habit("Stacked Habit Two")
+    unstacked = create_habit("Unstacked Habit")
+    stack = create_habit_stack("Morning Stack", [habit1.ref_id, habit2.ref_id])
+
+    response = requests.post(
+        f"{api_url}/v1/time-plan-associate-with-habit-stacks",
+        headers=_headers(api_key),
+        json={
+            "ref_id": tp.ref_id,
+            "habit_stack_ref_ids": [stack.ref_id],
+            "kind": "finish",
+            "feasability": "must-do",
+        },
+        timeout=10,
+    )
+    assert response.status_code == 200
+
+    activities = response.json()["new_time_plan_activities"]
+    targets = {a["target"] for a in activities}
+    assert f"HabitStack:std:{stack.ref_id}" in targets
+    assert f"Habit:std:{habit1.ref_id}" in targets
+    assert f"Habit:std:{habit2.ref_id}" in targets
+    assert f"Habit:std:{unstacked.ref_id}" not in targets
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_api_habit_stack_find_suitable_for_time_plan(
+    api_url: str,
+    api_key: str,
+    create_time_plan,
+    create_habit,
+    create_habit_stack,
+) -> None:
+    tp = create_time_plan("2024-12-09")
+    habit = create_habit("Suitable Stack Habit")
+    stack = create_habit_stack("Suitable Stack", [habit.ref_id])
+
+    response = requests.post(
+        f"{api_url}/v1/habit-stack-find-suitable-for-time-plan",
+        headers=_headers(api_key),
+        json={"time_plan_ref_id": tp.ref_id},
+        timeout=10,
+    )
+    assert response.status_code == 200
+    entries = response.json()["entries"]
+    matching = [
+        entry for entry in entries if entry["habit_stack"]["ref_id"] == stack.ref_id
+    ]
+    assert len(matching) == 1
+    assert matching[0]["habit_stack"]["name"] == "Suitable Stack"
+    member_ids = {habit["ref_id"] for habit in matching[0]["habits"]}
+    assert habit.ref_id in member_ids
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_api_time_event_create_for_habit_stack(
+    api_url: str,
+    api_key: str,
+    create_habit,
+    create_habit_stack,
+) -> None:
+    habit1 = create_habit("Event Habit One")
+    habit2 = create_habit("Event Habit Two")
+    stack = create_habit_stack("Event Stack", [habit1.ref_id, habit2.ref_id])
+
+    response = requests.post(
+        f"{api_url}/v1/time-event-in-day-block-create-for-habit-stack",
+        headers=_headers(api_key),
+        json={
+            "habit_stack_ref_id": stack.ref_id,
+            "start_date": "2024-12-02",
+            "start_time_in_day": "09:00",
+            "duration_mins": 30,
+        },
+        timeout=10,
+    )
+    assert response.status_code == 200
+    events = response.json()["new_time_events"]
+    assert len(events) == 2
+    owners = {event["owner"] for event in events}
+    assert f"Habit:std:{habit1.ref_id}" in owners
+    assert f"Habit:std:{habit2.ref_id}" in owners
+    start_times = {event["start_time_in_day"] for event in events}
+    assert start_times == {"09:00"}
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_api_time_plan_associate_with_chore_stacks(
+    api_url: str,
+    api_key: str,
+    create_time_plan,
+    create_chore,
+    create_chore_stack,
+) -> None:
+    tp = create_time_plan("2024-12-02")
+    chore1 = create_chore("Stacked Chore One")
+    chore2 = create_chore("Stacked Chore Two")
+    unstacked = create_chore("Unstacked Chore")
+    stack = create_chore_stack("Morning Stack", [chore1.ref_id, chore2.ref_id])
+
+    response = requests.post(
+        f"{api_url}/v1/time-plan-associate-with-chore-stacks",
+        headers=_headers(api_key),
+        json={
+            "ref_id": tp.ref_id,
+            "chore_stack_ref_ids": [stack.ref_id],
+            "kind": "finish",
+            "feasability": "must-do",
+        },
+        timeout=10,
+    )
+    assert response.status_code == 200
+
+    activities = response.json()["new_time_plan_activities"]
+    targets = {a["target"] for a in activities}
+    assert f"ChoreStack:std:{stack.ref_id}" in targets
+    assert f"Chore:std:{chore1.ref_id}" in targets
+    assert f"Chore:std:{chore2.ref_id}" in targets
+    assert f"Chore:std:{unstacked.ref_id}" not in targets
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_api_chore_stack_find_suitable_for_time_plan(
+    api_url: str,
+    api_key: str,
+    create_time_plan,
+    create_chore,
+    create_chore_stack,
+) -> None:
+    tp = create_time_plan("2024-12-09")
+    chore = create_chore("Suitable Stack Chore")
+    stack = create_chore_stack("Suitable Stack", [chore.ref_id])
+
+    response = requests.post(
+        f"{api_url}/v1/chore-stack-find-suitable-for-time-plan",
+        headers=_headers(api_key),
+        json={"time_plan_ref_id": tp.ref_id},
+        timeout=10,
+    )
+    assert response.status_code == 200
+    entries = response.json()["entries"]
+    matching = [
+        entry for entry in entries if entry["chore_stack"]["ref_id"] == stack.ref_id
+    ]
+    assert len(matching) == 1
+    assert matching[0]["chore_stack"]["name"] == "Suitable Stack"
+    member_ids = {chore["ref_id"] for chore in matching[0]["chores"]}
+    assert chore.ref_id in member_ids
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_api_time_event_create_for_chore_stack(
+    api_url: str,
+    api_key: str,
+    create_chore,
+    create_chore_stack,
+) -> None:
+    chore1 = create_chore("Event Chore One")
+    chore2 = create_chore("Event Chore Two")
+    stack = create_chore_stack("Event Stack", [chore1.ref_id, chore2.ref_id])
+
+    response = requests.post(
+        f"{api_url}/v1/time-event-in-day-block-create-for-chore-stack",
+        headers=_headers(api_key),
+        json={
+            "chore_stack_ref_id": stack.ref_id,
+            "start_date": "2024-12-02",
+            "start_time_in_day": "09:00",
+            "duration_mins": 30,
+        },
+        timeout=10,
+    )
+    assert response.status_code == 200
+    events = response.json()["new_time_events"]
+    assert len(events) == 2
+    owners = {event["owner"] for event in events}
+    assert f"Chore:std:{chore1.ref_id}" in owners
+    assert f"Chore:std:{chore2.ref_id}" in owners
+    start_times = {event["start_time_in_day"] for event in events}
+    assert start_times == {"09:00"}
 
 
 def test_api_time_plan_requires_auth(api_url: str) -> None:

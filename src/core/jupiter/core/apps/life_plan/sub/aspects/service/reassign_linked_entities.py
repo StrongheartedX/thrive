@@ -4,8 +4,10 @@ from jupiter.core.apps.big_plans.collection import BigPlanCollection
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.chores.collection import ChoreCollection
 from jupiter.core.apps.chores.root import Chore
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.core.apps.habits.collection import HabitCollection
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.life_plan.root import LifePlan
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
@@ -86,6 +88,7 @@ class AspectReassignLinkedEntitiesService:
                 aspect_ref_id=UpdateAction.change_to(new_aspect.ref_id),
                 chapter_ref_id=UpdateAction.do_nothing(),
                 goal_ref_id=UpdateAction.do_nothing(),
+                stack_ref_id=UpdateAction.do_nothing(),
                 is_key=UpdateAction.do_nothing(),
                 gen_params=UpdateAction.do_nothing(),
                 start_at_date=UpdateAction.do_nothing(),
@@ -95,6 +98,22 @@ class AspectReassignLinkedEntitiesService:
             await uow.get_for(Chore).save(updated_chore)
             await progress_reporter.mark_updated(updated_chore)
             chores_by_ref_id[chore.ref_id] = updated_chore
+
+        chore_stacks = await uow.get_for(ChoreStack).find_all_generic(
+            parent_ref_id=chore_collection.ref_id,
+            allow_archived=True,
+            aspect_ref_id=old_aspect.ref_id,
+        )
+        for stack in chore_stacks:
+            updated_stack = stack.update(
+                ctx,
+                name=UpdateAction.do_nothing(),
+                aspect_ref_id=UpdateAction.change_to(new_aspect.ref_id),
+                chapter_ref_id=UpdateAction.do_nothing(),
+                goal_ref_id=UpdateAction.do_nothing(),
+            )
+            await uow.get_for(ChoreStack).save(updated_stack)
+            await progress_reporter.mark_updated(updated_stack)
 
         # Unlink from Habits
         habit_collection = await uow.get_for(HabitCollection).load_by_parent(
@@ -113,6 +132,7 @@ class AspectReassignLinkedEntitiesService:
                 aspect_ref_id=UpdateAction.change_to(new_aspect.ref_id),
                 chapter_ref_id=UpdateAction.do_nothing(),
                 goal_ref_id=UpdateAction.do_nothing(),
+                stack_ref_id=UpdateAction.do_nothing(),
                 is_key=UpdateAction.do_nothing(),
                 gen_params=UpdateAction.do_nothing(),
                 repeats_in_period_count=UpdateAction.do_nothing(),
@@ -121,6 +141,22 @@ class AspectReassignLinkedEntitiesService:
             await uow.get_for(Habit).save(updated_habit)
             await progress_reporter.mark_updated(updated_habit)
             habits_by_ref_id[habit.ref_id] = updated_habit
+
+        habit_stacks = await uow.get_for(HabitStack).find_all_generic(
+            parent_ref_id=habit_collection.ref_id,
+            allow_archived=True,
+            aspect_ref_id=old_aspect.ref_id,
+        )
+        for habit_stack in habit_stacks:
+            updated_habit_stack = habit_stack.update(
+                ctx,
+                name=UpdateAction.do_nothing(),
+                aspect_ref_id=UpdateAction.change_to(new_aspect.ref_id),
+                chapter_ref_id=UpdateAction.do_nothing(),
+                goal_ref_id=UpdateAction.do_nothing(),
+            )
+            await uow.get_for(HabitStack).save(updated_habit_stack)
+            await progress_reporter.mark_updated(updated_habit_stack)
 
         milestones = await uow.get_for(
             Milestone

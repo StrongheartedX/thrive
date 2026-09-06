@@ -2,8 +2,10 @@ import {
   BigPlan,
   BigPlanStatus,
   Chore,
+  ChoreStack,
   Difficulty,
   Habit,
+  HabitStack,
   InboxTask,
   InboxTaskStatus,
   TimePlanActivity,
@@ -27,7 +29,9 @@ import { compareTimePlanActivityFeasability } from "#/core/apps/time_plans/sub/a
 import { compareTimePlanActivityKind } from "#/core/apps/time_plans/sub/activity/kind";
 import {
   isTimePlanActivityBigPlanTarget,
+  isTimePlanActivityChoreStackTarget,
   isTimePlanActivityChoreTarget,
+  isTimePlanActivityHabitStackTarget,
   isTimePlanActivityHabitTarget,
   isTimePlanActivityInboxTaskTarget,
   isTimePlanActivityTodoTaskTarget,
@@ -41,6 +45,8 @@ export function timePlanActivityTargetNameForEvent(
   targetTodoTask?: TodoTask | null,
   targetHabit?: Habit | null,
   targetChore?: Chore | null,
+  targetHabitStack?: HabitStack | null,
+  targetChoreStack?: ChoreStack | null,
 ): string {
   if (targetInboxTask) {
     const name = targetInboxTask.name;
@@ -83,6 +89,20 @@ export function timePlanActivityTargetNameForEvent(
     }
     return `${name}`;
   }
+  if (targetHabitStack) {
+    const name = targetHabitStack.name;
+    if (targetHabitStack.archived) {
+      return `❌ ${name}`;
+    }
+    return `${name}`;
+  }
+  if (targetChoreStack) {
+    const name = targetChoreStack.name;
+    if (targetChoreStack.archived) {
+      return `❌ ${name}`;
+    }
+    return `${name}`;
+  }
   return `📋 Work on activity ${activityRefId ?? "unknown"}`;
 }
 
@@ -96,6 +116,8 @@ export function timePlanActivityNameForEvent(
     entry.target_todo_task,
     entry.target_habit,
     entry.target_chore,
+    entry.target_habit_stack,
+    entry.target_chore_stack,
   );
 }
 
@@ -109,7 +131,9 @@ export function filterActivityByFeasabilityWithParents(
     if (
       isTimePlanActivityBigPlanTarget(a.target) ||
       isTimePlanActivityTodoTaskTarget(a.target) ||
+      isTimePlanActivityHabitStackTarget(a.target) ||
       isTimePlanActivityHabitTarget(a.target) ||
+      isTimePlanActivityChoreStackTarget(a.target) ||
       isTimePlanActivityChoreTarget(a.target)
     ) {
       return a.feasability === feasability;
@@ -146,6 +170,8 @@ export function filterActivitiesByTargetStatus(
   targetTodoTasks?: Map<string, TodoTask>,
   targetHabits?: Map<string, Habit>,
   targetChores?: Map<string, Chore>,
+  targetHabitStacks?: Map<string, HabitStack>,
+  targetChoreStacks?: Map<string, ChoreStack>,
 ): TimePlanActivity[] {
   return timePlanActivities.filter((activity) => {
     if (activityDoneness[activity.ref_id] === TimePlanActivityDoneness.DONE) {
@@ -187,6 +213,18 @@ export function filterActivitiesByTargetStatus(
       );
       return ownedInboxTask ? !ownedInboxTask.archived : true;
     }
+    if (isTimePlanActivityHabitStackTarget(activity.target)) {
+      const stack = targetHabitStacks?.get(
+        entityLinkRefIdFromWire(activity.target),
+      );
+      return stack ? !stack.archived : true;
+    }
+    if (isTimePlanActivityChoreStackTarget(activity.target)) {
+      const stack = targetChoreStacks?.get(
+        entityLinkRefIdFromWire(activity.target),
+      );
+      return stack ? !stack.archived : true;
+    }
     if (isTimePlanActivityChoreTarget(activity.target)) {
       const chore = targetChores?.get(entityLinkRefIdFromWire(activity.target));
       if (chore) {
@@ -218,7 +256,9 @@ function parentGroupingLink(
   if (
     isTimePlanActivityBigPlanTarget(activity.target) ||
     isTimePlanActivityTodoTaskTarget(activity.target) ||
+    isTimePlanActivityHabitStackTarget(activity.target) ||
     isTimePlanActivityHabitTarget(activity.target) ||
+    isTimePlanActivityChoreStackTarget(activity.target) ||
     isTimePlanActivityChoreTarget(activity.target)
   ) {
     return activity.target;
@@ -308,6 +348,8 @@ export function inferDurationMinsForTimePlanActivity(
   bigPlansByRefId: Map<string, BigPlan>,
   habitsByRefId: Map<string, Habit>,
   choresByRefId: Map<string, Chore>,
+  habitStacksByRefId?: Map<string, HabitStack>,
+  choreStacksByRefId?: Map<string, ChoreStack>,
 ): number {
   if (isTimePlanActivityInboxTaskTarget(activity.target)) {
     const inboxTask = inboxTasksByRefId.get(
@@ -337,6 +379,38 @@ export function inferDurationMinsForTimePlanActivity(
     const habit = habitsByRefId.get(entityLinkRefIdFromWire(activity.target));
     if (habit) {
       return inferDurationMinsFromDifficulty(habit.gen_params.difficulty);
+    }
+  } else if (isTimePlanActivityHabitStackTarget(activity.target)) {
+    const stackRefId = entityLinkRefIdFromWire(activity.target);
+    let total = 0;
+    let found = false;
+    for (const habit of habitsByRefId.values()) {
+      if (habit.stack_ref_id === stackRefId) {
+        found = true;
+        total += inferDurationMinsFromDifficulty(habit.gen_params.difficulty);
+      }
+    }
+    if (found) {
+      return total;
+    }
+    if (habitStacksByRefId?.has(stackRefId)) {
+      return inferDurationMinsFromDifficulty(Difficulty.HARD);
+    }
+  } else if (isTimePlanActivityChoreStackTarget(activity.target)) {
+    const stackRefId = entityLinkRefIdFromWire(activity.target);
+    let total = 0;
+    let found = false;
+    for (const chore of choresByRefId.values()) {
+      if (chore.stack_ref_id === stackRefId) {
+        found = true;
+        total += inferDurationMinsFromDifficulty(chore.gen_params.difficulty);
+      }
+    }
+    if (found) {
+      return total;
+    }
+    if (choreStacksByRefId?.has(stackRefId)) {
+      return inferDurationMinsFromDifficulty(Difficulty.HARD);
     }
   } else if (isTimePlanActivityChoreTarget(activity.target)) {
     const ownedInboxTask = ownedInboxTaskForTarget(

@@ -2,8 +2,10 @@ import type {
   AspectSummary,
   BigPlan,
   Chore,
+  ChoreStack,
   EntityId,
   Habit,
+  HabitStack,
   InboxTask,
   TimePlanActivity,
   TodoTask,
@@ -19,7 +21,9 @@ import {
 } from "#/core/common/sub/inbox_tasks/parent-link-namespace";
 import {
   isTimePlanActivityBigPlanTarget,
+  isTimePlanActivityChoreStackTarget,
   isTimePlanActivityChoreTarget,
+  isTimePlanActivityHabitStackTarget,
   isTimePlanActivityHabitTarget,
   isTimePlanActivityInboxTaskTarget,
   isTimePlanActivityTodoTaskTarget,
@@ -31,6 +35,8 @@ export interface TimePlanActivityGroupingMaps {
   targetBigPlansByRefId: Map<string, BigPlan>;
   targetTodoTasksByRefId: Map<string, TodoTask>;
   targetHabitsByRefId: Map<string, Habit>;
+  targetHabitStacksByRefId?: Map<string, HabitStack>;
+  targetChoreStacksByRefId?: Map<string, ChoreStack>;
   targetChoresByRefId: Map<string, Chore>;
 }
 
@@ -55,7 +61,9 @@ export function parentActivitiesByTargetRefId(
   for (const activity of activities) {
     if (
       !isTimePlanActivityBigPlanTarget(activity.target) &&
+      !isTimePlanActivityHabitStackTarget(activity.target) &&
       !isTimePlanActivityHabitTarget(activity.target) &&
+      !isTimePlanActivityChoreStackTarget(activity.target) &&
       !isTimePlanActivityChoreTarget(activity.target) &&
       !isTimePlanActivityTodoTaskTarget(activity.target)
     ) {
@@ -102,12 +110,16 @@ export function goalRefIdForActivity(
   targetTodoTasksByRefId: Map<string, TodoTask>,
   targetHabitsByRefId: Map<string, Habit>,
   targetChoresByRefId: Map<string, Chore>,
+  targetHabitStacksByRefId?: Map<string, HabitStack>,
+  targetChoreStacksByRefId?: Map<string, ChoreStack>,
 ): EntityId | null {
   const parent = parentForActivity(activity, {
     targetInboxTasksByRefId,
     targetBigPlansByRefId,
     targetTodoTasksByRefId,
     targetHabitsByRefId,
+    targetHabitStacksByRefId,
+    targetChoreStacksByRefId,
     targetChoresByRefId,
   });
   if (!parent) {
@@ -130,6 +142,12 @@ function parentForActivity(
   }
   if (isTimePlanActivityHabitTarget(activity.target)) {
     return parentForEntity(maps.targetHabitsByRefId.get(targetRefId));
+  }
+  if (isTimePlanActivityHabitStackTarget(activity.target)) {
+    return parentForEntity(maps.targetHabitStacksByRefId?.get(targetRefId));
+  }
+  if (isTimePlanActivityChoreStackTarget(activity.target)) {
+    return parentForEntity(maps.targetChoreStacksByRefId?.get(targetRefId));
   }
   if (isTimePlanActivityChoreTarget(activity.target)) {
     return parentForEntity(maps.targetChoresByRefId.get(targetRefId));
@@ -163,7 +181,14 @@ function parentForActivity(
 }
 
 function parentForEntity(
-  entity: BigPlan | Chore | Habit | TodoTask | undefined,
+  entity:
+    | BigPlan
+    | Chore
+    | ChoreStack
+    | Habit
+    | HabitStack
+    | TodoTask
+    | undefined,
 ): ActivityParent | null {
   if (!entity) {
     return null;

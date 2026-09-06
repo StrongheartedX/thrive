@@ -36,6 +36,8 @@ import { TimeEventParamsSource } from "@jupiter/core/common/sub/time_events/comp
 import { DisplayType } from "@jupiter/core/infra/component/use-nested-entities";
 import { TopLevelInfoContext } from "@jupiter/core/infra/top-level-context";
 import { timePlanActivityTargetNameForEvent } from "#/core/apps/time_plans/sub/activity/root";
+import { habitActivitiesForStackMembers } from "#/core/apps/time_plans/sub/activity/habit-chore-group";
+import { isTimePlanActivityHabitStackTarget } from "#/core/apps/time_plans/sub/activity/target-wire";
 import { handleActionApiError } from "@jupiter/core/infra/errors.server";
 
 import { standardShouldRevalidate } from "~/rendering/standard-should-revalidate";
@@ -82,6 +84,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     targetBigPlan: activityResponse.target_big_plan,
     targetTodoTask: activityResponse.target_todo_task,
     targetHabit: activityResponse.target_habit,
+    targetHabitStack: activityResponse.target_habit_stack,
+    targetHabitStackInfo: activityResponse.target_habit_stack_info,
     targetChore: activityResponse.target_chore,
   });
 }
@@ -92,19 +96,59 @@ export async function action({ request }: ActionFunctionArgs) {
   const form = await parseForm(request, CreateFormSchema);
 
   try {
-    const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
-      form,
-      form.userTimezone,
-    );
-
-    await apiClient.timeEvents.timeEventInDayBlockCreateForTimePlanActivity({
-      time_plan_activity_ref_id: query.timePlanActivityRefId,
-      start_date: startDate,
-      start_time_in_day: startTimeInDay ?? "",
-      duration_mins: form.durationMins,
-      buffer_before_mins: parseTimeEventBufferMins(form.bufferBeforeMins),
-      buffer_after_mins: parseTimeEventBufferMins(form.bufferAfterMins),
+    const activityResponse = await apiClient.timePlans.timePlanActivityLoad({
+      ref_id: query.timePlanActivityRefId,
+      allow_archived: true,
     });
+
+    if (
+      isTimePlanActivityHabitStackTarget(
+        activityResponse.time_plan_activity.target,
+      ) &&
+      activityResponse.target_habit_stack_info
+    ) {
+      const timePlanResult = await apiClient.timePlans.timePlanLoad({
+        ref_id: query.timePlanRefId,
+        allow_archived: true,
+        include_targets: true,
+        include_completed_nontarget: false,
+        include_other_time_plans: false,
+      });
+      const memberActivities = habitActivitiesForStackMembers(
+        timePlanResult.activities,
+        activityResponse.target_habit_stack_info.habits,
+      );
+      const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
+        form,
+        form.userTimezone,
+      );
+      for (const memberActivity of memberActivities) {
+        await apiClient.timeEvents.timeEventInDayBlockCreateForTimePlanActivity(
+          {
+            time_plan_activity_ref_id: memberActivity.ref_id,
+            start_date: startDate,
+            start_time_in_day: startTimeInDay ?? "",
+            duration_mins: form.durationMins,
+            buffer_before_mins: parseTimeEventBufferMins(form.bufferBeforeMins),
+            buffer_after_mins: parseTimeEventBufferMins(form.bufferAfterMins),
+          },
+        );
+      }
+    } else {
+      const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
+        form,
+        form.userTimezone,
+      );
+
+      await apiClient.timeEvents.timeEventInDayBlockCreateForTimePlanActivity({
+        time_plan_activity_ref_id: query.timePlanActivityRefId,
+        start_date: startDate,
+        start_time_in_day: startTimeInDay ?? "",
+        duration_mins: form.durationMins,
+        buffer_before_mins: parseTimeEventBufferMins(form.bufferBeforeMins),
+        buffer_after_mins: parseTimeEventBufferMins(form.bufferAfterMins),
+      });
+    }
 
     return redirect(
       `/app/workspace/apps/time-plans/${query.timePlanRefId}/${query.timePlanActivityRefId}`,
@@ -196,6 +240,7 @@ export default function TimeEventInDayBlockCreateForTimePlanActivity() {
               loaderData.targetTodoTask,
               loaderData.targetHabit,
               loaderData.targetChore,
+              loaderData.targetHabitStack,
             )}
             readOnly={true}
           />

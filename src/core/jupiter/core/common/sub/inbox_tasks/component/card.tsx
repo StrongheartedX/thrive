@@ -52,6 +52,8 @@ import { EisenTag } from "#/core/common/component/eisen-tag";
 import { EmailTaskTag } from "#/core/push_integrations/sub/email/component/tag";
 import { EntityNameComponent } from "#/core/common/component/entity-name";
 import { HabitTag } from "#/core/apps/habits/component/habit-tag";
+import { HabitStackTag } from "#/core/apps/habits/component/habit-stack-tag";
+import { ChoreStackTag } from "#/core/apps/chores/component/chore-stack-tag";
 import { InboxTaskNamespaceTag } from "#/core/common/sub/inbox_tasks/component/namespace-tag";
 import { parentLinkNamespaceFromEntityLinkWire } from "#/core/common/sub/inbox_tasks/parent-link-namespace";
 import { InboxTaskStatusTag } from "#/core/common/sub/inbox_tasks/component/status-tag";
@@ -299,6 +301,24 @@ export function InboxTaskCard(props: InboxTaskCardProps) {
                   props.parent.habit && (
                     <HabitTag habit={props.parent.habit as Habit} />
                   )}
+              </>
+            )}
+            {isWorkspaceFeatureAvailable(
+              props.topLevelInfo.workspace,
+              WorkspaceFeature.HABITS,
+            ) &&
+              props.parent?.habitStack && (
+                <HabitStackTag habitStack={props.parent.habitStack} />
+              )}
+            {isWorkspaceFeatureAvailable(
+              props.topLevelInfo.workspace,
+              WorkspaceFeature.CHORES,
+            ) &&
+              props.parent?.choreStack && (
+                <ChoreStackTag choreStack={props.parent.choreStack} />
+              )}
+            {props.showOptions.showParent && (
+              <>
                 {isWorkspaceFeatureAvailable(
                   props.topLevelInfo.workspace,
                   WorkspaceFeature.CHORES,

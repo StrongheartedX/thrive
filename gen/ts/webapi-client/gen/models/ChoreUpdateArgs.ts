@@ -32,6 +32,10 @@ export type ChoreUpdateArgs = {
         should_change: boolean;
         value?: (EntityId | null);
     };
+    stack_ref_id: {
+        should_change: boolean;
+        value?: (EntityId | null);
+    };
     is_key: {
         should_change: boolean;
         value?: boolean;

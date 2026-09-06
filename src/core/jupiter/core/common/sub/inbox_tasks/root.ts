@@ -7,6 +7,8 @@ import {
   Eisen,
   EmailTask,
   Habit,
+  HabitStack,
+  ChoreStack,
   InboxTask,
   InboxTaskFindResultEntry,
   InboxTaskStatus,
@@ -48,7 +50,9 @@ export interface InboxTaskParent {
   /** When true, writes require current user to match ``owner`` (core lists). */
   writeRequiresOwner?: boolean;
   habit?: Habit;
+  habitStack?: HabitStack;
   chore?: Chore;
+  choreStack?: ChoreStack;
   metric?: Metric;
   person?: Person;
   contact?: Contact;
@@ -64,7 +68,9 @@ export function inboxTaskFindEntryToParent(
     bigPlan: entry.big_plan ?? undefined,
     todoTask: entry.todo_task ?? undefined,
     habit: entry.habit ?? undefined,
+    habitStack: entry.habit_stack ?? undefined,
     chore: entry.chore ?? undefined,
+    choreStack: entry.chore_stack ?? undefined,
     metric: entry.metric ?? undefined,
     person: entry.person ?? undefined,
     contact: entry.contact ?? undefined,
@@ -283,6 +289,54 @@ export function sortInboxTasksByEisenAndDifficulty(
 
   return [...inboxTasks].sort((i1, i2) => {
     return (
+      compareIsKey(i1.is_key, i2.is_key) ||
+      -1 * compareEisen(i1.eisen, i2.eisen) ||
+      -1 * compareDifficulty(i1.difficulty, i2.difficulty) ||
+      (cleanOptions.dueDateAscending ? 1 : -1) *
+        compareADate(i1.due_date, i2.due_date)
+    );
+  });
+}
+
+function compareHabitStackForInboxTaskSort(
+  parent1: InboxTaskParent | undefined,
+  parent2: InboxTaskParent | undefined,
+): number {
+  const stack1 = parent1?.habitStack ?? parent1?.choreStack;
+  const stack2 = parent2?.habitStack ?? parent2?.choreStack;
+  if (stack1 === undefined && stack2 === undefined) {
+    return 0;
+  }
+  if (stack1 === undefined) {
+    return 1;
+  }
+  if (stack2 === undefined) {
+    return -1;
+  }
+  return (
+    stack1.name.localeCompare(stack2.name) ||
+    stack1.ref_id.localeCompare(stack2.ref_id)
+  );
+}
+
+export function sortInboxTasksByHabitStackThenEisenAndDifficulty(
+  inboxTasks: Array<InboxTask>,
+  entriesByRefId: { [key: string]: InboxTaskParent },
+  options?: InboxTaskSortOptions,
+): Array<InboxTask> {
+  let cleanOptions: InboxTaskSortOptions = {
+    dueDateAscending: true,
+  };
+  if (options !== undefined) {
+    cleanOptions = options;
+  }
+
+  return [...inboxTasks].sort((i1, i2) => {
+    return (
+      compareHabitStackForInboxTaskSort(
+        entriesByRefId[i1.ref_id],
+        entriesByRefId[i2.ref_id],
+      ) ||
       compareIsKey(i1.is_key, i2.is_key) ||
       -1 * compareEisen(i1.eisen, i2.eisen) ||
       -1 * compareDifficulty(i1.difficulty, i2.difficulty) ||

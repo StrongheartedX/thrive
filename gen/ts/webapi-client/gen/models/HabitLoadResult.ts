@@ -9,6 +9,7 @@ import type { Chapter } from './Chapter';
 import type { Contact } from './Contact';
 import type { Goal } from './Goal';
 import type { Habit } from './Habit';
+import type { HabitStack } from './HabitStack';
 import type { HabitStreakMark } from './HabitStreakMark';
 import type { InboxTask } from './InboxTask';
 import type { Location } from './Location';
@@ -22,6 +23,7 @@ import type { UserLight } from './UserLight';
  */
 export type HabitLoadResult = {
     habit: Habit;
+    stack?: (HabitStack | null);
     aspect: Aspect;
     chapter?: (Chapter | null);
     goal?: (Goal | null);

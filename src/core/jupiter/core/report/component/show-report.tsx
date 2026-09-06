@@ -337,7 +337,7 @@ export function ShowReport({
                           <TableRow key={`${period}-${phb.ref_id}`}>
                             <SmallTableCell>
                               <EntityLink
-                                to={`/app/workspace/apps/habits/${phb.ref_id}`}
+                                to={`/app/workspace/apps/habits/habits/${phb.ref_id}`}
                               >
                                 <EntityNameOneLineComponent name={phb.name} />
                               </EntityLink>

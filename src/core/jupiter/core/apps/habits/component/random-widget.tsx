@@ -52,7 +52,7 @@ export function HabitRandomWidget(props: WidgetProps) {
       <InboxTasksNoTasksCard
         parent="habit"
         parentLabel="New Habit"
-        parentNewLocations="/app/workspace/apps/habits/new"
+        parentNewLocations="/app/workspace/apps/habits/habits/new"
       />
     );
   }

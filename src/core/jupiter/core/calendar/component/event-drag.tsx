@@ -106,6 +106,10 @@ export interface CalendarPlaceActivitySource {
   activityRefId: EntityId;
   timePlanRefId: EntityId;
   durationMins: number;
+  extraPlacements?: Array<{
+    activityRefId: EntityId;
+    durationMins: number;
+  }>;
 }
 
 function placeBlockRefId(activityRefId: EntityId): EntityId {
@@ -826,6 +830,10 @@ export function CalendarEventDragProvider(
             startDate: snapshot.newStartTime.toFormat("yyyy-MM-dd"),
             startTimeInDay: snapshot.newStartTime.toFormat("HH:mm"),
             durationMins: String(place.durationMins),
+            extraPlacements:
+              place.extraPlacements && place.extraPlacements.length > 0
+                ? JSON.stringify(place.extraPlacements)
+                : "",
             userTimezone: timezoneRef.current,
           },
           { method: "post", action: CALENDAR_PLACE_ACTIVITY_ACTION },
@@ -1747,6 +1755,10 @@ export function useCalendarPlaceActivity(args: {
   timePlanRefId: EntityId;
   archived: boolean;
   durationMins: number;
+  extraPlacements?: Array<{
+    activityRefId: EntityId;
+    durationMins: number;
+  }>;
 }): CalendarEventDragBinding {
   const theme = useTheme();
   const controller = useContext(CalendarEventDragContext)?.controller ?? null;
@@ -1762,6 +1774,7 @@ export function useCalendarPlaceActivity(args: {
         activityRefId: args.activityRefId,
         timePlanRefId: args.timePlanRefId,
         durationMins: args.durationMins,
+        extraPlacements: args.extraPlacements,
       });
     },
     [
@@ -1770,6 +1783,7 @@ export function useCalendarPlaceActivity(args: {
       args.activityRefId,
       args.timePlanRefId,
       args.durationMins,
+      args.extraPlacements,
     ],
   );
 

@@ -16,7 +16,10 @@ from jupiter.cli.command.rendering import (
     skip_rule_to_rich_text,
 )
 from jupiter.cli.config import JupiterLoggedInReadonlyCommand
-from jupiter.core.apps.habits.use_case.find import HabitFindResult, HabitFindUseCase
+from jupiter.core.apps.habits.sub.habit.use_case.find import (
+    HabitFindResult,
+    HabitFindUseCase,
+)
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.config import JupiterLoggedInReadonlyContext
 from jupiter.core.features import WorkspaceFeature

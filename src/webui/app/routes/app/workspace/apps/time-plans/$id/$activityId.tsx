@@ -1,9 +1,14 @@
 import type {
   AccessStatus,
+  Chore,
+  ChoreStack,
+  Habit,
   InboxTask,
   LifePlan,
   AspectSummary,
+  TimeEventInDayBlock,
   TimePlan,
+  TimePlanActivity,
 } from "@jupiter/webapi-client";
 import {
   NamedEntityTag,
@@ -45,6 +50,7 @@ import { TIME_PLAN_ACTIVITY_TIME_EVENT_PARAM } from "@jupiter/core/calendar/comp
 import {
   isInboxTaskCoreFieldEditable,
   sortInboxTasksNaturally,
+  type InboxTaskParent,
 } from "#/core/common/sub/inbox_tasks/root";
 import { BigPlanPropertiesEditor } from "@jupiter/core/apps/big_plans/component/properties-editor";
 import {
@@ -52,6 +58,27 @@ import {
   selectZod,
 } from "@jupiter/core/common/select-form";
 import { HabitPropertiesEditor } from "@jupiter/core/apps/habits/component/properties-editor";
+import { HabitStackPropertiesEditor } from "@jupiter/core/apps/habits/component/stack-properties-editor";
+import { sortHabitsNaturally } from "@jupiter/core/apps/habits/root";
+import { ChoreStackPropertiesEditor } from "@jupiter/core/apps/chores/component/stack-properties-editor";
+import { sortChoresNaturally } from "@jupiter/core/apps/chores/root";
+import { PeriodTag } from "@jupiter/core/common/component/period-tag";
+import { EntityNameComponent } from "@jupiter/core/common/component/entity-name";
+import {
+  EntityCard,
+  EntityLink,
+} from "@jupiter/core/infra/component/entity-card";
+import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
+import { parseEntityLinkStd } from "@jupiter/core/common/entity-link";
+import {
+  CHORE,
+  HABIT,
+  entityLinkRefIdFromWire,
+} from "@jupiter/core/common/sub/inbox_tasks/parent-link-namespace";
+import {
+  choreActivitiesForStackMembers,
+  habitActivitiesForStackMembers,
+} from "@jupiter/core/apps/time_plans/sub/activity/habit-chore-group";
 import { ChorePropertiesEditor } from "@jupiter/core/apps/chores/component/properties-editor";
 import { InboxTaskPropertiesEditor } from "@jupiter/core/common/sub/inbox_tasks/component/properties-editor";
 import { InboxTaskStack } from "@jupiter/core/common/sub/inbox_tasks/component/stack";
@@ -142,6 +169,7 @@ const UpdateFormTargetHabitSchema = {
   targetHabitAspect: z.string().optional(),
   targetHabitChapter: z.string().optional(),
   targetHabitGoal: z.string().optional(),
+  targetHabitStack: z.string().optional(),
   targetHabitPeriod: z.nativeEnum(RecurringTaskPeriod),
   targetHabitIsKey: CheckboxAsString,
   targetHabitEisen: z.nativeEnum(Eisen),
@@ -158,12 +186,31 @@ const UpdateFormTargetHabitSchema = {
   targetHabitRepeatsInPeriodCount: z.string().optional(),
 };
 
+const UpdateFormTargetHabitStackSchema = {
+  targetHabitStackRefId: z.string(),
+  targetHabitStackName: z.string(),
+  targetHabitStackHabitRefIds: z.string().optional(),
+  targetHabitStackAspect: z.string().optional(),
+  targetHabitStackChapter: z.string().optional(),
+  targetHabitStackGoal: z.string().optional(),
+};
+
+const UpdateFormTargetChoreStackSchema = {
+  targetChoreStackRefId: z.string(),
+  targetChoreStackName: z.string(),
+  targetChoreStackChoreRefIds: z.string().optional(),
+  targetChoreStackAspect: z.string().optional(),
+  targetChoreStackChapter: z.string().optional(),
+  targetChoreStackGoal: z.string().optional(),
+};
+
 const UpdateFormTargetChoreSchema = {
   targetChoreRefId: z.string(),
   targetChoreName: z.string(),
   targetChoreAspect: z.string().optional(),
   targetChoreChapter: z.string().optional(),
   targetChoreGoal: z.string().optional(),
+  targetChoreStack: z.string().optional(),
   targetChoreIsKey: CheckboxAsString,
   targetChorePeriod: z.nativeEnum(RecurringTaskPeriod),
   targetChoreEisen: z.nativeEnum(Eisen),
@@ -341,6 +388,20 @@ const UpdateFormSchema = z.discriminatedUnion("intent", [
     intent: z.literal("target-habit-gen"),
   }),
   z.object({
+    intent: z.literal("target-habit-stack-update"),
+    ...UpdateFormTargetHabitStackSchema,
+  }),
+  z.object({
+    intent: z.literal("target-habit-stack-create-note"),
+  }),
+  z.object({
+    intent: z.literal("target-chore-stack-update"),
+    ...UpdateFormTargetChoreStackSchema,
+  }),
+  z.object({
+    intent: z.literal("target-chore-stack-create-note"),
+  }),
+  z.object({
     intent: z.literal("target-chore-update"),
     ...UpdateFormTargetChoreSchema,
   }),
@@ -378,11 +439,92 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     const allContacts = await apiClient.contacts.contactFind({
       allow_archived: false,
     });
+    const stacksResponse =
+      summaryResponse.workspace &&
+      isWorkspaceFeatureAvailable(
+        summaryResponse.workspace,
+        WorkspaceFeature.HABITS,
+      )
+        ? await apiClient.habits.habitStackFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_habits: false,
+          })
+        : { entries: [] };
+
+    const choreStacksResponse =
+      summaryResponse.workspace &&
+      isWorkspaceFeatureAvailable(
+        summaryResponse.workspace,
+        WorkspaceFeature.CHORES,
+      )
+        ? await apiClient.chores.choreStackFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_chores: false,
+          })
+        : { entries: [] };
 
     const result = await apiClient.timePlans.timePlanActivityLoad({
       ref_id: activityId,
       allow_archived: true,
     });
+
+    const habitsResponse =
+      summaryResponse.workspace &&
+      isWorkspaceFeatureAvailable(
+        summaryResponse.workspace,
+        WorkspaceFeature.HABITS,
+      )
+        ? await apiClient.habits.habitFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_inbox_tasks: false,
+          })
+        : { entries: [] };
+
+    const choresResponse =
+      summaryResponse.workspace &&
+      isWorkspaceFeatureAvailable(
+        summaryResponse.workspace,
+        WorkspaceFeature.CHORES,
+      )
+        ? await apiClient.chores.choreFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_inbox_tasks: false,
+          })
+        : { entries: [] };
+
+    const stackMemberHabitRefIds =
+      result.target_habit_stack_info?.habits.map((habit) => habit.ref_id) ?? [];
+    const stackInboxTasksResult =
+      stackMemberHabitRefIds.length > 0
+        ? await apiClient.inboxTasks.inboxTaskFind({
+            allow_archived: false,
+            filter_namespace: [HABIT],
+            filter_source_entity_ref_ids: stackMemberHabitRefIds,
+          })
+        : { entries: [] };
+
+    const stackMemberChoreRefIds =
+      result.target_chore_stack_info?.chores.map((chore) => chore.ref_id) ?? [];
+    const choreStackInboxTasksResult =
+      stackMemberChoreRefIds.length > 0
+        ? await apiClient.inboxTasks.inboxTaskFind({
+            allow_archived: false,
+            filter_namespace: [CHORE],
+            filter_source_entity_ref_ids: stackMemberChoreRefIds,
+          })
+        : { entries: [] };
 
     return json({
       rootAspect: summaryResponse.root_aspect as AspectSummary,
@@ -394,6 +536,16 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       allBigPlans: summaryResponse.big_plans,
       allTags: allTags.tags,
       allContacts: allContacts.contacts,
+      allStacks: stacksResponse.entries.map((entry) => entry.habit_stack),
+      allChoreStacks: choreStacksResponse.entries.map(
+        (entry) => entry.chore_stack,
+      ) as Array<ChoreStack>,
+      allHabits: habitsResponse.entries.map(
+        (entry) => entry.habit,
+      ) as Array<Habit>,
+      allChores: choresResponse.entries.map(
+        (entry) => entry.chore,
+      ) as Array<Chore>,
       timePlanActivity: result.time_plan_activity,
       targetInboxTask: result.target_inbox_task,
       targetInboxTaskInfo: result.target_inbox_task_info,
@@ -403,8 +555,18 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       targetTodoTaskInfo: result.target_todo_task_info,
       targetHabit: result.target_habit,
       targetHabitInfo: result.target_habit_info,
+      targetHabitStack: result.target_habit_stack,
+      targetHabitStackInfo: result.target_habit_stack_info,
       targetChore: result.target_chore,
       targetChoreInfo: result.target_chore_info,
+      targetChoreStack: result.target_chore_stack,
+      targetChoreStackInfo: result.target_chore_stack_info,
+      stackInboxTasks: stackInboxTasksResult.entries.map(
+        (entry) => entry.inbox_task,
+      ),
+      choreStackInboxTasks: choreStackInboxTasksResult.entries.map(
+        (entry) => entry.inbox_task,
+      ),
       activityTimeEventBlocks: result.time_event_blocks,
     });
   } catch (error) {
@@ -968,6 +1130,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
                       : undefined,
                 }
               : { should_change: false },
+          stack_ref_id: {
+            should_change: true,
+            value:
+              form.targetHabitStack !== undefined &&
+              form.targetHabitStack !== ""
+                ? form.targetHabitStack
+                : null,
+          },
           period: {
             should_change: true,
             value: form.targetHabitPeriod,
@@ -1092,6 +1262,158 @@ export async function action({ request, params }: ActionFunctionArgs) {
         );
       }
 
+      case "target-habit-stack-update": {
+        const habitRefIds = (form.targetHabitStackHabitRefIds ?? "")
+          .split(",")
+          .map((refId) => refId.trim())
+          .filter((refId) => refId.length > 0);
+
+        await apiClient.habits.habitStackUpdate({
+          ref_id: form.targetHabitStackRefId,
+          name: {
+            should_change: true,
+            value: form.targetHabitStackName,
+          },
+          habit_ref_ids: {
+            should_change: true,
+            value: habitRefIds,
+          },
+          aspect_ref_id:
+            form.targetHabitStackAspect !== undefined
+              ? { should_change: true, value: form.targetHabitStackAspect }
+              : { should_change: false },
+          chapter_ref_id:
+            form.targetHabitStackAspect !== undefined
+              ? {
+                  should_change: true,
+                  value:
+                    form.targetHabitStackChapter !== undefined &&
+                    form.targetHabitStackChapter !== ""
+                      ? form.targetHabitStackChapter
+                      : undefined,
+                }
+              : { should_change: false },
+          goal_ref_id:
+            form.targetHabitStackAspect !== undefined
+              ? {
+                  should_change: true,
+                  value:
+                    form.targetHabitStackGoal !== undefined &&
+                    form.targetHabitStackGoal !== ""
+                      ? form.targetHabitStackGoal
+                      : undefined,
+                }
+              : { should_change: false },
+        });
+
+        return redirect(
+          withTimePlanView(
+            `/app/workspace/apps/time-plans/${id}/${activityId}`,
+            timePlanView,
+          ),
+        );
+      }
+
+      case "target-habit-stack-create-note": {
+        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
+          ref_id: activityId,
+          allow_archived: true,
+        });
+
+        if (activityResult.target_habit_stack) {
+          await apiClient.notes.noteCreate({
+            owner: noteStdOwner(
+              NamedEntityTag.HABIT_STACK,
+              activityResult.target_habit_stack.ref_id,
+            ),
+            content: [],
+          });
+        }
+
+        return redirect(
+          withTimePlanView(
+            `/app/workspace/apps/time-plans/${id}/${activityId}`,
+            timePlanView,
+          ),
+        );
+      }
+
+      case "target-chore-stack-update": {
+        const choreRefIds = (form.targetChoreStackChoreRefIds ?? "")
+          .split(",")
+          .map((refId) => refId.trim())
+          .filter((refId) => refId.length > 0);
+
+        await apiClient.chores.choreStackUpdate({
+          ref_id: form.targetChoreStackRefId,
+          name: {
+            should_change: true,
+            value: form.targetChoreStackName,
+          },
+          chore_ref_ids: {
+            should_change: true,
+            value: choreRefIds,
+          },
+          aspect_ref_id:
+            form.targetChoreStackAspect !== undefined
+              ? { should_change: true, value: form.targetChoreStackAspect }
+              : { should_change: false },
+          chapter_ref_id:
+            form.targetChoreStackAspect !== undefined
+              ? {
+                  should_change: true,
+                  value:
+                    form.targetChoreStackChapter !== undefined &&
+                    form.targetChoreStackChapter !== ""
+                      ? form.targetChoreStackChapter
+                      : undefined,
+                }
+              : { should_change: false },
+          goal_ref_id:
+            form.targetChoreStackAspect !== undefined
+              ? {
+                  should_change: true,
+                  value:
+                    form.targetChoreStackGoal !== undefined &&
+                    form.targetChoreStackGoal !== ""
+                      ? form.targetChoreStackGoal
+                      : undefined,
+                }
+              : { should_change: false },
+        });
+
+        return redirect(
+          withTimePlanView(
+            `/app/workspace/apps/time-plans/${id}/${activityId}`,
+            timePlanView,
+          ),
+        );
+      }
+
+      case "target-chore-stack-create-note": {
+        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
+          ref_id: activityId,
+          allow_archived: true,
+        });
+
+        if (activityResult.target_chore_stack) {
+          await apiClient.notes.noteCreate({
+            owner: noteStdOwner(
+              NamedEntityTag.CHORE_STACK,
+              activityResult.target_chore_stack.ref_id,
+            ),
+            content: [],
+          });
+        }
+
+        return redirect(
+          withTimePlanView(
+            `/app/workspace/apps/time-plans/${id}/${activityId}`,
+            timePlanView,
+          ),
+        );
+      }
+
       case "target-chore-update": {
         await apiClient.chores.choreUpdate({
           ref_id: form.targetChoreRefId,
@@ -1129,6 +1451,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
                       : undefined,
                 }
               : { should_change: false },
+          stack_ref_id: {
+            should_change: true,
+            value:
+              form.targetChoreStack !== undefined &&
+              form.targetChoreStack !== ""
+                ? form.targetChoreStack
+                : null,
+          },
           period: {
             should_change: true,
             value: form.targetChorePeriod,
@@ -1271,6 +1601,8 @@ export default function TimePlanActivity() {
   const parentLoaderData = useRouteLoaderData<{
     timePlan: TimePlan;
     accessStatus: AccessStatus | null;
+    activities: TimePlanActivity[];
+    activityTimeEventBlocks: TimeEventInDayBlock[];
   }>("routes/app/workspace/apps/time-plans/$id")!;
   const timePlan = parentLoaderData.timePlan;
   const actionData = useActionData<typeof action>();
@@ -1294,11 +1626,79 @@ export default function TimePlanActivity() {
     loaderData.targetHabitInfo?.inbox_tasks ?? [],
     { dueDateAscending: false },
   );
+  const habitMoreInfoByRefId: { [key: string]: InboxTaskParent } = {};
+  if (loaderData.targetHabit && loaderData.targetHabitInfo) {
+    for (const inboxTask of loaderData.targetHabitInfo.inbox_tasks) {
+      habitMoreInfoByRefId[inboxTask.ref_id] = {
+        habit: loaderData.targetHabit,
+        habitStack: loaderData.targetHabitInfo.stack ?? undefined,
+        owner: loaderData.targetHabitInfo.owner,
+        accessStatus: loaderData.targetHabitInfo.access_status ?? undefined,
+      };
+    }
+  }
 
   const sortedChoreInboxTasks = sortInboxTasksNaturally(
     loaderData.targetChoreInfo?.inbox_tasks ?? [],
     { dueDateAscending: false },
   );
+
+  const sortedStackHabits = sortHabitsNaturally(
+    loaderData.targetHabitStackInfo?.habits ?? [],
+  );
+  const sortedStackInboxTasks = sortInboxTasksNaturally(
+    loaderData.stackInboxTasks ?? [],
+    { dueDateAscending: false },
+  );
+  const sortedStackChores = sortChoresNaturally(
+    loaderData.targetChoreStackInfo?.chores ?? [],
+  );
+  const sortedChoreStackInboxTasks = sortInboxTasksNaturally(
+    loaderData.choreStackInboxTasks ?? [],
+    { dueDateAscending: false },
+  );
+  const stackMoreInfoByRefId: { [key: string]: InboxTaskParent } = {};
+  if (loaderData.targetHabitStack && loaderData.targetHabitStackInfo) {
+    const stackHabitsByRefId = new Map(
+      loaderData.targetHabitStackInfo.habits.map((habit) => [
+        habit.ref_id,
+        habit,
+      ]),
+    );
+    for (const inboxTask of loaderData.stackInboxTasks ?? []) {
+      const habit = stackHabitsByRefId.get(
+        entityLinkRefIdFromWire(inboxTask.owner),
+      );
+      stackMoreInfoByRefId[inboxTask.ref_id] = {
+        habit,
+        habitStack: loaderData.targetHabitStack,
+        owner: loaderData.targetHabitStackInfo.owner,
+        accessStatus:
+          loaderData.targetHabitStackInfo.access_status ?? undefined,
+      };
+    }
+  }
+
+  const choreStackMoreInfoByRefId: { [key: string]: InboxTaskParent } = {};
+  if (loaderData.targetChoreStack && loaderData.targetChoreStackInfo) {
+    const stackChoresByRefId = new Map(
+      loaderData.targetChoreStackInfo.chores.map((chore) => [
+        chore.ref_id,
+        chore,
+      ]),
+    );
+    for (const inboxTask of loaderData.choreStackInboxTasks ?? []) {
+      const chore = stackChoresByRefId.get(
+        entityLinkRefIdFromWire(inboxTask.owner),
+      );
+      choreStackMoreInfoByRefId[inboxTask.ref_id] = {
+        chore,
+        owner: loaderData.targetChoreStackInfo.owner,
+        accessStatus:
+          loaderData.targetChoreStackInfo.access_status ?? undefined,
+      };
+    }
+  }
 
   function handleHabitCardMarkDone(it: InboxTask) {
     cardActionFetcher.submit(
@@ -1360,9 +1760,50 @@ export default function TimePlanActivity() {
     );
   }
 
-  const activityTimeEventEntries = (
-    loaderData.activityTimeEventBlocks || []
-  ).map((block) => ({
+  const activityTimeEventBlocks = [
+    ...(loaderData.activityTimeEventBlocks || []),
+  ];
+  if (loaderData.targetHabitStack && loaderData.targetHabitStackInfo) {
+    const memberActivities = habitActivitiesForStackMembers(
+      parentLoaderData.activities ?? [],
+      loaderData.targetHabitStackInfo.habits,
+    );
+    const memberActivityRefIds = new Set(
+      memberActivities.map((activity) => activity.ref_id),
+    );
+    for (const block of parentLoaderData.activityTimeEventBlocks ?? []) {
+      const { refId } = parseEntityLinkStd(block.owner);
+      if (
+        memberActivityRefIds.has(refId) &&
+        !activityTimeEventBlocks.some(
+          (existing) => existing.ref_id === block.ref_id,
+        )
+      ) {
+        activityTimeEventBlocks.push(block);
+      }
+    }
+  }
+  if (loaderData.targetChoreStack && loaderData.targetChoreStackInfo) {
+    const memberActivities = choreActivitiesForStackMembers(
+      parentLoaderData.activities ?? [],
+      loaderData.targetChoreStackInfo.chores,
+    );
+    const memberActivityRefIds = new Set(
+      memberActivities.map((activity) => activity.ref_id),
+    );
+    for (const block of parentLoaderData.activityTimeEventBlocks ?? []) {
+      const { refId } = parseEntityLinkStd(block.owner);
+      if (
+        memberActivityRefIds.has(refId) &&
+        !activityTimeEventBlocks.some(
+          (existing) => existing.ref_id === block.ref_id,
+        )
+      ) {
+        activityTimeEventBlocks.push(block);
+      }
+    }
+  }
+  const activityTimeEventEntries = activityTimeEventBlocks.map((block) => ({
     time_event_in_tz: timeEventInDayBlockToTimezone(
       block,
       topLevelInfo.user.timezone,
@@ -1373,7 +1814,9 @@ export default function TimePlanActivity() {
       target_big_plan: loaderData.targetBigPlan,
       target_todo_task: loaderData.targetTodoTask,
       target_habit: loaderData.targetHabit,
+      target_habit_stack: loaderData.targetHabitStack,
       target_chore: loaderData.targetChore,
+      target_chore_stack: loaderData.targetChoreStack,
       time_events: [block],
     },
   }));
@@ -1381,7 +1824,7 @@ export default function TimePlanActivity() {
     activityTimeEventEntries,
   );
   const calendarTimeEventRefId = query.get(TIME_PLAN_ACTIVITY_TIME_EVENT_PARAM);
-  const calendarTimeEvent = (loaderData.activityTimeEventBlocks || []).find(
+  const calendarTimeEvent = activityTimeEventBlocks.find(
     (block) => block.ref_id === calendarTimeEventRefId,
   );
 
@@ -1689,6 +2132,7 @@ export default function TimePlanActivity() {
               inputsEnabled={inputsEnabled && !loaderData.targetHabit.archived}
               entityOwner={loaderData.targetHabitInfo.owner}
               habit={loaderData.targetHabit}
+              allStacks={loaderData.allStacks}
               aspect={loaderData.targetHabitInfo.aspect}
               chapter={loaderData.targetHabitInfo.chapter}
               goal={loaderData.targetHabitInfo.goal}
@@ -1762,8 +2206,221 @@ export default function TimePlanActivity() {
                   }}
                   inputsEnabled={inputsEnabled}
                   inboxTasks={sortedHabitInboxTasks}
+                  moreInfoByRefId={habitMoreInfoByRefId}
                   onCardMarkDone={handleHabitCardMarkDone}
                   onCardMarkNotDone={handleHabitCardMarkNotDone}
+                />
+              )}
+            </SectionCard>
+          </>
+        )}
+
+      {isWorkspaceFeatureAvailable(
+        topLevelInfo.workspace,
+        WorkspaceFeature.HABITS,
+      ) &&
+        loaderData.targetHabitStack &&
+        loaderData.targetHabitStackInfo && (
+          <>
+            <HabitStackPropertiesEditor
+              title="Habit Stack"
+              showLinkToHabitStack
+              intentPrefix="target-habit-stack"
+              namePrefix="targetHabitStack"
+              topLevelInfo={topLevelInfo}
+              lifePlan={loaderData.lifePlan}
+              allAspects={loaderData.allAspects ?? []}
+              allChapters={loaderData.allChapters ?? []}
+              allGoals={loaderData.allGoals ?? []}
+              allMilestones={loaderData.allMilestones ?? []}
+              allHabits={loaderData.allHabits}
+              habits={loaderData.targetHabitStackInfo.habits}
+              allTags={loaderData.allTags ?? []}
+              tags={loaderData.targetHabitStackInfo.tags}
+              allContacts={loaderData.allContacts ?? []}
+              contacts={loaderData.targetHabitStackInfo.contacts}
+              location={loaderData.targetHabitStackInfo.location ?? null}
+              inputsEnabled={
+                inputsEnabled && !loaderData.targetHabitStack.archived
+              }
+              entityOwner={loaderData.targetHabitStackInfo.owner}
+              habitStack={loaderData.targetHabitStack}
+              aspect={loaderData.targetHabitStackInfo.aspect}
+              chapter={loaderData.targetHabitStackInfo.chapter}
+              goal={loaderData.targetHabitStackInfo.goal}
+              actionData={actionData}
+            />
+
+            <SectionCard title="Habits">
+              <EntityStack>
+                {sortedStackHabits.map((habit) => (
+                  <EntityCard
+                    key={`habit-${habit.ref_id}`}
+                    entityId={`habit-${habit.ref_id}`}
+                  >
+                    <EntityLink
+                      to={`/app/workspace/apps/habits/habits/${habit.ref_id}`}
+                    >
+                      <EntityNameComponent name={habit.name} />
+                      <PeriodTag period={habit.gen_params.period} />
+                    </EntityLink>
+                  </EntityCard>
+                ))}
+              </EntityStack>
+            </SectionCard>
+
+            <SectionCard
+              title="Note"
+              actions={
+                <SectionActions
+                  id="target-habit-stack-note"
+                  topLevelInfo={topLevelInfo}
+                  inputsEnabled={inputsEnabled}
+                  actions={[
+                    ActionSingle({
+                      text: "Create",
+                      value: "target-habit-stack-create-note",
+                      highlight: false,
+                      disabled:
+                        loaderData.targetHabitStackInfo.note !== null &&
+                        loaderData.targetHabitStackInfo.note !== undefined,
+                    }),
+                  ]}
+                />
+              }
+            >
+              {loaderData.targetHabitStackInfo.note && (
+                <EntityNoteEditor
+                  initialNote={loaderData.targetHabitStackInfo.note}
+                  inputsEnabled={inputsEnabled}
+                />
+              )}
+            </SectionCard>
+
+            <SectionCard
+              id="target-habit-stack-inbox-tasks"
+              title="Inbox Tasks"
+            >
+              {sortedStackInboxTasks.length > 0 && (
+                <InboxTaskStack
+                  topLevelInfo={topLevelInfo}
+                  showOptions={{
+                    showStatus: true,
+                    showDueDate: true,
+                    showHandleMarkDone: true,
+                    showHandleMarkNotDone: true,
+                  }}
+                  inputsEnabled={inputsEnabled}
+                  inboxTasks={sortedStackInboxTasks}
+                  moreInfoByRefId={stackMoreInfoByRefId}
+                  onCardMarkDone={handleHabitCardMarkDone}
+                  onCardMarkNotDone={handleHabitCardMarkNotDone}
+                />
+              )}
+            </SectionCard>
+          </>
+        )}
+
+      {isWorkspaceFeatureAvailable(
+        topLevelInfo.workspace,
+        WorkspaceFeature.CHORES,
+      ) &&
+        loaderData.targetChoreStack &&
+        loaderData.targetChoreStackInfo && (
+          <>
+            <ChoreStackPropertiesEditor
+              title="Chore Stack"
+              showLinkToChoreStack
+              intentPrefix="target-chore-stack"
+              namePrefix="targetChoreStack"
+              topLevelInfo={topLevelInfo}
+              lifePlan={loaderData.lifePlan}
+              allAspects={loaderData.allAspects ?? []}
+              allChapters={loaderData.allChapters ?? []}
+              allGoals={loaderData.allGoals ?? []}
+              allMilestones={loaderData.allMilestones ?? []}
+              allChores={loaderData.allChores}
+              chores={loaderData.targetChoreStackInfo.chores}
+              allTags={loaderData.allTags ?? []}
+              tags={loaderData.targetChoreStackInfo.tags}
+              allContacts={loaderData.allContacts ?? []}
+              contacts={loaderData.targetChoreStackInfo.contacts}
+              location={loaderData.targetChoreStackInfo.location ?? null}
+              inputsEnabled={
+                inputsEnabled && !loaderData.targetChoreStack.archived
+              }
+              entityOwner={loaderData.targetChoreStackInfo.owner}
+              choreStack={loaderData.targetChoreStack}
+              aspect={loaderData.targetChoreStackInfo.aspect}
+              chapter={loaderData.targetChoreStackInfo.chapter}
+              goal={loaderData.targetChoreStackInfo.goal}
+              actionData={actionData}
+            />
+
+            <SectionCard title="Chores">
+              <EntityStack>
+                {sortedStackChores.map((chore) => (
+                  <EntityCard
+                    key={`chore-${chore.ref_id}`}
+                    entityId={`chore-${chore.ref_id}`}
+                  >
+                    <EntityLink
+                      to={`/app/workspace/apps/chores/${chore.ref_id}`}
+                    >
+                      <EntityNameComponent name={chore.name} />
+                      <PeriodTag period={chore.gen_params.period} />
+                    </EntityLink>
+                  </EntityCard>
+                ))}
+              </EntityStack>
+            </SectionCard>
+
+            <SectionCard
+              title="Note"
+              actions={
+                <SectionActions
+                  id="target-chore-stack-note"
+                  topLevelInfo={topLevelInfo}
+                  inputsEnabled={inputsEnabled}
+                  actions={[
+                    ActionSingle({
+                      text: "Create",
+                      value: "target-chore-stack-create-note",
+                      highlight: false,
+                      disabled:
+                        loaderData.targetChoreStackInfo.note !== null &&
+                        loaderData.targetChoreStackInfo.note !== undefined,
+                    }),
+                  ]}
+                />
+              }
+            >
+              {loaderData.targetChoreStackInfo.note && (
+                <EntityNoteEditor
+                  initialNote={loaderData.targetChoreStackInfo.note}
+                  inputsEnabled={inputsEnabled}
+                />
+              )}
+            </SectionCard>
+
+            <SectionCard
+              id="target-chore-stack-inbox-tasks"
+              title="Inbox Tasks"
+            >
+              {sortedChoreStackInboxTasks.length > 0 && (
+                <InboxTaskStack
+                  topLevelInfo={topLevelInfo}
+                  showOptions={{
+                    showStatus: true,
+                    showDueDate: true,
+                    showHandleMarkDone: true,
+                    showHandleMarkNotDone: true,
+                  }}
+                  inputsEnabled={inputsEnabled}
+                  inboxTasks={sortedChoreStackInboxTasks}
+                  moreInfoByRefId={choreStackMoreInfoByRefId}
+                  onCardMarkDone={handleChoreCardMarkDone}
+                  onCardMarkNotDone={handleChoreCardMarkNotDone}
                 />
               )}
             </SectionCard>
@@ -1797,6 +2454,7 @@ export default function TimePlanActivity() {
               inputsEnabled={inputsEnabled && !loaderData.targetChore.archived}
               entityOwner={loaderData.targetChoreInfo.owner}
               chore={loaderData.targetChore}
+              allStacks={loaderData.allChoreStacks}
               aspect={loaderData.targetChoreInfo.aspect}
               chapter={loaderData.targetChoreInfo.chapter}
               goal={loaderData.targetChoreInfo.goal}
@@ -1889,6 +2547,8 @@ export default function TimePlanActivity() {
             loaderData.targetTodoTask,
             loaderData.targetHabit,
             loaderData.targetChore,
+            loaderData.targetHabitStack,
+            loaderData.targetChoreStack,
           )}
           inDayBlock={calendarTimeEvent}
           timezone={topLevelInfo.user.timezone}

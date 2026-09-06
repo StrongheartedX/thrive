@@ -1,0 +1,19 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import type { ADate } from './ADate';
+import type { EntityId } from './EntityId';
+import type { TimeInDay } from './TimeInDay';
+/**
+ * Args.
+ */
+export type TimeEventInDayBlockCreateForHabitStackArgs = {
+    habit_stack_ref_id: EntityId;
+    start_date: ADate;
+    start_time_in_day: TimeInDay;
+    duration_mins: number;
+    buffer_before_mins?: (number | null);
+    buffer_after_mins?: (number | null);
+};
+

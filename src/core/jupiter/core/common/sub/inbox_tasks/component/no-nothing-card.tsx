@@ -54,7 +54,7 @@ export function InboxTasksNoNothingCard(props: InboxTasksNoNothingCardProps) {
             variant="contained"
             size="small"
             component={Link}
-            to="/app/workspace/apps/habits/new"
+            to="/app/workspace/apps/habits/habits/new"
           >
             New Habit
           </Button>

@@ -5,9 +5,11 @@
 import type { AccessStatus } from './AccessStatus';
 import type { BigPlan } from './BigPlan';
 import type { Chore } from './Chore';
+import type { ChoreStack } from './ChoreStack';
 import type { Contact } from './Contact';
 import type { EmailTask } from './EmailTask';
 import type { Habit } from './Habit';
+import type { HabitStack } from './HabitStack';
 import type { InboxTask } from './InboxTask';
 import type { Journal } from './Journal';
 import type { Metric } from './Metric';
@@ -26,7 +28,9 @@ export type InboxTaskFindResultEntry = {
     working_mem_collection?: (WorkingMemCollection | null);
     time_plan?: (TimePlan | null);
     habit?: (Habit | null);
+    habit_stack?: (HabitStack | null);
     chore?: (Chore | null);
+    chore_stack?: (ChoreStack | null);
     big_plan?: (BigPlan | null);
     journal?: (Journal | null);
     metric?: (Metric | null);

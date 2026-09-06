@@ -1,7 +1,7 @@
 """Use case for creating time plan actitivities for habits."""
 
 from jupiter.core.app import AppCore
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.habits.sub.habit.root import Habit
 from jupiter.core.apps.time_plans.root import TimePlan
 from jupiter.core.apps.time_plans.sub.activity.feasability import (
     TimePlanActivityFeasability,

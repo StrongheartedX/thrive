@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from ..models.contact import Contact
     from ..models.goal import Goal
     from ..models.habit import Habit
+    from ..models.habit_stack import HabitStack
     from ..models.habit_streak_mark import HabitStreakMark
     from ..models.inbox_task import InboxTask
     from ..models.location import Location
@@ -45,6 +46,7 @@ class HabitLoadResult:
         contacts (list[Contact]):
         time_event_blocks (list[TimeEventInDayBlock]):
         owner (UserLight): A user's ref id, name, and email address.
+        stack (HabitStack | None | Unset):
         chapter (Chapter | None | Unset):
         goal (Goal | None | Unset):
         location (Location | None | Unset):
@@ -65,6 +67,7 @@ class HabitLoadResult:
     contacts: list[Contact]
     time_event_blocks: list[TimeEventInDayBlock]
     owner: UserLight
+    stack: HabitStack | None | Unset = UNSET
     chapter: Chapter | None | Unset = UNSET
     goal: Goal | None | Unset = UNSET
     location: Location | None | Unset = UNSET
@@ -77,6 +80,7 @@ class HabitLoadResult:
         from ..models.access_status import AccessStatus  # noqa: PLC0415
         from ..models.chapter import Chapter  # noqa: PLC0415
         from ..models.goal import Goal  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
         from ..models.location import Location  # noqa: PLC0415
         from ..models.note import Note  # noqa: PLC0415
         from ..models.publish_entity import PublishEntity  # noqa: PLC0415
@@ -119,6 +123,14 @@ class HabitLoadResult:
             time_event_blocks.append(time_event_blocks_item)
 
         owner = self.owner.to_dict()
+
+        stack: dict[str, Any] | None | Unset
+        if isinstance(self.stack, Unset):
+            stack = UNSET
+        elif isinstance(self.stack, HabitStack):
+            stack = self.stack.to_dict()
+        else:
+            stack = self.stack
 
         chapter: dict[str, Any] | None | Unset
         if isinstance(self.chapter, Unset):
@@ -186,6 +198,8 @@ class HabitLoadResult:
                 "owner": owner,
             }
         )
+        if stack is not UNSET:
+            field_dict["stack"] = stack
         if chapter is not UNSET:
             field_dict["chapter"] = chapter
         if goal is not UNSET:
@@ -209,6 +223,7 @@ class HabitLoadResult:
         from ..models.contact import Contact  # noqa: PLC0415
         from ..models.goal import Goal  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
         from ..models.habit_streak_mark import HabitStreakMark  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.location import Location  # noqa: PLC0415
@@ -267,6 +282,23 @@ class HabitLoadResult:
             time_event_blocks.append(time_event_blocks_item)
 
         owner = UserLight.from_dict(d.pop("owner"))
+
+        def _parse_stack(data: object) -> HabitStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                stack_type_0 = HabitStack.from_dict(data)
+
+                return stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(HabitStack | None | Unset, data)
+
+        stack = _parse_stack(d.pop("stack", UNSET))
 
         def _parse_chapter(data: object) -> Chapter | None | Unset:
             if data is None:
@@ -383,6 +415,7 @@ class HabitLoadResult:
             contacts=contacts,
             time_event_blocks=time_event_blocks,
             owner=owner,
+            stack=stack,
             chapter=chapter,
             goal=goal,
             location=location,

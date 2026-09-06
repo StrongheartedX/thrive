@@ -133,6 +133,44 @@ class TimePlanActivity(LeafEntity):
 
     @staticmethod
     @create_entity_action
+    def new_activity_for_habit_stack(
+        ctx: DomainContext,
+        time_plan_ref_id: EntityId,
+        habit_stack_ref_id: EntityId,
+        kind: TimePlanActivityKind,
+        feasability: TimePlanActivityFeasability,
+    ) -> "TimePlanActivity":
+        """Create a new activity from a habit stack."""
+        return TimePlanActivity._create(
+            ctx,
+            name=TimePlanActivity._build_name("habit-stack", habit_stack_ref_id),
+            time_plan=ParentLink(time_plan_ref_id),
+            target=EntityLink.std(NamedEntityTag.HABIT_STACK.value, habit_stack_ref_id),
+            kind=kind,
+            feasability=feasability,
+        )
+
+    @staticmethod
+    @create_entity_action
+    def new_activity_for_chore_stack(
+        ctx: DomainContext,
+        time_plan_ref_id: EntityId,
+        chore_stack_ref_id: EntityId,
+        kind: TimePlanActivityKind,
+        feasability: TimePlanActivityFeasability,
+    ) -> "TimePlanActivity":
+        """Create a new activity from a chore stack."""
+        return TimePlanActivity._create(
+            ctx,
+            name=TimePlanActivity._build_name("chore-stack", chore_stack_ref_id),
+            time_plan=ParentLink(time_plan_ref_id),
+            target=EntityLink.std(NamedEntityTag.CHORE_STACK.value, chore_stack_ref_id),
+            kind=kind,
+            feasability=feasability,
+        )
+
+    @staticmethod
+    @create_entity_action
     def new_activity_for_chore(
         ctx: DomainContext,
         time_plan_ref_id: EntityId,
@@ -222,6 +260,14 @@ class TimePlanActivity(LeafEntity):
         )
 
     @property
+    def is_target_habit_stack(self) -> bool:
+        """Whether the target is a habit stack."""
+        return (
+            self.target.the_type == NamedEntityTag.HABIT_STACK.value
+            and self.target.purpose == "std"
+        )
+
+    @property
     def is_target_chore(self) -> bool:
         """Whether the target is a chore."""
         return (
@@ -230,12 +276,24 @@ class TimePlanActivity(LeafEntity):
         )
 
     @property
+    def is_target_chore_stack(self) -> bool:
+        """Whether the target is a chore stack."""
+        return (
+            self.target.the_type == NamedEntityTag.CHORE_STACK.value
+            and self.target.purpose == "std"
+        )
+
+    @property
     def target_kind(self) -> TimePlanActivityTarget:
         """The kind of target for this activity."""
         if self.is_target_todo_task:
             return TimePlanActivityTarget.TODO_TASK
+        if self.is_target_habit_stack:
+            return TimePlanActivityTarget.HABIT_STACK
         if self.is_target_habit:
             return TimePlanActivityTarget.HABIT
+        if self.is_target_chore_stack:
+            return TimePlanActivityTarget.CHORE_STACK
         if self.is_target_chore:
             return TimePlanActivityTarget.CHORE
         if self.is_target_big_plan:

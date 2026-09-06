@@ -78,7 +78,17 @@ export function inferEntityTagsForEnabledFeatures(
     ) {
       inferredEntityTags.push(entityTag);
     } else if (
+      entityTag === NamedEntityTag.HABIT_STACK &&
+      isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.HABITS)
+    ) {
+      inferredEntityTags.push(entityTag);
+    } else if (
       entityTag === NamedEntityTag.CHORE &&
+      isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.CHORES)
+    ) {
+      inferredEntityTags.push(entityTag);
+    } else if (
+      entityTag === NamedEntityTag.CHORE_STACK &&
       isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.CHORES)
     ) {
       inferredEntityTags.push(entityTag);

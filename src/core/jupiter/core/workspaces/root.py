@@ -217,7 +217,15 @@ class Workspace(RootEntity):
                 WorkspaceFeature.HABITS
             ):
                 inferred_entity_tags.append(entity_tag)
+            elif entity_tag is NamedEntityTag.HABIT_STACK and self.is_feature_available(
+                WorkspaceFeature.HABITS
+            ):
+                inferred_entity_tags.append(entity_tag)
             elif entity_tag is NamedEntityTag.CHORE and self.is_feature_available(
+                WorkspaceFeature.CHORES
+            ):
+                inferred_entity_tags.append(entity_tag)
+            elif entity_tag is NamedEntityTag.CHORE_STACK and self.is_feature_available(
                 WorkspaceFeature.CHORES
             ):
                 inferred_entity_tags.append(entity_tag)

@@ -232,6 +232,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
             activityResponse.target_todo_task,
             activityResponse.target_habit,
             activityResponse.target_chore,
+            activityResponse.target_habit_stack,
           );
         }
         return json({

@@ -17,7 +17,7 @@ Many entity types support collaboration. The common ones include:
 * [Todos](todos.md)
 * [Time plans](time-plans.md)
 * Calendar [schedule streams](calendar.md) and their events
-* [Habits](habits.md) and [chores](chores.md)
+* [Habits](habits.md), habit stacks, and [chores](chores.md)
 * [Big plans](big-plans.md)
 * Docs and doc folders
 * [Journals](journals.md)

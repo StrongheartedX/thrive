@@ -218,7 +218,7 @@ export default function LifePlanHistoryOfWork() {
                           {goalHabits.map((h) => (
                             <DenseLinksItem key={`habit-${h.ref_id}`}>
                               <DenseSingleLineLink
-                                to={`/app/workspace/apps/habits/${h.ref_id}`}
+                                to={`/app/workspace/apps/habits/habits/${h.ref_id}`}
                               >
                                 <span style={{ flexShrink: 0 }}>
                                   <PeriodTag period={h.gen_params.period} />
@@ -341,7 +341,7 @@ export default function LifePlanHistoryOfWork() {
                             {noGoalHabits.map((h) => (
                               <DenseLinksItem key={`habit-${h.ref_id}`}>
                                 <DenseSingleLineLink
-                                  to={`/app/workspace/apps/habits/${h.ref_id}`}
+                                  to={`/app/workspace/apps/habits/habits/${h.ref_id}`}
                                 >
                                   <span style={{ flexShrink: 0 }}>
                                     <PeriodTag period={h.gen_params.period} />

@@ -81,6 +81,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       aspect: result.aspect,
       chapter: result.chapter ?? null,
       goal: result.goal ?? null,
+      stack: result.stack ?? null,
       inboxTasks: result.inbox_tasks as Array<InboxTask>,
       inboxTasksTotalCnt: result.inbox_tasks_total_cnt,
       inboxTasksPageSize: result.inbox_tasks_page_size,
@@ -140,6 +141,7 @@ export default function PublishedHabit() {
         location={loaderData.location}
         inputsEnabled={false}
         habit={loaderData.habit}
+        allStacks={loaderData.stack ? [loaderData.stack] : []}
         aspect={loaderData.aspect}
         chapter={loaderData.chapter}
         goal={loaderData.goal}

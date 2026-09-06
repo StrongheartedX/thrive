@@ -1,4 +1,7 @@
-import type { HabitFindSuitableForTimePlanResultEntry } from "@jupiter/webapi-client";
+import type {
+  HabitFindSuitableForTimePlanResultEntry,
+  HabitStackFindSuitableForTimePlanResultEntry,
+} from "@jupiter/webapi-client";
 import {
   RecurringTaskPeriod,
   TimePlanActivityFeasability,
@@ -17,7 +20,11 @@ import {
   groupInboxTasksByOwnerRefId,
   recurringTargetPeriodProgress,
 } from "@jupiter/core/apps/time_plans/recurring-target-progress";
-import { isTimePlanActivityHabitTarget } from "@jupiter/core/apps/time_plans/sub/activity/target-wire";
+import { compareADate } from "@jupiter/core/common/adate";
+import {
+  isTimePlanActivityHabitStackTarget,
+  isTimePlanActivityHabitTarget,
+} from "@jupiter/core/apps/time_plans/sub/activity/target-wire";
 import { FormControl, FormLabel, Stack, Typography } from "@mui/material";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
@@ -73,6 +80,9 @@ const UpdateFormSchema = z.object({
   targetHabitRefIds: z
     .string()
     .transform((s) => (s === "" ? [] : s.split(","))),
+  targetHabitStackRefIds: z
+    .string()
+    .transform((s) => (s === "" ? [] : s.split(","))),
   kind: z.nativeEnum(TimePlanActivityKind),
   feasability: z.nativeEnum(TimePlanActivityFeasability),
 });
@@ -114,27 +124,46 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       );
     }
 
-    const habitsResult = await apiClient.habits.habitFindSuitableForTimePlan({
-      time_plan_ref_id: id,
-    });
+    const [habitsResult, stacksResult] = await Promise.all([
+      apiClient.habits.habitFindSuitableForTimePlan({
+        time_plan_ref_id: id,
+      }),
+      apiClient.habits.habitStackFindSuitableForTimePlan({
+        time_plan_ref_id: id,
+      }),
+    ]);
 
-    const habitRefIdsForInboxTasks = habitsResult.entries
-      .filter(
-        (entry) =>
-          entry.has_uncompleted_historical_inbox_tasks ||
-          comparePeriods(
-            entry.habit.gen_params.period,
-            timePlanResult.time_plan.period,
-          ) > 0,
-      )
-      .map((entry) => entry.habit.ref_id);
+    const habitRefIdsForInboxTasks = [
+      ...habitsResult.entries
+        .filter(
+          (entry) =>
+            entry.has_uncompleted_historical_inbox_tasks ||
+            comparePeriods(
+              entry.habit.gen_params.period,
+              timePlanResult.time_plan.period,
+            ) > 0,
+        )
+        .map((entry) => entry.habit.ref_id),
+      ...stacksResult.entries.flatMap((entry) =>
+        entry.has_uncompleted_historical_inbox_tasks ||
+        comparePeriods(
+          entry.habit_stack.period,
+          timePlanResult.time_plan.period,
+        ) > 0
+          ? entry.habits.map((habit) => habit.ref_id)
+          : [],
+      ),
+    ];
+    const uniqueHabitRefIdsForInboxTasks = [
+      ...new Set(habitRefIdsForInboxTasks),
+    ];
 
     const inboxTasksResult =
-      habitRefIdsForInboxTasks.length > 0
+      uniqueHabitRefIdsForInboxTasks.length > 0
         ? await apiClient.inboxTasks.inboxTaskFind({
             allow_archived: false,
             filter_namespace: [HABIT],
-            filter_source_entity_ref_ids: habitRefIdsForInboxTasks,
+            filter_source_entity_ref_ids: uniqueHabitRefIdsForInboxTasks,
           })
         : { entries: [] };
 
@@ -142,6 +171,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       timePlan: timePlanResult.time_plan,
       activities: timePlanResult.activities,
       habits: habitsResult.entries,
+      habitStacks: stacksResult.entries,
       inboxTasks: inboxTasksResult.entries.map((entry) => entry.inbox_task),
     });
   } catch (error) {
@@ -161,12 +191,23 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const timePlanView = new URL(request.url).searchParams;
 
   try {
-    await apiClient.timePlans.timePlanAssociateWithHabits({
-      ref_id: id,
-      habit_ref_ids: form.targetHabitRefIds,
-      kind: form.kind,
-      feasability: form.feasability,
-    });
+    if (form.targetHabitStackRefIds.length > 0) {
+      await apiClient.timePlans.timePlanAssociateWithHabitStacks({
+        ref_id: id,
+        habit_stack_ref_ids: form.targetHabitStackRefIds,
+        kind: form.kind,
+        feasability: form.feasability,
+      });
+    }
+
+    if (form.targetHabitRefIds.length > 0) {
+      await apiClient.timePlans.timePlanAssociateWithHabits({
+        ref_id: id,
+        habit_ref_ids: form.targetHabitRefIds,
+        kind: form.kind,
+        feasability: form.feasability,
+      });
+    }
 
     return redirect(
       withTimePlanView(`/app/workspace/apps/time-plans/${id}`, timePlanView),
@@ -191,6 +232,21 @@ function isAddableInTimePlan(
   );
 }
 
+function isSelectableStackEntry(
+  entry: HabitStackFindSuitableForTimePlanResultEntry,
+): boolean {
+  return !entry.habit_stack.archived;
+}
+
+function isAddableStackInTimePlan(
+  entry: HabitStackFindSuitableForTimePlanResultEntry,
+): boolean {
+  return (
+    entry.has_uncompleted_historical_inbox_tasks ||
+    entry.would_generate_in_time_plan
+  );
+}
+
 export default function TimePlanAddFromCurrentHabits() {
   const { id } = useParams();
   const [query] = useSearchParams();
@@ -208,8 +264,16 @@ export default function TimePlanAddFromCurrentHabits() {
       .filter((tpa) => isTimePlanActivityHabitTarget(tpa.target))
       .map((tpa) => entityLinkRefIdFromWire(tpa.target)),
   );
+  const alreadyIncludedStackRefIds = new Set(
+    loaderData.activities
+      .filter((tpa) => isTimePlanActivityHabitStackTarget(tpa.target))
+      .map((tpa) => entityLinkRefIdFromWire(tpa.target)),
+  );
 
   const [targetHabitRefIds, setTargetHabitRefIds] = useState(new Set<string>());
+  const [targetHabitStackRefIds, setTargetHabitStackRefIds] = useState(
+    new Set<string>(),
+  );
   const [showFilter, setShowFilter] = useState(ShowFilter.IN_PERIOD);
 
   const inboxTasksByHabitRefId = groupInboxTasksByOwnerRefId(
@@ -217,15 +281,43 @@ export default function TimePlanAddFromCurrentHabits() {
     HABIT,
   );
 
+  const selectableStacks = loaderData.habitStacks
+    .filter(isSelectableStackEntry)
+    .filter(
+      (entry) => !alreadyIncludedStackRefIds.has(entry.habit_stack.ref_id),
+    );
+  const visibleStacks = selectableStacks.filter(
+    (entry) =>
+      showFilter === ShowFilter.ALL ||
+      isAddableStackInTimePlan(entry) ||
+      targetHabitStackRefIds.has(entry.habit_stack.ref_id),
+  );
+
   const selectableHabits = loaderData.habits
     .filter(isSelectableHabitEntry)
-    .filter((entry) => !alreadyIncludedHabitRefIds.has(entry.habit.ref_id));
+    .filter((entry) => !alreadyIncludedHabitRefIds.has(entry.habit.ref_id))
+    .filter(
+      (entry) =>
+        entry.habit.stack_ref_id === null ||
+        entry.habit.stack_ref_id === undefined,
+    );
   const visibleHabits = selectableHabits.filter(
     (entry) =>
       showFilter === ShowFilter.ALL ||
       isAddableInTimePlan(entry) ||
       targetHabitRefIds.has(entry.habit.ref_id),
   );
+
+  const stacksByPeriod = new Map<
+    RecurringTaskPeriod,
+    HabitStackFindSuitableForTimePlanResultEntry[]
+  >();
+  for (const entry of visibleStacks) {
+    const period = entry.habit_stack.period;
+    const existing = stacksByPeriod.get(period) ?? [];
+    existing.push(entry);
+    stacksByPeriod.set(period, existing);
+  }
 
   const habitsByPeriod = new Map<
     RecurringTaskPeriod,
@@ -236,6 +328,73 @@ export default function TimePlanAddFromCurrentHabits() {
     const existing = habitsByPeriod.get(period) ?? [];
     existing.push(entry);
     habitsByPeriod.set(period, existing);
+  }
+
+  function renderStackCard(
+    entry: HabitStackFindSuitableForTimePlanResultEntry,
+  ) {
+    const habitStack = entry.habit_stack;
+    const showPeriodProgress =
+      entry.has_uncompleted_historical_inbox_tasks ||
+      comparePeriods(habitStack.period, loaderData.timePlan.period) > 0;
+    const memberProgress = entry.habits.map((habit) =>
+      recurringTargetPeriodProgress(
+        inboxTasksByHabitRefId.get(habit.ref_id) ?? [],
+        habit.gen_params,
+        topLevelInfo.today,
+      ),
+    );
+    const periodProgress =
+      showPeriodProgress && memberProgress.length > 0
+        ? {
+            generatedCount: memberProgress.reduce(
+              (sum, progress) => sum + progress.generatedCount,
+              0,
+            ),
+            doneCount: memberProgress.reduce(
+              (sum, progress) => sum + progress.doneCount,
+              0,
+            ),
+            nextDueDate: [...memberProgress]
+              .map((progress) => progress.nextDueDate)
+              .sort(compareADate)[0],
+          }
+        : null;
+
+    return (
+      <EntityCard
+        key={`habit-stack-${habitStack.ref_id}`}
+        entityId={`habit-stack-${habitStack.ref_id}`}
+        allowSelect
+        selected={targetHabitStackRefIds.has(habitStack.ref_id)}
+        onClick={() => {
+          setTargetHabitStackRefIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(habitStack.ref_id)) {
+              next.delete(habitStack.ref_id);
+            } else {
+              next.add(habitStack.ref_id);
+            }
+            return next;
+          });
+        }}
+      >
+        <EntityLink
+          to={`/app/workspace/apps/habits/stacks/${habitStack.ref_id}`}
+          block
+        >
+          <Typography>{habitStack.name}</Typography>
+          {entry.aspect && <AspectTag aspect={entry.aspect} />}
+          {periodProgress && (
+            <RecurringTaskPeriodProgress
+              generatedCount={periodProgress.generatedCount}
+              doneCount={periodProgress.doneCount}
+              nextDueDate={periodProgress.nextDueDate}
+            />
+          )}
+        </EntityLink>
+      </EntityCard>
+    );
   }
 
   function renderHabitCard(entry: HabitFindSuitableForTimePlanResultEntry) {
@@ -269,7 +428,10 @@ export default function TimePlanAddFromCurrentHabits() {
           });
         }}
       >
-        <EntityLink to={`/app/workspace/apps/habits/${habit.ref_id}`} block>
+        <EntityLink
+          to={`/app/workspace/apps/habits/habits/${habit.ref_id}`}
+          block
+        >
           <Typography>{habit.name}</Typography>
           {entry.aspect && <AspectTag aspect={entry.aspect} />}
           {periodProgress && (
@@ -283,6 +445,10 @@ export default function TimePlanAddFromCurrentHabits() {
       </EntityCard>
     );
   }
+
+  const hasVisibleItems = visibleStacks.length > 0 || visibleHabits.length > 0;
+  const hasSelectableItems =
+    selectableStacks.length > 0 || selectableHabits.length > 0;
 
   return (
     <LeafPanel
@@ -366,17 +532,23 @@ export default function TimePlanAddFromCurrentHabits() {
           name="targetHabitRefIds"
           value={[...targetHabitRefIds].join(",")}
         />
+        <input
+          type="hidden"
+          name="targetHabitStackRefIds"
+          value={[...targetHabitStackRefIds].join(",")}
+        />
 
-        {selectableHabits.length > 0 && visibleHabits.length === 0 && (
+        {hasSelectableItems && !hasVisibleItems && (
           <Typography>
-            No habits would generate tasks in this period. Switch to All to see
-            them.
+            No habits or stacks would generate tasks in this period. Switch to
+            All to see them.
           </Typography>
         )}
 
         {PERIOD_SECTIONS.map((period) => {
+          const periodStacks = stacksByPeriod.get(period) ?? [];
           const periodHabits = habitsByPeriod.get(period) ?? [];
-          if (periodHabits.length === 0) {
+          if (periodStacks.length === 0 && periodHabits.length === 0) {
             return null;
           }
 
@@ -387,6 +559,7 @@ export default function TimePlanAddFromCurrentHabits() {
                 size="large"
               />
               <EntityStack>
+                {periodStacks.map((entry) => renderStackCard(entry))}
                 {periodHabits.map((entry) => renderHabitCard(entry))}
               </EntityStack>
             </div>

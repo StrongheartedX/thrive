@@ -8,8 +8,21 @@ from jupiter.core.apps.big_plans.service.load import (
 )
 from jupiter.core.apps.chores.root import Chore
 from jupiter.core.apps.chores.service.load import ChoreLoadResult, ChoreLoadService
-from jupiter.core.apps.habits.root import Habit
-from jupiter.core.apps.habits.service.load import HabitLoadResult, HabitLoadService
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
+from jupiter.core.apps.chores.sub.stack.service.load import (
+    ChoreStackLoadResult,
+    ChoreStackLoadService,
+)
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.habit.service.load import (
+    HabitLoadResult,
+    HabitLoadService,
+)
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
+from jupiter.core.apps.habits.sub.stack.service.load import (
+    HabitStackLoadResult,
+    HabitStackLoadService,
+)
 from jupiter.core.apps.time_plans.sub.activity.root import TimePlanActivity
 from jupiter.core.apps.todo.root import TodoTask
 from jupiter.core.apps.todo.service.load import TodoTaskLoadResult, TodoTaskLoadService
@@ -65,8 +78,12 @@ class TimePlanActivityLoadResult(UseCaseResultBase):
     target_todo_task_info: TodoTaskLoadResult | None
     target_habit: Habit | None
     target_habit_info: HabitLoadResult | None
+    target_habit_stack: HabitStack | None
+    target_habit_stack_info: HabitStackLoadResult | None
     target_chore: Chore | None
     target_chore_info: ChoreLoadResult | None
+    target_chore_stack: ChoreStack | None
+    target_chore_stack_info: ChoreStackLoadResult | None
     note: Note | None
     time_event_blocks: list[TimeEventInDayBlock]
 
@@ -105,8 +122,12 @@ class TimePlanActivityLoadUseCase(
         target_todo_task_info = None
         target_habit = None
         target_habit_info = None
+        target_habit_stack = None
+        target_habit_stack_info = None
         target_chore = None
         target_chore_info = None
+        target_chore_stack = None
+        target_chore_stack_info = None
         # Activity targets are loadable whenever the activity is — access to the
         # time plan / activity does not require separate ACL on the target.
         if time_plan_activity.is_target_inbox_task:
@@ -159,6 +180,18 @@ class TimePlanActivityLoadUseCase(
                     user_ref_id=context.user.ref_id,
                     allow_archived=allow_archived,
                 )
+        elif time_plan_activity.is_target_habit_stack:
+            if workspace.is_feature_available(WorkspaceFeature.HABITS):
+                target_habit_stack = await uow.get_for(HabitStack).load_by_id(
+                    time_plan_activity.target.ref_id,
+                    allow_archived=allow_archived,
+                )
+                target_habit_stack_info = await HabitStackLoadService().do_it(
+                    uow,
+                    target_habit_stack,
+                    user_ref_id=context.user.ref_id,
+                    allow_archived=allow_archived,
+                )
         elif time_plan_activity.is_target_chore:
             if workspace.is_feature_available(WorkspaceFeature.CHORES):
                 target_chore = await uow.get_for(Chore).load_by_id(
@@ -169,6 +202,18 @@ class TimePlanActivityLoadUseCase(
                     uow,
                     workspace.ref_id,
                     target_chore,
+                    user_ref_id=context.user.ref_id,
+                    allow_archived=allow_archived,
+                )
+        elif time_plan_activity.is_target_chore_stack:
+            if workspace.is_feature_available(WorkspaceFeature.CHORES):
+                target_chore_stack = await uow.get_for(ChoreStack).load_by_id(
+                    time_plan_activity.target.ref_id,
+                    allow_archived=allow_archived,
+                )
+                target_chore_stack_info = await ChoreStackLoadService().do_it(
+                    uow,
+                    target_chore_stack,
                     user_ref_id=context.user.ref_id,
                     allow_archived=allow_archived,
                 )
@@ -198,8 +243,12 @@ class TimePlanActivityLoadUseCase(
             target_todo_task_info=target_todo_task_info,
             target_habit=target_habit,
             target_habit_info=target_habit_info,
+            target_habit_stack=target_habit_stack,
+            target_habit_stack_info=target_habit_stack_info,
             target_chore=target_chore,
             target_chore_info=target_chore_info,
+            target_chore_stack=target_chore_stack,
+            target_chore_stack_info=target_chore_stack_info,
             note=note,
             time_event_blocks=time_event_blocks,
         )

@@ -335,6 +335,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
           targetBigPlans: fullTimePlanForToday.target_big_plans ?? [],
           targetTodoTasks: fullTimePlanForToday.target_todo_tasks ?? [],
           targetHabits: fullTimePlanForToday.target_habits ?? [],
+          targetHabitStacks: fullTimePlanForToday.target_habit_stacks ?? [],
+          targetChoreStacks: fullTimePlanForToday.target_chore_stacks ?? [],
           targetChores: fullTimePlanForToday.target_chores ?? [],
           activityDoneness: fullTimePlanForToday.activity_doneness ?? {},
         }
@@ -347,6 +349,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
           targetBigPlans: fullTimePlanForWeek.target_big_plans ?? [],
           targetTodoTasks: fullTimePlanForWeek.target_todo_tasks ?? [],
           targetHabits: fullTimePlanForWeek.target_habits ?? [],
+          targetHabitStacks: fullTimePlanForWeek.target_habit_stacks ?? [],
+          targetChoreStacks: fullTimePlanForWeek.target_chore_stacks ?? [],
           targetChores: fullTimePlanForWeek.target_chores ?? [],
           activityDoneness: fullTimePlanForWeek.activity_doneness ?? {},
         }

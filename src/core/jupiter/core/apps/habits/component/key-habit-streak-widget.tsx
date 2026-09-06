@@ -65,7 +65,7 @@ export function HabitKeyHabitStreakWidget(props: WidgetProps) {
       <EntityNoNothingCard
         title="No Key Habit Streaks"
         message="No key habit streaks found. You can create a new habit to start a streak."
-        newEntityLocations="/app/workspace/apps/habits/new"
+        newEntityLocations="/app/workspace/apps/habits/habits/new"
         helpSubject={DocsHelpSubject.HABITS}
       />
     );

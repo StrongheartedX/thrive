@@ -2,8 +2,8 @@
 
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.big_plans.stats import BigPlanStatsRepository
-from jupiter.core.apps.habits.root import Habit
-from jupiter.core.apps.habits.service.streak_recorder import (
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.habit.service.streak_recorder import (
     HabitStreakRecorderService,
 )
 from jupiter.core.apps.time_plans.root import TimePlan

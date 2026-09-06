@@ -47,8 +47,18 @@ export function resolveShareableEntityFromPath(
       refId: (_m, p) => p.id,
     },
     {
-      re: /^\/app\/workspace\/habits\/([^/]+)$/,
+      re: /^\/app\/workspace\/(?:apps\/)?habits\/stacks\/([^/]+)$/,
+      entityType: NamedEntityTag.HABIT_STACK,
+      refId: (_m, p) => p.id,
+    },
+    {
+      re: /^\/app\/workspace\/(?:apps\/)?habits\/habits\/([^/]+)$/,
       entityType: NamedEntityTag.HABIT,
+      refId: (_m, p) => p.id,
+    },
+    {
+      re: /^\/app\/workspace\/(?:apps\/)?chores\/stacks\/([^/]+)$/,
+      entityType: NamedEntityTag.CHORE_STACK,
       refId: (_m, p) => p.id,
     },
     {
@@ -132,7 +142,10 @@ export function resolveShareableEntityFromPath(
       entityRefId === "no-parent" ||
       entityRefId === "vacation" ||
       entityRefId === "wish-list" ||
-      entityRefId === "new-from-wish"
+      entityRefId === "new-from-wish" ||
+      entityRefId === "habits" ||
+      entityRefId === "stack" ||
+      entityRefId === "stacks"
     ) {
       return null;
     }

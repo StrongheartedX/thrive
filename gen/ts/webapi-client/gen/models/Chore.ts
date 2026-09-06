@@ -23,6 +23,7 @@ export type Chore = {
     aspect_ref_id: EntityId;
     chapter_ref_id?: (EntityId | null);
     goal_ref_id?: (EntityId | null);
+    stack_ref_id?: (EntityId | null);
     is_key: boolean;
     gen_params: RecurringTaskGenParams;
     suspended: boolean;

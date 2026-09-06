@@ -11,7 +11,9 @@ from ..types import UNSET, Unset
 if TYPE_CHECKING:
     from ..models.big_plan import BigPlan
     from ..models.chore import Chore
+    from ..models.chore_stack import ChoreStack
     from ..models.habit import Habit
+    from ..models.habit_stack import HabitStack
     from ..models.inbox_task import InboxTask
     from ..models.time_event_in_day_block import TimeEventInDayBlock
     from ..models.time_plan_activity import TimePlanActivity
@@ -32,7 +34,9 @@ class TimePlanActivityEntry:
         target_big_plan (BigPlan | None | Unset):
         target_todo_task (None | TodoTask | Unset):
         target_habit (Habit | None | Unset):
+        target_habit_stack (HabitStack | None | Unset):
         target_chore (Chore | None | Unset):
+        target_chore_stack (ChoreStack | None | Unset):
     """
 
     time_plan_activity: TimePlanActivity
@@ -41,13 +45,17 @@ class TimePlanActivityEntry:
     target_big_plan: BigPlan | None | Unset = UNSET
     target_todo_task: None | TodoTask | Unset = UNSET
     target_habit: Habit | None | Unset = UNSET
+    target_habit_stack: HabitStack | None | Unset = UNSET
     target_chore: Chore | None | Unset = UNSET
+    target_chore_stack: ChoreStack | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.big_plan import BigPlan  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.todo_task import TodoTask  # noqa: PLC0415
 
@@ -90,6 +98,14 @@ class TimePlanActivityEntry:
         else:
             target_habit = self.target_habit
 
+        target_habit_stack: dict[str, Any] | None | Unset
+        if isinstance(self.target_habit_stack, Unset):
+            target_habit_stack = UNSET
+        elif isinstance(self.target_habit_stack, HabitStack):
+            target_habit_stack = self.target_habit_stack.to_dict()
+        else:
+            target_habit_stack = self.target_habit_stack
+
         target_chore: dict[str, Any] | None | Unset
         if isinstance(self.target_chore, Unset):
             target_chore = UNSET
@@ -97,6 +113,14 @@ class TimePlanActivityEntry:
             target_chore = self.target_chore.to_dict()
         else:
             target_chore = self.target_chore
+
+        target_chore_stack: dict[str, Any] | None | Unset
+        if isinstance(self.target_chore_stack, Unset):
+            target_chore_stack = UNSET
+        elif isinstance(self.target_chore_stack, ChoreStack):
+            target_chore_stack = self.target_chore_stack.to_dict()
+        else:
+            target_chore_stack = self.target_chore_stack
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -114,8 +138,12 @@ class TimePlanActivityEntry:
             field_dict["target_todo_task"] = target_todo_task
         if target_habit is not UNSET:
             field_dict["target_habit"] = target_habit
+        if target_habit_stack is not UNSET:
+            field_dict["target_habit_stack"] = target_habit_stack
         if target_chore is not UNSET:
             field_dict["target_chore"] = target_chore
+        if target_chore_stack is not UNSET:
+            field_dict["target_chore_stack"] = target_chore_stack
 
         return field_dict
 
@@ -123,7 +151,9 @@ class TimePlanActivityEntry:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.big_plan import BigPlan  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.time_event_in_day_block import TimeEventInDayBlock  # noqa: PLC0415
         from ..models.time_plan_activity import TimePlanActivity  # noqa: PLC0415
@@ -207,6 +237,23 @@ class TimePlanActivityEntry:
 
         target_habit = _parse_target_habit(d.pop("target_habit", UNSET))
 
+        def _parse_target_habit_stack(data: object) -> HabitStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                target_habit_stack_type_0 = HabitStack.from_dict(data)
+
+                return target_habit_stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(HabitStack | None | Unset, data)
+
+        target_habit_stack = _parse_target_habit_stack(d.pop("target_habit_stack", UNSET))
+
         def _parse_target_chore(data: object) -> Chore | None | Unset:
             if data is None:
                 return data
@@ -224,6 +271,23 @@ class TimePlanActivityEntry:
 
         target_chore = _parse_target_chore(d.pop("target_chore", UNSET))
 
+        def _parse_target_chore_stack(data: object) -> ChoreStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                target_chore_stack_type_0 = ChoreStack.from_dict(data)
+
+                return target_chore_stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ChoreStack | None | Unset, data)
+
+        target_chore_stack = _parse_target_chore_stack(d.pop("target_chore_stack", UNSET))
+
         time_plan_activity_entry = cls(
             time_plan_activity=time_plan_activity,
             time_events=time_events,
@@ -231,7 +295,9 @@ class TimePlanActivityEntry:
             target_big_plan=target_big_plan,
             target_todo_task=target_todo_task,
             target_habit=target_habit,
+            target_habit_stack=target_habit_stack,
             target_chore=target_chore,
+            target_chore_stack=target_chore_stack,
         )
 
         time_plan_activity_entry.additional_properties = d

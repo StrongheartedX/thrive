@@ -2,6 +2,7 @@ import type {
   Chapter,
   Contact,
   ChoreFindResultEntry,
+  ChoreStack,
   Goal,
   GoalSummary,
   InboxTask,
@@ -26,7 +27,7 @@ import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 import { Outlet, useFetcher } from "@remix-run/react";
 import { AnimatePresence } from "framer-motion";
-import { Box, Tab, Tabs } from "@mui/material";
+import { Box, Card, Tab, Tabs } from "@mui/material";
 import { DateTime } from "luxon";
 import { Fragment, useContext, useState } from "react";
 import { ChoreInboxTasksWidget } from "@jupiter/core/apps/chores/component/inbox-tasks-widget";
@@ -56,6 +57,7 @@ import { UserLightChip } from "#/core/users/components/user-light-chip";
 import {
   FilterFewOptionsCompact,
   FilterManyOptions,
+  NavSingle,
   SectionActions,
 } from "@jupiter/core/infra/component/section-actions";
 import { StandardDivider } from "@jupiter/core/infra/component/standard-divider";
@@ -67,6 +69,7 @@ import {
 } from "#/core/apps/life_plan/sub/aspects/root";
 import {
   DisplayType,
+  useTrunkNeedsToShowBranch,
   useTrunkNeedsToShowLeaf,
 } from "@jupiter/core/infra/component/use-nested-entities";
 import { TopLevelInfoContext } from "@jupiter/core/infra/top-level-context";
@@ -79,6 +82,7 @@ import { periodName } from "@jupiter/core/common/recurring-task-period";
 import { TagTag } from "#/core/common/sub/tags/component/tag-tag";
 import { ContactTag } from "#/core/common/sub/contacts/component/contact-tag";
 import { LocationTag } from "#/core/common/sub/locations/component/location-tag";
+import { ChoreStackTag } from "@jupiter/core/apps/chores/component/chore-stack-tag";
 
 import { useLoaderDataSafeForAnimation } from "~/rendering/use-loader-data-for-animation";
 import { basicShouldRevalidate } from "~/rendering/standard-should-revalidate";
@@ -150,6 +154,7 @@ export default function Chores() {
   const topLevelInfo = useContext(TopLevelInfoContext);
   const isBigScreen = useBigScreen();
 
+  const shouldShowABranch = useTrunkNeedsToShowBranch();
   const shouldShowALeaf = useTrunkNeedsToShowLeaf();
 
   const entriesByRefId = new Map<string, ChoreFindResultEntry>();
@@ -392,11 +397,16 @@ export default function Chores() {
               })),
               setSelectedContactsRefId,
             ),
+            NavSingle({
+              id: "chores-stacks",
+              text: "Stacks",
+              link: "/app/workspace/apps/chores/stacks",
+            }),
           ]}
         />
       }
     >
-      <NestingAwareBlock shouldHide={shouldShowALeaf}>
+      <NestingAwareBlock shouldHide={shouldShowABranch || shouldShowALeaf}>
         {isBigScreen ? (
           <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -574,6 +584,7 @@ interface ChoreRowProps {
   showAspectTag: boolean;
   showGoalTag: boolean;
   showPeriodTag: boolean;
+  showStackTag?: boolean;
 }
 
 function ChoreRow(props: ChoreRowProps) {
@@ -613,6 +624,9 @@ function ChoreRow(props: ChoreRowProps) {
           entry.goal && <GoalTag goal={entry.goal as Goal} />}
         <Check isDone={!chore.suspended} label="Active" />
         {props.showPeriodTag && <PeriodTag period={chore.gen_params.period} />}
+        {props.showStackTag !== false && entry.stack && (
+          <ChoreStackTag choreStack={entry.stack} />
+        )}
         {chore.gen_params.eisen && <EisenTag eisen={chore.gen_params.eisen} />}
         {chore.gen_params.difficulty && (
           <DifficultyTag difficulty={chore.gen_params.difficulty} />
@@ -667,22 +681,140 @@ function ChoresFlatStack(props: ChoresFlatStackProps) {
   const showAspectTag = props.showAspectTag ?? true;
   const showGoalTag = props.showGoalTag ?? true;
   const showPeriodTag = props.showPeriodTag ?? true;
+  const blocks = groupChoresIntoStackBlocks(props.chores, props.entriesByRefId);
 
   return (
     <EntityStack>
-      {props.chores.map((chore) => (
-        <ChoreRow
-          key={`chore-${chore.ref_id}`}
-          choreRefId={chore.ref_id}
-          entriesByRefId={props.entriesByRefId}
-          topLevelInfo={props.topLevelInfo}
-          showAspectTag={showAspectTag}
-          showGoalTag={showGoalTag}
-          showPeriodTag={showPeriodTag}
-        />
-      ))}
+      {blocks.map((block) =>
+        block.stack !== null ? (
+          <ChoreStackGroup
+            key={`chore-stack-group-${block.stack.ref_id}`}
+            stack={block.stack}
+            chores={block.chores}
+            entriesByRefId={props.entriesByRefId}
+            topLevelInfo={props.topLevelInfo}
+            showAspectTag={showAspectTag}
+            showGoalTag={showGoalTag}
+            showPeriodTag={showPeriodTag}
+          />
+        ) : (
+          <ChoreRow
+            key={`chore-${block.chores[0].ref_id}`}
+            choreRefId={block.chores[0].ref_id}
+            entriesByRefId={props.entriesByRefId}
+            topLevelInfo={props.topLevelInfo}
+            showAspectTag={showAspectTag}
+            showGoalTag={showGoalTag}
+            showPeriodTag={showPeriodTag}
+          />
+        ),
+      )}
     </EntityStack>
   );
+}
+
+interface ChoreStackGroupProps {
+  stack: ChoreStack;
+  chores: Array<ChoreFindResultEntry["chore"]>;
+  entriesByRefId: Map<string, ChoreFindResultEntry>;
+  topLevelInfo: React.ContextType<typeof TopLevelInfoContext>;
+  showAspectTag: boolean;
+  showGoalTag: boolean;
+  showPeriodTag: boolean;
+}
+
+function ChoreStackGroup(props: ChoreStackGroupProps) {
+  return (
+    <Card
+      id={`chore-stack-group-${props.stack.ref_id}`}
+      sx={(theme) => ({
+        backgroundColor:
+          theme.palette.mode === "dark"
+            ? theme.palette.grey[800]
+            : theme.palette.grey[100],
+        overflow: "hidden",
+        "& .MuiCard-root": {
+          backgroundColor: theme.palette.background.paper,
+        },
+      })}
+    >
+      <Box sx={{ px: 1.5, py: 0.5 }}>
+        <EntityLink
+          inline
+          to={`/app/workspace/apps/chores/stacks/${props.stack.ref_id}`}
+        >
+          <EntityNameComponent compact name={props.stack.name} />
+          {props.showPeriodTag && <PeriodTag period={props.stack.period} />}
+        </EntityLink>
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 0.75,
+          px: 0.75,
+          pb: 0.75,
+        }}
+      >
+        {props.chores.map((chore) => (
+          <ChoreRow
+            key={`chore-${chore.ref_id}`}
+            choreRefId={chore.ref_id}
+            entriesByRefId={props.entriesByRefId}
+            topLevelInfo={props.topLevelInfo}
+            showAspectTag={props.showAspectTag}
+            showGoalTag={props.showGoalTag}
+            showPeriodTag={props.showPeriodTag}
+            showStackTag={false}
+          />
+        ))}
+      </Box>
+    </Card>
+  );
+}
+
+function groupChoresIntoStackBlocks(
+  chores: Array<ChoreFindResultEntry["chore"]>,
+  entriesByRefId: Map<string, ChoreFindResultEntry>,
+): Array<{
+  stack: ChoreStack | null;
+  chores: Array<ChoreFindResultEntry["chore"]>;
+}> {
+  const choresByStackRefId = new Map<
+    string,
+    Array<ChoreFindResultEntry["chore"]>
+  >();
+  for (const chore of chores) {
+    const stack = entriesByRefId.get(chore.ref_id)?.stack;
+    if (stack === undefined || stack === null) {
+      continue;
+    }
+    const members = choresByStackRefId.get(stack.ref_id) ?? [];
+    members.push(chore);
+    choresByStackRefId.set(stack.ref_id, members);
+  }
+
+  const emittedStackRefIds = new Set<string>();
+  const blocks: Array<{
+    stack: ChoreStack | null;
+    chores: Array<ChoreFindResultEntry["chore"]>;
+  }> = [];
+  for (const chore of chores) {
+    const stack = entriesByRefId.get(chore.ref_id)?.stack ?? null;
+    if (stack === null) {
+      blocks.push({ stack: null, chores: [chore] });
+      continue;
+    }
+    if (emittedStackRefIds.has(stack.ref_id)) {
+      continue;
+    }
+    emittedStackRefIds.add(stack.ref_id);
+    blocks.push({
+      stack,
+      chores: choresByStackRefId.get(stack.ref_id) ?? [chore],
+    });
+  }
+  return blocks;
 }
 
 interface ChoresByAspectStackProps {

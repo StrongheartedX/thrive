@@ -1,0 +1,1 @@
+"""Chore stack leaf entity."""

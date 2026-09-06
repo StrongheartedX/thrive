@@ -7,11 +7,13 @@ from jupiter.core.apps.big_plans.collection import BigPlanCollection
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.chores.collection import ChoreCollection
 from jupiter.core.apps.chores.root import Chore
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.core.apps.docs.root import DocCollection
 from jupiter.core.apps.docs.sub.dir.root import Dir
 from jupiter.core.apps.docs.sub.doc.root import Doc
 from jupiter.core.apps.habits.collection import HabitCollection
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.journals.collection import JournalCollection
 from jupiter.core.apps.journals.root import Journal
 from jupiter.core.apps.life_plan.root import LifePlan
@@ -142,11 +144,25 @@ async def _load_workspace_summaries_for_entity_tag(
             return await uow.get_for(Habit).find_summary(
                 habit_collection.ref_id, allow_archived=True
             )
+        case NamedEntityTag.HABIT_STACK:
+            habit_collection = await uow.get_for(HabitCollection).load_by_parent(
+                workspace.ref_id
+            )
+            return await uow.get_for(HabitStack).find_summary(
+                habit_collection.ref_id, allow_archived=True
+            )
         case NamedEntityTag.CHORE:
             chore_collection = await uow.get_for(ChoreCollection).load_by_parent(
                 workspace.ref_id
             )
             return await uow.get_for(Chore).find_summary(
+                chore_collection.ref_id, allow_archived=True
+            )
+        case NamedEntityTag.CHORE_STACK:
+            chore_collection = await uow.get_for(ChoreCollection).load_by_parent(
+                workspace.ref_id
+            )
+            return await uow.get_for(ChoreStack).find_summary(
                 chore_collection.ref_id, allow_archived=True
             )
         case NamedEntityTag.BIG_PLAN:

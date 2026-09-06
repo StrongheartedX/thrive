@@ -24,8 +24,12 @@ export function noteOwnerLinkToEntityTag(owner: string): NamedEntityTag {
       return NamedEntityTag.SCHEDULE_EVENT_FULL_DAYS;
     case NamedEntityTag.HABIT:
       return NamedEntityTag.HABIT;
+    case NamedEntityTag.HABIT_STACK:
+      return NamedEntityTag.HABIT_STACK;
     case NamedEntityTag.CHORE:
       return NamedEntityTag.CHORE;
+    case NamedEntityTag.CHORE_STACK:
+      return NamedEntityTag.CHORE_STACK;
     case NamedEntityTag.BIG_PLAN:
       return NamedEntityTag.BIG_PLAN;
     case NamedEntityTag.DOC:

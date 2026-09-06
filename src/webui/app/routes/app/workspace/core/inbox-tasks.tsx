@@ -47,6 +47,7 @@ import {
   inboxTaskFindEntryToParent,
   isInboxTaskCoreFieldEditable,
   sortInboxTasksByEisenAndDifficulty,
+  sortInboxTasksByHabitStackThenEisenAndDifficulty,
   sortInboxTasksNaturally,
 } from "#/core/common/sub/inbox_tasks/root";
 import type {
@@ -554,96 +555,116 @@ function SwiftView(props: SwiftViewProps) {
 
   const sortedInboxTasks = sortInboxTasksByEisenAndDifficulty(props.inboxTasks);
 
-  const inboxTasksForHabitsDueToday = filterInboxTasksForDisplay(
-    sortedInboxTasks,
-    props.moreInfoByRefId,
-    props.optimisticUpdates,
-    {
-      allowSources: [HABIT],
-      allowStatuses: [
-        InboxTaskStatus.NOT_STARTED,
-        InboxTaskStatus.IN_PROGRESS,
-        InboxTaskStatus.BLOCKED,
-      ],
-      includeIfNoActionableDate: true,
-      actionableDateEnd: actionableTime,
-      dueDateEnd: aDateToDate(props.topLevelInfo.today),
-      allowPeriodsIfHabit: [RecurringTaskPeriod.DAILY],
-    },
-  );
+  const inboxTasksForHabitsDueToday =
+    sortInboxTasksByHabitStackThenEisenAndDifficulty(
+      filterInboxTasksForDisplay(
+        sortedInboxTasks,
+        props.moreInfoByRefId,
+        props.optimisticUpdates,
+        {
+          allowSources: [HABIT],
+          allowStatuses: [
+            InboxTaskStatus.NOT_STARTED,
+            InboxTaskStatus.IN_PROGRESS,
+            InboxTaskStatus.BLOCKED,
+          ],
+          includeIfNoActionableDate: true,
+          actionableDateEnd: actionableTime,
+          dueDateEnd: aDateToDate(props.topLevelInfo.today),
+          allowPeriodsIfHabit: [RecurringTaskPeriod.DAILY],
+        },
+      ),
+      props.moreInfoByRefId,
+    );
 
-  const inboxTasksForHabitsDueThisWeek = filterInboxTasksForDisplay(
-    sortedInboxTasks,
-    props.moreInfoByRefId,
-    props.optimisticUpdates,
-    {
-      allowSources: [HABIT],
-      allowStatuses: [
-        InboxTaskStatus.NOT_STARTED,
-        InboxTaskStatus.IN_PROGRESS,
-        InboxTaskStatus.BLOCKED,
-      ],
-      includeIfNoActionableDate: true,
-      actionableDateEnd: actionableTime,
-      dueDateEnd: endOfTheWeek,
-      allowPeriodsIfHabit: [RecurringTaskPeriod.WEEKLY],
-    },
-  );
+  const inboxTasksForHabitsDueThisWeek =
+    sortInboxTasksByHabitStackThenEisenAndDifficulty(
+      filterInboxTasksForDisplay(
+        sortedInboxTasks,
+        props.moreInfoByRefId,
+        props.optimisticUpdates,
+        {
+          allowSources: [HABIT],
+          allowStatuses: [
+            InboxTaskStatus.NOT_STARTED,
+            InboxTaskStatus.IN_PROGRESS,
+            InboxTaskStatus.BLOCKED,
+          ],
+          includeIfNoActionableDate: true,
+          actionableDateEnd: actionableTime,
+          dueDateEnd: endOfTheWeek,
+          allowPeriodsIfHabit: [RecurringTaskPeriod.WEEKLY],
+        },
+      ),
+      props.moreInfoByRefId,
+    );
 
-  const inboxTasksForHabitsDueThisMonth = filterInboxTasksForDisplay(
-    sortedInboxTasks,
-    props.moreInfoByRefId,
-    props.optimisticUpdates,
-    {
-      allowSources: [HABIT],
-      allowStatuses: [
-        InboxTaskStatus.NOT_STARTED,
-        InboxTaskStatus.IN_PROGRESS,
-        InboxTaskStatus.BLOCKED,
-      ],
-      includeIfNoActionableDate: true,
-      actionableDateEnd: actionableTime,
-      dueDateEnd: endOfTheMonth,
-      allowPeriodsIfHabit: [RecurringTaskPeriod.MONTHLY],
-    },
-  );
+  const inboxTasksForHabitsDueThisMonth =
+    sortInboxTasksByHabitStackThenEisenAndDifficulty(
+      filterInboxTasksForDisplay(
+        sortedInboxTasks,
+        props.moreInfoByRefId,
+        props.optimisticUpdates,
+        {
+          allowSources: [HABIT],
+          allowStatuses: [
+            InboxTaskStatus.NOT_STARTED,
+            InboxTaskStatus.IN_PROGRESS,
+            InboxTaskStatus.BLOCKED,
+          ],
+          includeIfNoActionableDate: true,
+          actionableDateEnd: actionableTime,
+          dueDateEnd: endOfTheMonth,
+          allowPeriodsIfHabit: [RecurringTaskPeriod.MONTHLY],
+        },
+      ),
+      props.moreInfoByRefId,
+    );
 
-  const inboxTasksForHabitsDueThisQuarter = filterInboxTasksForDisplay(
-    sortedInboxTasks,
-    props.moreInfoByRefId,
-    props.optimisticUpdates,
-    {
-      allowSources: [HABIT],
-      allowStatuses: [
-        InboxTaskStatus.NOT_STARTED,
-        InboxTaskStatus.IN_PROGRESS,
-        InboxTaskStatus.BLOCKED,
-      ],
-      includeIfNoActionableDate: true,
-      actionableDateEnd: actionableTime,
-      dueDateEnd: endOfTheQuarter,
-      allowPeriodsIfHabit: [RecurringTaskPeriod.QUARTERLY],
-    },
-  );
+  const inboxTasksForHabitsDueThisQuarter =
+    sortInboxTasksByHabitStackThenEisenAndDifficulty(
+      filterInboxTasksForDisplay(
+        sortedInboxTasks,
+        props.moreInfoByRefId,
+        props.optimisticUpdates,
+        {
+          allowSources: [HABIT],
+          allowStatuses: [
+            InboxTaskStatus.NOT_STARTED,
+            InboxTaskStatus.IN_PROGRESS,
+            InboxTaskStatus.BLOCKED,
+          ],
+          includeIfNoActionableDate: true,
+          actionableDateEnd: actionableTime,
+          dueDateEnd: endOfTheQuarter,
+          allowPeriodsIfHabit: [RecurringTaskPeriod.QUARTERLY],
+        },
+      ),
+      props.moreInfoByRefId,
+    );
 
-  const inboxTasksForHabitsDueThisYear = filterInboxTasksForDisplay(
-    sortedInboxTasks,
-    props.moreInfoByRefId,
-    props.optimisticUpdates,
-    {
-      allowSources: [HABIT],
-      allowStatuses: [
-        InboxTaskStatus.NOT_STARTED,
-        InboxTaskStatus.IN_PROGRESS,
-        InboxTaskStatus.BLOCKED,
-      ],
-      includeIfNoActionableDate: true,
-      actionableDateEnd: actionableTime,
-      includeIfNoDueDate: true,
-      dueDateEnd: endOfTheYear,
-      allowPeriodsIfHabit: [RecurringTaskPeriod.YEARLY],
-    },
-  );
+  const inboxTasksForHabitsDueThisYear =
+    sortInboxTasksByHabitStackThenEisenAndDifficulty(
+      filterInboxTasksForDisplay(
+        sortedInboxTasks,
+        props.moreInfoByRefId,
+        props.optimisticUpdates,
+        {
+          allowSources: [HABIT],
+          allowStatuses: [
+            InboxTaskStatus.NOT_STARTED,
+            InboxTaskStatus.IN_PROGRESS,
+            InboxTaskStatus.BLOCKED,
+          ],
+          includeIfNoActionableDate: true,
+          actionableDateEnd: actionableTime,
+          includeIfNoDueDate: true,
+          dueDateEnd: endOfTheYear,
+          allowPeriodsIfHabit: [RecurringTaskPeriod.YEARLY],
+        },
+      ),
+      props.moreInfoByRefId,
+    );
 
   const inboxTasksForChoresDueToday = filterInboxTasksForDisplay(
     sortedInboxTasks,
@@ -1188,7 +1209,7 @@ function SwiftView(props: SwiftViewProps) {
     <InboxTasksNoTasksCard
       parent="habit"
       parentLabel="New Habit"
-      parentNewLocations="/app/workspace/apps/habits/new"
+      parentNewLocations="/app/workspace/apps/habits/habits/new"
     />
   );
   const noChoresCard = (

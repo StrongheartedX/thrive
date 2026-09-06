@@ -23,7 +23,9 @@ class NamedEntityTag(EnumValue):
         "ScheduleEventFullDays"  # ScheduleEventFullDays.__name__
     )
     HABIT = "Habit"  # Habit.__name__
+    HABIT_STACK = "HabitStack"  # HabitStack.__name__
     CHORE = "Chore"  # Chore.__name__
+    CHORE_STACK = "ChoreStack"  # ChoreStack.__name__
     BIG_PLAN = "BigPlan"  # BigPlan.__name__
     BIG_PLAN_MILESTONE = "BigPlanMilestone"  # BigPlanMilestone.__name__
     DOC = "Doc"  # Doc.__name__

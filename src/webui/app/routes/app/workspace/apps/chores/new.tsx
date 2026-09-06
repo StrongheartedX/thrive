@@ -5,6 +5,7 @@ import type {
   MilestoneSummary,
   AspectSummary,
   TimePlan,
+  ChoreStack,
 } from "@jupiter/webapi-client";
 import {
   Difficulty,
@@ -34,6 +35,7 @@ import { useContext, useState } from "react";
 import { z } from "zod";
 import { CheckboxAsString, parseForm, parseQuery } from "zodix";
 import { isWorkspaceFeatureAvailable } from "@jupiter/core/workspaces/root";
+import { ChoreStackSelectSingle } from "@jupiter/core/apps/chores/component/stack-select-single";
 import { withTimePlanView } from "@jupiter/core/apps/time_plans/view-mode";
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { FieldError, GlobalError } from "@jupiter/core/infra/component/errors";
@@ -79,6 +81,7 @@ const CreateFormSchema = z.object({
   aspect: z.string().optional(),
   chapter: z.string().optional(),
   goal: z.string().optional(),
+  stack: z.string().optional(),
   period: z.nativeEnum(RecurringTaskPeriod),
   isKey: CheckboxAsString,
   eisen: z.nativeEnum(Eisen),
@@ -131,6 +134,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
     include_goals: true,
     include_milestones: true,
   });
+  const stacksResponse = await apiClient.chores.choreStackFind({
+    allow_archived: false,
+    include_tags: false,
+    include_notes: false,
+    include_life_plan: false,
+    include_chores: false,
+  });
 
   return json({
     timePlanReason: timePlanReason,
@@ -141,6 +151,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     allChapters: summaryResponse.chapters as Array<ChapterSummary> | null,
     allGoals: summaryResponse.goals as Array<GoalSummary> | null,
     allMilestones: summaryResponse.milestones as Array<MilestoneSummary> | null,
+    allStacks: stacksResponse.entries.map(
+      (entry) => entry.chore_stack,
+    ) as Array<ChoreStack>,
   });
 }
 
@@ -183,6 +196,8 @@ export async function action({ request }: ActionFunctionArgs) {
         form.skipRule !== undefined && form.skipRule !== ""
           ? form.skipRule
           : undefined,
+      stack_ref_id:
+        form.stack !== undefined && form.stack !== "" ? form.stack : undefined,
       must_do: form.mustDo,
       start_at_date: form.startAtDate ? form.startAtDate : undefined,
       end_at_date: form.endAtDate ? form.endAtDate : undefined,
@@ -228,6 +243,12 @@ export default function NewChore() {
   const [selectedAspect, setSelectedAspect] = useState<string>(
     loaderData.rootAspect?.ref_id ?? "",
   );
+  const [selectedPeriod, setSelectedPeriod] = useState<RecurringTaskPeriod>(
+    RecurringTaskPeriod.DAILY,
+  );
+  const [selectedStackRefId, setSelectedStackRefId] = useState<
+    string | undefined
+  >(undefined);
 
   const inputsEnabled = navigation.state === "idle";
 
@@ -282,6 +303,23 @@ export default function NewChore() {
             <FieldError actionResult={actionData} fieldName="/name" />
           </FormControl>
 
+          <FormControl
+            sx={{ flex: "0 1 10rem", minWidth: 0, maxWidth: "10rem" }}
+          >
+            <ChoreStackSelectSingle
+              name="stack"
+              label="Stack"
+              allowNone
+              allStacks={loaderData.allStacks.filter(
+                (stack) => stack.period === selectedPeriod,
+              )}
+              value={selectedStackRefId}
+              inputsEnabled={inputsEnabled}
+              onChange={(value) => setSelectedStackRefId(value)}
+            />
+            <FieldError actionResult={actionData} fieldName="/stack_ref_id" />
+          </FormControl>
+
           <FormControl sx={{ flexGrow: 1 }}>
             <IsKeySelect
               name="isKey"
@@ -317,7 +355,22 @@ export default function NewChore() {
         <RecurringTaskGenParamsBlock
           inputsEnabled={inputsEnabled}
           allowSkipRule
-          period={RecurringTaskPeriod.DAILY}
+          period={selectedPeriod}
+          onChangePeriod={(newPeriod) => {
+            if (newPeriod === "none") {
+              setSelectedPeriod(RecurringTaskPeriod.DAILY);
+            } else {
+              setSelectedPeriod(newPeriod);
+            }
+            const nextPeriod =
+              newPeriod === "none" ? RecurringTaskPeriod.DAILY : newPeriod;
+            const selectedStack = loaderData.allStacks.find(
+              (stack) => stack.ref_id === selectedStackRefId,
+            );
+            if (selectedStack && selectedStack.period !== nextPeriod) {
+              setSelectedStackRefId(undefined);
+            }
+          }}
           eisen={Eisen.REGULAR}
           difficulty={Difficulty.EASY}
           actionableFromDay={null}

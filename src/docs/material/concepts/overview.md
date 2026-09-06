@@ -18,7 +18,8 @@ As a quick reference, here is the list of the more important concepts:
   Jeff on the speech", or "Buy new socks".
 * _Habit_: a regular activity, usually one that is centered on _you_. Think
   "Walk 10K steps" or "Meditate for 5 minutes". A habit will generate a task
-  periodically   which needs to be acted upon.
+  periodically   which needs to be acted upon. A _habit stack_ groups habits you
+  do together.
 * _Chore_: a regular activity, usually one that is imposed by the outside world.
   Think
   "Pay mortgage" or "Take car in for checks". A chore will generate a task

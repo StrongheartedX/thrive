@@ -4,6 +4,7 @@ from typing import cast
 
 from jupiter.core.apps.chores.name import ChoreName
 from jupiter.core.apps.chores.root import Chore
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
 from jupiter.core.apps.life_plan.sub.goals.root import Goal
@@ -57,6 +58,7 @@ class ChoreUpdateArgs(JupiterUpdateCrownEntityArgs):
     aspect_ref_id: UpdateAction[EntityId]
     chapter_ref_id: UpdateAction[EntityId | None]
     goal_ref_id: UpdateAction[EntityId | None]
+    stack_ref_id: UpdateAction[EntityId | None]
     is_key: UpdateAction[bool]
     period: UpdateAction[RecurringTaskPeriod]
     eisen: UpdateAction[Eisen]
@@ -192,11 +194,31 @@ class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None])
                             f"Goal does not belong to aspect '{aspect.name}'"
                         )
 
+        new_period = args.period.or_else(chore.gen_params.period)
+        period_changing = (
+            args.period.should_change and new_period != chore.gen_params.period
+        )
+        stack_ref_id_action = args.stack_ref_id
+        if period_changing and not args.stack_ref_id.should_change:
+            stack_ref_id_action = UpdateAction.change_to(None)
+
+        new_stack_ref_id = stack_ref_id_action.or_else(chore.stack_ref_id)
+        stack_changing = (
+            stack_ref_id_action.should_change and new_stack_ref_id != chore.stack_ref_id
+        )
+        if stack_changing and new_stack_ref_id is not None:
+            stack = await self.load_entity(
+                uow, context.user.ref_id, ChoreStack, new_stack_ref_id
+            )
+            if stack.period != new_period:
+                raise InputValidationError("Chore period must match the stack period")
+
         chore = chore.update(
             ctx=context.domain_context,
             aspect_ref_id=args.aspect_ref_id,
             chapter_ref_id=args.chapter_ref_id,
             goal_ref_id=args.goal_ref_id,
+            stack_ref_id=stack_ref_id_action,
             name=args.name,
             is_key=args.is_key,
             gen_params=chore_gen_params,

@@ -71,6 +71,24 @@ from jupiter_webapi_client.api.chores.chore_load import (
 from jupiter_webapi_client.api.chores.chore_remove import (
     asyncio_detailed as chore_remove,
 )
+from jupiter_webapi_client.api.chores.chore_stack_archive import (
+    asyncio_detailed as chore_stack_archive,
+)
+from jupiter_webapi_client.api.chores.chore_stack_create import (
+    asyncio_detailed as chore_stack_create,
+)
+from jupiter_webapi_client.api.chores.chore_stack_find import (
+    asyncio_detailed as chore_stack_find,
+)
+from jupiter_webapi_client.api.chores.chore_stack_load import (
+    asyncio_detailed as chore_stack_load,
+)
+from jupiter_webapi_client.api.chores.chore_stack_remove import (
+    asyncio_detailed as chore_stack_remove,
+)
+from jupiter_webapi_client.api.chores.chore_stack_update import (
+    asyncio_detailed as chore_stack_update,
+)
 from jupiter_webapi_client.api.chores.chore_suspend import (
     asyncio_detailed as chore_suspend,
 )
@@ -160,6 +178,24 @@ from jupiter_webapi_client.api.habits.habit_load import (
 )
 from jupiter_webapi_client.api.habits.habit_remove import (
     asyncio_detailed as habit_remove,
+)
+from jupiter_webapi_client.api.habits.habit_stack_archive import (
+    asyncio_detailed as habit_stack_archive,
+)
+from jupiter_webapi_client.api.habits.habit_stack_create import (
+    asyncio_detailed as habit_stack_create,
+)
+from jupiter_webapi_client.api.habits.habit_stack_find import (
+    asyncio_detailed as habit_stack_find,
+)
+from jupiter_webapi_client.api.habits.habit_stack_load import (
+    asyncio_detailed as habit_stack_load,
+)
+from jupiter_webapi_client.api.habits.habit_stack_remove import (
+    asyncio_detailed as habit_stack_remove,
+)
+from jupiter_webapi_client.api.habits.habit_stack_update import (
+    asyncio_detailed as habit_stack_update,
 )
 from jupiter_webapi_client.api.habits.habit_suspend import (
     asyncio_detailed as habit_suspend,
@@ -1124,6 +1160,21 @@ async def main() -> None:
             JupiterApiGatewayMethod.get(habit_find),
             JupiterApiGatewayMethod.post(habit_create),
             JupiterApiResource.build(
+                "stacks",
+                JupiterApiGatewayMethod.get(habit_stack_find),
+                JupiterApiGatewayMethod.post(habit_stack_create),
+                JupiterApiResource.build(
+                    ":ref_id",
+                    JupiterApiGatewayMethod.get(habit_stack_load),
+                    JupiterApiGatewayMethod.put(habit_stack_update),
+                    JupiterApiGatewayMethod.delete(habit_stack_archive),
+                    JupiterApiResource.build(
+                        "remove",
+                        JupiterApiGatewayMethod.delete(habit_stack_remove),
+                    ),
+                ),
+            ),
+            JupiterApiResource.build(
                 ":ref_id",
                 JupiterApiGatewayMethod.get(habit_load),
                 JupiterApiGatewayMethod.put(habit_update),
@@ -1147,6 +1198,21 @@ async def main() -> None:
             "chores",
             JupiterApiGatewayMethod.get(chore_find),
             JupiterApiGatewayMethod.post(chore_create),
+            JupiterApiResource.build(
+                "stacks",
+                JupiterApiGatewayMethod.get(chore_stack_find),
+                JupiterApiGatewayMethod.post(chore_stack_create),
+                JupiterApiResource.build(
+                    ":ref_id",
+                    JupiterApiGatewayMethod.get(chore_stack_load),
+                    JupiterApiGatewayMethod.put(chore_stack_update),
+                    JupiterApiGatewayMethod.delete(chore_stack_archive),
+                    JupiterApiResource.build(
+                        "remove",
+                        JupiterApiGatewayMethod.delete(chore_stack_remove),
+                    ),
+                ),
+            ),
             JupiterApiResource.build(
                 ":ref_id",
                 JupiterApiGatewayMethod.get(chore_load),

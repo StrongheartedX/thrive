@@ -13,8 +13,12 @@ if TYPE_CHECKING:
     from ..models.big_plan_load_result import BigPlanLoadResult
     from ..models.chore import Chore
     from ..models.chore_load_result import ChoreLoadResult
+    from ..models.chore_stack import ChoreStack
+    from ..models.chore_stack_load_result import ChoreStackLoadResult
     from ..models.habit import Habit
     from ..models.habit_load_result import HabitLoadResult
+    from ..models.habit_stack import HabitStack
+    from ..models.habit_stack_load_result import HabitStackLoadResult
     from ..models.inbox_task import InboxTask
     from ..models.inbox_task_load_result import InboxTaskLoadResult
     from ..models.note import Note
@@ -42,8 +46,12 @@ class TimePlanActivityLoadResult:
         target_todo_task_info (None | TodoTaskLoadResult | Unset):
         target_habit (Habit | None | Unset):
         target_habit_info (HabitLoadResult | None | Unset):
+        target_habit_stack (HabitStack | None | Unset):
+        target_habit_stack_info (HabitStackLoadResult | None | Unset):
         target_chore (Chore | None | Unset):
         target_chore_info (ChoreLoadResult | None | Unset):
+        target_chore_stack (ChoreStack | None | Unset):
+        target_chore_stack_info (ChoreStackLoadResult | None | Unset):
         note (None | Note | Unset):
     """
 
@@ -57,8 +65,12 @@ class TimePlanActivityLoadResult:
     target_todo_task_info: None | TodoTaskLoadResult | Unset = UNSET
     target_habit: Habit | None | Unset = UNSET
     target_habit_info: HabitLoadResult | None | Unset = UNSET
+    target_habit_stack: HabitStack | None | Unset = UNSET
+    target_habit_stack_info: HabitStackLoadResult | None | Unset = UNSET
     target_chore: Chore | None | Unset = UNSET
     target_chore_info: ChoreLoadResult | None | Unset = UNSET
+    target_chore_stack: ChoreStack | None | Unset = UNSET
+    target_chore_stack_info: ChoreStackLoadResult | None | Unset = UNSET
     note: None | Note | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -67,8 +79,12 @@ class TimePlanActivityLoadResult:
         from ..models.big_plan_load_result import BigPlanLoadResult  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
         from ..models.chore_load_result import ChoreLoadResult  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
+        from ..models.chore_stack_load_result import ChoreStackLoadResult  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
         from ..models.habit_load_result import HabitLoadResult  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
+        from ..models.habit_stack_load_result import HabitStackLoadResult  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.inbox_task_load_result import InboxTaskLoadResult  # noqa: PLC0415
         from ..models.note import Note  # noqa: PLC0415
@@ -146,6 +162,22 @@ class TimePlanActivityLoadResult:
         else:
             target_habit_info = self.target_habit_info
 
+        target_habit_stack: dict[str, Any] | None | Unset
+        if isinstance(self.target_habit_stack, Unset):
+            target_habit_stack = UNSET
+        elif isinstance(self.target_habit_stack, HabitStack):
+            target_habit_stack = self.target_habit_stack.to_dict()
+        else:
+            target_habit_stack = self.target_habit_stack
+
+        target_habit_stack_info: dict[str, Any] | None | Unset
+        if isinstance(self.target_habit_stack_info, Unset):
+            target_habit_stack_info = UNSET
+        elif isinstance(self.target_habit_stack_info, HabitStackLoadResult):
+            target_habit_stack_info = self.target_habit_stack_info.to_dict()
+        else:
+            target_habit_stack_info = self.target_habit_stack_info
+
         target_chore: dict[str, Any] | None | Unset
         if isinstance(self.target_chore, Unset):
             target_chore = UNSET
@@ -161,6 +193,22 @@ class TimePlanActivityLoadResult:
             target_chore_info = self.target_chore_info.to_dict()
         else:
             target_chore_info = self.target_chore_info
+
+        target_chore_stack: dict[str, Any] | None | Unset
+        if isinstance(self.target_chore_stack, Unset):
+            target_chore_stack = UNSET
+        elif isinstance(self.target_chore_stack, ChoreStack):
+            target_chore_stack = self.target_chore_stack.to_dict()
+        else:
+            target_chore_stack = self.target_chore_stack
+
+        target_chore_stack_info: dict[str, Any] | None | Unset
+        if isinstance(self.target_chore_stack_info, Unset):
+            target_chore_stack_info = UNSET
+        elif isinstance(self.target_chore_stack_info, ChoreStackLoadResult):
+            target_chore_stack_info = self.target_chore_stack_info.to_dict()
+        else:
+            target_chore_stack_info = self.target_chore_stack_info
 
         note: dict[str, Any] | None | Unset
         if isinstance(self.note, Unset):
@@ -194,10 +242,18 @@ class TimePlanActivityLoadResult:
             field_dict["target_habit"] = target_habit
         if target_habit_info is not UNSET:
             field_dict["target_habit_info"] = target_habit_info
+        if target_habit_stack is not UNSET:
+            field_dict["target_habit_stack"] = target_habit_stack
+        if target_habit_stack_info is not UNSET:
+            field_dict["target_habit_stack_info"] = target_habit_stack_info
         if target_chore is not UNSET:
             field_dict["target_chore"] = target_chore
         if target_chore_info is not UNSET:
             field_dict["target_chore_info"] = target_chore_info
+        if target_chore_stack is not UNSET:
+            field_dict["target_chore_stack"] = target_chore_stack
+        if target_chore_stack_info is not UNSET:
+            field_dict["target_chore_stack_info"] = target_chore_stack_info
         if note is not UNSET:
             field_dict["note"] = note
 
@@ -209,8 +265,12 @@ class TimePlanActivityLoadResult:
         from ..models.big_plan_load_result import BigPlanLoadResult  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
         from ..models.chore_load_result import ChoreLoadResult  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
+        from ..models.chore_stack_load_result import ChoreStackLoadResult  # noqa: PLC0415
         from ..models.habit import Habit  # noqa: PLC0415
         from ..models.habit_load_result import HabitLoadResult  # noqa: PLC0415
+        from ..models.habit_stack import HabitStack  # noqa: PLC0415
+        from ..models.habit_stack_load_result import HabitStackLoadResult  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.inbox_task_load_result import InboxTaskLoadResult  # noqa: PLC0415
         from ..models.note import Note  # noqa: PLC0415
@@ -365,6 +425,40 @@ class TimePlanActivityLoadResult:
 
         target_habit_info = _parse_target_habit_info(d.pop("target_habit_info", UNSET))
 
+        def _parse_target_habit_stack(data: object) -> HabitStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                target_habit_stack_type_0 = HabitStack.from_dict(data)
+
+                return target_habit_stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(HabitStack | None | Unset, data)
+
+        target_habit_stack = _parse_target_habit_stack(d.pop("target_habit_stack", UNSET))
+
+        def _parse_target_habit_stack_info(data: object) -> HabitStackLoadResult | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                target_habit_stack_info_type_0 = HabitStackLoadResult.from_dict(data)
+
+                return target_habit_stack_info_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(HabitStackLoadResult | None | Unset, data)
+
+        target_habit_stack_info = _parse_target_habit_stack_info(d.pop("target_habit_stack_info", UNSET))
+
         def _parse_target_chore(data: object) -> Chore | None | Unset:
             if data is None:
                 return data
@@ -399,6 +493,40 @@ class TimePlanActivityLoadResult:
 
         target_chore_info = _parse_target_chore_info(d.pop("target_chore_info", UNSET))
 
+        def _parse_target_chore_stack(data: object) -> ChoreStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                target_chore_stack_type_0 = ChoreStack.from_dict(data)
+
+                return target_chore_stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ChoreStack | None | Unset, data)
+
+        target_chore_stack = _parse_target_chore_stack(d.pop("target_chore_stack", UNSET))
+
+        def _parse_target_chore_stack_info(data: object) -> ChoreStackLoadResult | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                target_chore_stack_info_type_0 = ChoreStackLoadResult.from_dict(data)
+
+                return target_chore_stack_info_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ChoreStackLoadResult | None | Unset, data)
+
+        target_chore_stack_info = _parse_target_chore_stack_info(d.pop("target_chore_stack_info", UNSET))
+
         def _parse_note(data: object) -> None | Note | Unset:
             if data is None:
                 return data
@@ -427,8 +555,12 @@ class TimePlanActivityLoadResult:
             target_todo_task_info=target_todo_task_info,
             target_habit=target_habit,
             target_habit_info=target_habit_info,
+            target_habit_stack=target_habit_stack,
+            target_habit_stack_info=target_habit_stack_info,
             target_chore=target_chore,
             target_chore_info=target_chore_info,
+            target_chore_stack=target_chore_stack,
+            target_chore_stack_info=target_chore_stack_info,
             note=note,
         )
 

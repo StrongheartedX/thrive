@@ -46,8 +46,12 @@ function publishedEntityLocation(externalId: string, owner: string): string {
       return `/publish/person/${externalId}`;
     case NamedEntityTag.HABIT:
       return `/publish/habit/${externalId}`;
+    case NamedEntityTag.HABIT_STACK:
+      return `/publish/habit-stack/${externalId}`;
     case NamedEntityTag.CHORE:
       return `/publish/chore/${externalId}`;
+    case NamedEntityTag.CHORE_STACK:
+      return `/publish/chore-stack/${externalId}`;
     case NamedEntityTag.BIG_PLAN:
       return `/publish/big-plan/${externalId}`;
     case NamedEntityTag.SCHEDULE_STREAM:

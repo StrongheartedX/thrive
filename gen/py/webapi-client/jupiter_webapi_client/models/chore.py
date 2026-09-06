@@ -37,6 +37,7 @@ class Chore:
         archived_time (None | str | Unset):
         chapter_ref_id (None | str | Unset):
         goal_ref_id (None | str | Unset):
+        stack_ref_id (None | str | Unset):
         end_at_date (None | str | Unset):
     """
 
@@ -57,6 +58,7 @@ class Chore:
     archived_time: None | str | Unset = UNSET
     chapter_ref_id: None | str | Unset = UNSET
     goal_ref_id: None | str | Unset = UNSET
+    stack_ref_id: None | str | Unset = UNSET
     end_at_date: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -111,6 +113,12 @@ class Chore:
         else:
             goal_ref_id = self.goal_ref_id
 
+        stack_ref_id: None | str | Unset
+        if isinstance(self.stack_ref_id, Unset):
+            stack_ref_id = UNSET
+        else:
+            stack_ref_id = self.stack_ref_id
+
         end_at_date: None | str | Unset
         if isinstance(self.end_at_date, Unset):
             end_at_date = UNSET
@@ -144,6 +152,8 @@ class Chore:
             field_dict["chapter_ref_id"] = chapter_ref_id
         if goal_ref_id is not UNSET:
             field_dict["goal_ref_id"] = goal_ref_id
+        if stack_ref_id is not UNSET:
+            field_dict["stack_ref_id"] = stack_ref_id
         if end_at_date is not UNSET:
             field_dict["end_at_date"] = end_at_date
 
@@ -216,6 +226,15 @@ class Chore:
 
         goal_ref_id = _parse_goal_ref_id(d.pop("goal_ref_id", UNSET))
 
+        def _parse_stack_ref_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        stack_ref_id = _parse_stack_ref_id(d.pop("stack_ref_id", UNSET))
+
         def _parse_end_at_date(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -243,6 +262,7 @@ class Chore:
             archived_time=archived_time,
             chapter_ref_id=chapter_ref_id,
             goal_ref_id=goal_ref_id,
+            stack_ref_id=stack_ref_id,
             end_at_date=end_at_date,
         )
 

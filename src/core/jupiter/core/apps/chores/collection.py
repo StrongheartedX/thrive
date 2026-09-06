@@ -1,6 +1,7 @@
 """A chore collection."""
 
 from jupiter.core.apps.chores.root import Chore
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.framework.base.entity_id import EntityId
 from jupiter.framework.context import DomainContext
 from jupiter.framework.entity import (
@@ -20,6 +21,7 @@ class ChoreCollection(TrunkEntity):
     workspace: ParentLink
 
     chores = ContainsMany(Chore, chore_collection_ref_id=IsRefId())
+    chore_stacks = ContainsMany(ChoreStack, chore_collection_ref_id=IsRefId())
 
     @staticmethod
     @create_entity_action

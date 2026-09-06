@@ -40,6 +40,7 @@ class HabitCreateArgs:
         skip_rule (None | str | Unset):
         repeats_strategy (HabitRepeatsStrategy | None | Unset):
         repeats_in_period_count (int | None | Unset):
+        stack_ref_id (None | str | Unset):
     """
 
     name: str
@@ -60,6 +61,7 @@ class HabitCreateArgs:
     skip_rule: None | str | Unset = UNSET
     repeats_strategy: HabitRepeatsStrategy | None | Unset = UNSET
     repeats_in_period_count: int | None | Unset = UNSET
+    stack_ref_id: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -157,6 +159,12 @@ class HabitCreateArgs:
         else:
             repeats_in_period_count = self.repeats_in_period_count
 
+        stack_ref_id: None | str | Unset
+        if isinstance(self.stack_ref_id, Unset):
+            stack_ref_id = UNSET
+        else:
+            stack_ref_id = self.stack_ref_id
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -194,6 +202,8 @@ class HabitCreateArgs:
             field_dict["repeats_strategy"] = repeats_strategy
         if repeats_in_period_count is not UNSET:
             field_dict["repeats_in_period_count"] = repeats_in_period_count
+        if stack_ref_id is not UNSET:
+            field_dict["stack_ref_id"] = stack_ref_id
 
         return field_dict
 
@@ -353,6 +363,15 @@ class HabitCreateArgs:
 
         repeats_in_period_count = _parse_repeats_in_period_count(d.pop("repeats_in_period_count", UNSET))
 
+        def _parse_stack_ref_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        stack_ref_id = _parse_stack_ref_id(d.pop("stack_ref_id", UNSET))
+
         habit_create_args = cls(
             name=name,
             period=period,
@@ -372,6 +391,7 @@ class HabitCreateArgs:
             skip_rule=skip_rule,
             repeats_strategy=repeats_strategy,
             repeats_in_period_count=repeats_in_period_count,
+            stack_ref_id=stack_ref_id,
         )
 
         habit_create_args.additional_properties = d

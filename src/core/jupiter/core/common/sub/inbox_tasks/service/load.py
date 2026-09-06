@@ -2,7 +2,9 @@
 
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.chores.root import Chore
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.journals.root import Journal
 from jupiter.core.apps.metrics.root import Metric
 from jupiter.core.apps.prm.sub.person.root import Person
@@ -50,7 +52,9 @@ class InboxTaskLoadResult(UseCaseResultBase):
     working_mem_collection: WorkingMemCollection | None
     time_plan: TimePlan | None
     habit: Habit | None
+    habit_stack: HabitStack | None
     chore: Chore | None
+    chore_stack: ChoreStack | None
     big_plan: BigPlan | None
     journal: Journal | None
     metric: Metric | None
@@ -106,12 +110,28 @@ class InboxTaskLoadService:
         else:
             habit = None
 
+        habit_stack = (
+            await uow.get_for(HabitStack).load_by_id(
+                habit.stack_ref_id, allow_archived=True
+            )
+            if habit is not None and habit.stack_ref_id is not None
+            else None
+        )
+
         if owner_pln == CHORE:
             chore = await uow.get_for(Chore).load_by_id(
                 inbox_task.owner.ref_id, allow_archived=True
             )
         else:
             chore = None
+
+        chore_stack = (
+            await uow.get_for(ChoreStack).load_by_id(
+                chore.stack_ref_id, allow_archived=True
+            )
+            if chore is not None and chore.stack_ref_id is not None
+            else None
+        )
 
         if owner_pln == BIG_PLAN:
             big_plan = await uow.get_for(BigPlan).load_by_id(
@@ -198,7 +218,9 @@ class InboxTaskLoadService:
             working_mem_collection=working_mem_collection,
             time_plan=time_plan,
             habit=habit,
+            habit_stack=habit_stack,
             chore=chore,
+            chore_stack=chore_stack,
             big_plan=big_plan,
             metric=metric,
             journal=journal,

@@ -8,13 +8,19 @@ import { handleActionApiError } from "@jupiter/core/infra/errors.server";
 
 import { getLoggedInApiClient } from "~/api-clients.server";
 
-// Creates a time event for a time plan activity at the moment it was dropped
-// on the calendar.
+const ExtraPlacementSchema = z.array(
+  z.object({
+    activityRefId: z.string(),
+    durationMins: z.number(),
+  }),
+);
+
 const PlaceFormSchema = z.object({
   timePlanActivityRefId: z.string(),
   startDate: z.string(),
   startTimeInDay: z.string(),
   durationMins: z.string().transform((v) => parseInt(v, 10)),
+  extraPlacements: z.string().optional(),
   userTimezone: z.string(),
 });
 
@@ -22,12 +28,35 @@ export async function action({ request }: ActionFunctionArgs) {
   const apiClient = await getLoggedInApiClient(request);
   const form = await parseForm(request, PlaceFormSchema);
 
-  const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
-    { startDate: form.startDate, startTimeInDay: form.startTimeInDay },
-    form.userTimezone,
-  );
+  const extraPlacements =
+    form.extraPlacements !== undefined && form.extraPlacements !== ""
+      ? ExtraPlacementSchema.parse(JSON.parse(form.extraPlacements))
+      : [];
 
   try {
+    if (extraPlacements.length > 0) {
+      const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
+        { startDate: form.startDate, startTimeInDay: form.startTimeInDay },
+        form.userTimezone,
+      );
+      for (const placement of extraPlacements) {
+        await apiClient.timeEvents.timeEventInDayBlockCreateForTimePlanActivity(
+          {
+            time_plan_activity_ref_id: placement.activityRefId,
+            start_date: startDate,
+            start_time_in_day: startTimeInDay ?? "",
+            duration_mins: placement.durationMins,
+          },
+        );
+      }
+      return json(noErrorNoData());
+    }
+
+    const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
+      { startDate: form.startDate, startTimeInDay: form.startTimeInDay },
+      form.userTimezone,
+    );
+
     await apiClient.timeEvents.timeEventInDayBlockCreateForTimePlanActivity({
       time_plan_activity_ref_id: form.timePlanActivityRefId,
       start_date: startDate,

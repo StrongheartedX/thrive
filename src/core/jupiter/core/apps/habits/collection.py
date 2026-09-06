@@ -1,6 +1,7 @@
 """A habit collection."""
 
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.framework.base.entity_id import EntityId
 from jupiter.framework.context import DomainContext
 from jupiter.framework.entity import (
@@ -20,6 +21,7 @@ class HabitCollection(TrunkEntity):
     workspace: ParentLink
 
     habits = ContainsMany(Habit, habit_collection_ref_id=IsRefId())
+    habit_stacks = ContainsMany(HabitStack, habit_collection_ref_id=IsRefId())
 
     @staticmethod
     @create_entity_action

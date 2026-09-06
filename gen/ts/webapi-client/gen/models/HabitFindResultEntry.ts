@@ -8,6 +8,7 @@ import type { Chapter } from './Chapter';
 import type { Contact } from './Contact';
 import type { Goal } from './Goal';
 import type { Habit } from './Habit';
+import type { HabitStack } from './HabitStack';
 import type { InboxTask } from './InboxTask';
 import type { Location } from './Location';
 import type { Note } from './Note';
@@ -18,6 +19,7 @@ import type { UserLight } from './UserLight';
  */
 export type HabitFindResultEntry = {
     habit: Habit;
+    stack?: (HabitStack | null);
     aspect?: (Aspect | null);
     chapter?: (Chapter | null);
     goal?: (Goal | null);

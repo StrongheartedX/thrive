@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from ..models.aspect import Aspect
     from ..models.chapter import Chapter
     from ..models.chore import Chore
+    from ..models.chore_stack import ChoreStack
     from ..models.contact import Contact
     from ..models.goal import Goal
     from ..models.inbox_task import InboxTask
@@ -35,6 +36,7 @@ class ChoreFindResultEntry:
         contacts (list[Contact]):
         owner (UserLight): A user's ref id, name, and email address.
         access_status (AccessStatus): The effective access status of a principal over a resource.
+        stack (ChoreStack | None | Unset):
         note (None | Note | Unset):
         aspect (Aspect | None | Unset):
         chapter (Chapter | None | Unset):
@@ -48,6 +50,7 @@ class ChoreFindResultEntry:
     contacts: list[Contact]
     owner: UserLight
     access_status: AccessStatus
+    stack: ChoreStack | None | Unset = UNSET
     note: None | Note | Unset = UNSET
     aspect: Aspect | None | Unset = UNSET
     chapter: Chapter | None | Unset = UNSET
@@ -59,6 +62,7 @@ class ChoreFindResultEntry:
     def to_dict(self) -> dict[str, Any]:
         from ..models.aspect import Aspect  # noqa: PLC0415
         from ..models.chapter import Chapter  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
         from ..models.goal import Goal  # noqa: PLC0415
         from ..models.location import Location  # noqa: PLC0415
         from ..models.note import Note  # noqa: PLC0415
@@ -78,6 +82,14 @@ class ChoreFindResultEntry:
         owner = self.owner.to_dict()
 
         access_status = self.access_status.to_dict()
+
+        stack: dict[str, Any] | None | Unset
+        if isinstance(self.stack, Unset):
+            stack = UNSET
+        elif isinstance(self.stack, ChoreStack):
+            stack = self.stack.to_dict()
+        else:
+            stack = self.stack
 
         note: dict[str, Any] | None | Unset
         if isinstance(self.note, Unset):
@@ -142,6 +154,8 @@ class ChoreFindResultEntry:
                 "access_status": access_status,
             }
         )
+        if stack is not UNSET:
+            field_dict["stack"] = stack
         if note is not UNSET:
             field_dict["note"] = note
         if aspect is not UNSET:
@@ -163,6 +177,7 @@ class ChoreFindResultEntry:
         from ..models.aspect import Aspect  # noqa: PLC0415
         from ..models.chapter import Chapter  # noqa: PLC0415
         from ..models.chore import Chore  # noqa: PLC0415
+        from ..models.chore_stack import ChoreStack  # noqa: PLC0415
         from ..models.contact import Contact  # noqa: PLC0415
         from ..models.goal import Goal  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
@@ -191,6 +206,23 @@ class ChoreFindResultEntry:
         owner = UserLight.from_dict(d.pop("owner"))
 
         access_status = AccessStatus.from_dict(d.pop("access_status"))
+
+        def _parse_stack(data: object) -> ChoreStack | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                stack_type_0 = ChoreStack.from_dict(data)
+
+                return stack_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ChoreStack | None | Unset, data)
+
+        stack = _parse_stack(d.pop("stack", UNSET))
 
         def _parse_note(data: object) -> None | Note | Unset:
             if data is None:
@@ -305,6 +337,7 @@ class ChoreFindResultEntry:
             contacts=contacts,
             owner=owner,
             access_status=access_status,
+            stack=stack,
             note=note,
             aspect=aspect,
             chapter=chapter,

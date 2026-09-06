@@ -1,4 +1,7 @@
-import type { ChoreFindSuitableForTimePlanResultEntry } from "@jupiter/webapi-client";
+import type {
+  ChoreFindSuitableForTimePlanResultEntry,
+  ChoreStackFindSuitableForTimePlanResultEntry,
+} from "@jupiter/webapi-client";
 import {
   RecurringTaskPeriod,
   TimePlanActivityFeasability,
@@ -17,7 +20,11 @@ import {
   groupInboxTasksByOwnerRefId,
   recurringTargetPeriodProgress,
 } from "@jupiter/core/apps/time_plans/recurring-target-progress";
-import { isTimePlanActivityChoreTarget } from "@jupiter/core/apps/time_plans/sub/activity/target-wire";
+import { compareADate } from "@jupiter/core/common/adate";
+import {
+  isTimePlanActivityChoreStackTarget,
+  isTimePlanActivityChoreTarget,
+} from "@jupiter/core/apps/time_plans/sub/activity/target-wire";
 import { FormControl, FormLabel, Stack, Typography } from "@mui/material";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
@@ -73,6 +80,9 @@ const UpdateFormSchema = z.object({
   targetChoreRefIds: z
     .string()
     .transform((s) => (s === "" ? [] : s.split(","))),
+  targetChoreStackRefIds: z
+    .string()
+    .transform((s) => (s === "" ? [] : s.split(","))),
   kind: z.nativeEnum(TimePlanActivityKind),
   feasability: z.nativeEnum(TimePlanActivityFeasability),
 });
@@ -114,27 +124,46 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       );
     }
 
-    const choresResult = await apiClient.chores.choreFindSuitableForTimePlan({
-      time_plan_ref_id: id,
-    });
+    const [choresResult, stacksResult] = await Promise.all([
+      apiClient.chores.choreFindSuitableForTimePlan({
+        time_plan_ref_id: id,
+      }),
+      apiClient.chores.choreStackFindSuitableForTimePlan({
+        time_plan_ref_id: id,
+      }),
+    ]);
 
-    const choreRefIdsForInboxTasks = choresResult.entries
-      .filter(
-        (entry) =>
-          entry.has_uncompleted_historical_inbox_tasks ||
-          comparePeriods(
-            entry.chore.gen_params.period,
-            timePlanResult.time_plan.period,
-          ) > 0,
-      )
-      .map((entry) => entry.chore.ref_id);
+    const choreRefIdsForInboxTasks = [
+      ...choresResult.entries
+        .filter(
+          (entry) =>
+            entry.has_uncompleted_historical_inbox_tasks ||
+            comparePeriods(
+              entry.chore.gen_params.period,
+              timePlanResult.time_plan.period,
+            ) > 0,
+        )
+        .map((entry) => entry.chore.ref_id),
+      ...stacksResult.entries.flatMap((entry) =>
+        entry.has_uncompleted_historical_inbox_tasks ||
+        comparePeriods(
+          entry.chore_stack.period,
+          timePlanResult.time_plan.period,
+        ) > 0
+          ? entry.chores.map((chore) => chore.ref_id)
+          : [],
+      ),
+    ];
+    const uniqueChoreRefIdsForInboxTasks = [
+      ...new Set(choreRefIdsForInboxTasks),
+    ];
 
     const inboxTasksResult =
-      choreRefIdsForInboxTasks.length > 0
+      uniqueChoreRefIdsForInboxTasks.length > 0
         ? await apiClient.inboxTasks.inboxTaskFind({
             allow_archived: false,
             filter_namespace: [CHORE],
-            filter_source_entity_ref_ids: choreRefIdsForInboxTasks,
+            filter_source_entity_ref_ids: uniqueChoreRefIdsForInboxTasks,
           })
         : { entries: [] };
 
@@ -142,6 +171,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       timePlan: timePlanResult.time_plan,
       activities: timePlanResult.activities,
       chores: choresResult.entries,
+      choreStacks: stacksResult.entries,
       inboxTasks: inboxTasksResult.entries.map((entry) => entry.inbox_task),
     });
   } catch (error) {
@@ -161,12 +191,23 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const timePlanView = new URL(request.url).searchParams;
 
   try {
-    await apiClient.timePlans.timePlanAssociateWithChores({
-      ref_id: id,
-      chore_ref_ids: form.targetChoreRefIds,
-      kind: form.kind,
-      feasability: form.feasability,
-    });
+    if (form.targetChoreStackRefIds.length > 0) {
+      await apiClient.timePlans.timePlanAssociateWithChoreStacks({
+        ref_id: id,
+        chore_stack_ref_ids: form.targetChoreStackRefIds,
+        kind: form.kind,
+        feasability: form.feasability,
+      });
+    }
+
+    if (form.targetChoreRefIds.length > 0) {
+      await apiClient.timePlans.timePlanAssociateWithChores({
+        ref_id: id,
+        chore_ref_ids: form.targetChoreRefIds,
+        kind: form.kind,
+        feasability: form.feasability,
+      });
+    }
 
     return redirect(
       withTimePlanView(`/app/workspace/apps/time-plans/${id}`, timePlanView),
@@ -191,6 +232,21 @@ function isAddableInTimePlan(
   );
 }
 
+function isSelectableStackEntry(
+  entry: ChoreStackFindSuitableForTimePlanResultEntry,
+): boolean {
+  return !entry.chore_stack.archived;
+}
+
+function isAddableStackInTimePlan(
+  entry: ChoreStackFindSuitableForTimePlanResultEntry,
+): boolean {
+  return (
+    entry.has_uncompleted_historical_inbox_tasks ||
+    entry.would_generate_in_time_plan
+  );
+}
+
 export default function TimePlanAddFromCurrentChores() {
   const { id } = useParams();
   const [query] = useSearchParams();
@@ -208,8 +264,16 @@ export default function TimePlanAddFromCurrentChores() {
       .filter((tpa) => isTimePlanActivityChoreTarget(tpa.target))
       .map((tpa) => entityLinkRefIdFromWire(tpa.target)),
   );
+  const alreadyIncludedStackRefIds = new Set(
+    loaderData.activities
+      .filter((tpa) => isTimePlanActivityChoreStackTarget(tpa.target))
+      .map((tpa) => entityLinkRefIdFromWire(tpa.target)),
+  );
 
   const [targetChoreRefIds, setTargetChoreRefIds] = useState(new Set<string>());
+  const [targetChoreStackRefIds, setTargetChoreStackRefIds] = useState(
+    new Set<string>(),
+  );
   const [showFilter, setShowFilter] = useState(ShowFilter.IN_PERIOD);
 
   const inboxTasksByChoreRefId = groupInboxTasksByOwnerRefId(
@@ -217,15 +281,43 @@ export default function TimePlanAddFromCurrentChores() {
     CHORE,
   );
 
+  const selectableStacks = loaderData.choreStacks
+    .filter(isSelectableStackEntry)
+    .filter(
+      (entry) => !alreadyIncludedStackRefIds.has(entry.chore_stack.ref_id),
+    );
+  const visibleStacks = selectableStacks.filter(
+    (entry) =>
+      showFilter === ShowFilter.ALL ||
+      isAddableStackInTimePlan(entry) ||
+      targetChoreStackRefIds.has(entry.chore_stack.ref_id),
+  );
+
   const selectableChores = loaderData.chores
     .filter(isSelectableChoreEntry)
-    .filter((entry) => !alreadyIncludedChoreRefIds.has(entry.chore.ref_id));
+    .filter((entry) => !alreadyIncludedChoreRefIds.has(entry.chore.ref_id))
+    .filter(
+      (entry) =>
+        entry.chore.stack_ref_id === null ||
+        entry.chore.stack_ref_id === undefined,
+    );
   const visibleChores = selectableChores.filter(
     (entry) =>
       showFilter === ShowFilter.ALL ||
       isAddableInTimePlan(entry) ||
       targetChoreRefIds.has(entry.chore.ref_id),
   );
+
+  const stacksByPeriod = new Map<
+    RecurringTaskPeriod,
+    ChoreStackFindSuitableForTimePlanResultEntry[]
+  >();
+  for (const entry of visibleStacks) {
+    const period = entry.chore_stack.period;
+    const existing = stacksByPeriod.get(period) ?? [];
+    existing.push(entry);
+    stacksByPeriod.set(period, existing);
+  }
 
   const choresByPeriod = new Map<
     RecurringTaskPeriod,
@@ -236,6 +328,73 @@ export default function TimePlanAddFromCurrentChores() {
     const existing = choresByPeriod.get(period) ?? [];
     existing.push(entry);
     choresByPeriod.set(period, existing);
+  }
+
+  function renderStackCard(
+    entry: ChoreStackFindSuitableForTimePlanResultEntry,
+  ) {
+    const choreStack = entry.chore_stack;
+    const showPeriodProgress =
+      entry.has_uncompleted_historical_inbox_tasks ||
+      comparePeriods(choreStack.period, loaderData.timePlan.period) > 0;
+    const memberProgress = entry.chores.map((chore) =>
+      recurringTargetPeriodProgress(
+        inboxTasksByChoreRefId.get(chore.ref_id) ?? [],
+        chore.gen_params,
+        topLevelInfo.today,
+      ),
+    );
+    const periodProgress =
+      showPeriodProgress && memberProgress.length > 0
+        ? {
+            generatedCount: memberProgress.reduce(
+              (sum, progress) => sum + progress.generatedCount,
+              0,
+            ),
+            doneCount: memberProgress.reduce(
+              (sum, progress) => sum + progress.doneCount,
+              0,
+            ),
+            nextDueDate: [...memberProgress]
+              .map((progress) => progress.nextDueDate)
+              .sort(compareADate)[0],
+          }
+        : null;
+
+    return (
+      <EntityCard
+        key={`chore-stack-${choreStack.ref_id}`}
+        entityId={`chore-stack-${choreStack.ref_id}`}
+        allowSelect
+        selected={targetChoreStackRefIds.has(choreStack.ref_id)}
+        onClick={() => {
+          setTargetChoreStackRefIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(choreStack.ref_id)) {
+              next.delete(choreStack.ref_id);
+            } else {
+              next.add(choreStack.ref_id);
+            }
+            return next;
+          });
+        }}
+      >
+        <EntityLink
+          to={`/app/workspace/apps/chores/stacks/${choreStack.ref_id}`}
+          block
+        >
+          <Typography>{choreStack.name}</Typography>
+          {entry.aspect && <AspectTag aspect={entry.aspect} />}
+          {periodProgress && (
+            <RecurringTaskPeriodProgress
+              generatedCount={periodProgress.generatedCount}
+              doneCount={periodProgress.doneCount}
+              nextDueDate={periodProgress.nextDueDate}
+            />
+          )}
+        </EntityLink>
+      </EntityCard>
+    );
   }
 
   function renderChoreCard(entry: ChoreFindSuitableForTimePlanResultEntry) {
@@ -366,17 +525,24 @@ export default function TimePlanAddFromCurrentChores() {
           name="targetChoreRefIds"
           value={[...targetChoreRefIds].join(",")}
         />
+        <input
+          type="hidden"
+          name="targetChoreStackRefIds"
+          value={[...targetChoreStackRefIds].join(",")}
+        />
 
-        {selectableChores.length > 0 && visibleChores.length === 0 && (
-          <Typography>
-            No chores would generate tasks in this period. Switch to All to see
-            them.
-          </Typography>
-        )}
+        {selectableStacks.length + selectableChores.length > 0 &&
+          visibleStacks.length + visibleChores.length === 0 && (
+            <Typography>
+              No chores or stacks would generate tasks in this period. Switch to
+              All to see them.
+            </Typography>
+          )}
 
         {PERIOD_SECTIONS.map((period) => {
+          const periodStacks = stacksByPeriod.get(period) ?? [];
           const periodChores = choresByPeriod.get(period) ?? [];
-          if (periodChores.length === 0) {
+          if (periodStacks.length === 0 && periodChores.length === 0) {
             return null;
           }
 
@@ -387,6 +553,7 @@ export default function TimePlanAddFromCurrentChores() {
                 size="large"
               />
               <EntityStack>
+                {periodStacks.map((entry) => renderStackCard(entry))}
                 {periodChores.map((entry) => renderChoreCard(entry))}
               </EntityStack>
             </div>

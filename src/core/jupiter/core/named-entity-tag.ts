@@ -26,8 +26,12 @@ export function entityTagName(entityTag: NamedEntityTag): string {
       return "Schedule Event Full Days";
     case NamedEntityTag.HABIT:
       return "Habit";
+    case NamedEntityTag.HABIT_STACK:
+      return "Habit Stack";
     case NamedEntityTag.CHORE:
       return "Chore";
+    case NamedEntityTag.CHORE_STACK:
+      return "Chore Stack";
     case NamedEntityTag.BIG_PLAN:
       return "Big Plan";
     case NamedEntityTag.BIG_PLAN_MILESTONE:

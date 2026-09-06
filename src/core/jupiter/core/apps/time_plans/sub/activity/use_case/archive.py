@@ -3,7 +3,9 @@
 from jupiter.core.app import AppCore
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.chores.root import Chore
-from jupiter.core.apps.habits.root import Habit
+from jupiter.core.apps.chores.sub.stack.root import ChoreStack
+from jupiter.core.apps.habits.sub.habit.root import Habit
+from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.time_plans.sub.activity.root import TimePlanActivity
 from jupiter.core.apps.todo.root import TodoTask
 from jupiter.core.archival_reason import JupiterArchivalReason
@@ -156,6 +158,126 @@ class TimePlanActivityArchiveUseCase(
                         progress_reporter,
                         TimePlanActivity,
                         inbox_task_activity.ref_id,
+                        JupiterArchivalReason.USER,
+                    )
+
+        if activity.is_target_habit_stack:
+            await self.check_entity(
+                uow, context.user.ref_id, HabitStack, activity.target.ref_id
+            )
+            member_habits = await uow.get_for(Habit).find_all_generic(
+                parent_ref_id=None,
+                allow_archived=True,
+                stack_ref_id=activity.target.ref_id,
+            )
+            if len(member_habits) > 0:
+                habit_activities = await self.find_all_generic(
+                    uow,
+                    context.user.ref_id,
+                    TimePlanActivity,
+                    parent_ref_id=activity.parent_ref_id,
+                    allow_archived=False,
+                    target=[
+                        EntityLink.std(NamedEntityTag.HABIT.value, habit.ref_id)
+                        for habit in member_habits
+                    ],
+                )
+                for habit_activity in habit_activities:
+                    inbox_tasks = await uow.get(
+                        InboxTaskRepository
+                    ).find_all_for_owner_created_desc(
+                        allow_archived=True,
+                        owner=EntityLink.std(
+                            NamedEntityTag.HABIT.value, habit_activity.target.ref_id
+                        ),
+                    )
+                    if len(inbox_tasks) > 0:
+                        inbox_task_activities = await self.find_all_generic(
+                            uow,
+                            context.user.ref_id,
+                            TimePlanActivity,
+                            parent_ref_id=activity.parent_ref_id,
+                            allow_archived=False,
+                            target=[
+                                EntityLink.std("InboxTask", it.ref_id)
+                                for it in inbox_tasks
+                            ],
+                        )
+                        for inbox_task_activity in inbox_task_activities:
+                            await generic_crown_archiver(
+                                context.domain_context,
+                                uow,
+                                progress_reporter,
+                                TimePlanActivity,
+                                inbox_task_activity.ref_id,
+                                JupiterArchivalReason.USER,
+                            )
+                    await generic_crown_archiver(
+                        context.domain_context,
+                        uow,
+                        progress_reporter,
+                        TimePlanActivity,
+                        habit_activity.ref_id,
+                        JupiterArchivalReason.USER,
+                    )
+
+        if activity.is_target_chore_stack:
+            await self.check_entity(
+                uow, context.user.ref_id, ChoreStack, activity.target.ref_id
+            )
+            member_chores = await uow.get_for(Chore).find_all_generic(
+                parent_ref_id=None,
+                allow_archived=True,
+                stack_ref_id=activity.target.ref_id,
+            )
+            if len(member_chores) > 0:
+                chore_activities = await self.find_all_generic(
+                    uow,
+                    context.user.ref_id,
+                    TimePlanActivity,
+                    parent_ref_id=activity.parent_ref_id,
+                    allow_archived=False,
+                    target=[
+                        EntityLink.std(NamedEntityTag.CHORE.value, chore.ref_id)
+                        for chore in member_chores
+                    ],
+                )
+                for chore_activity in chore_activities:
+                    inbox_tasks = await uow.get(
+                        InboxTaskRepository
+                    ).find_all_for_owner_created_desc(
+                        allow_archived=True,
+                        owner=EntityLink.std(
+                            NamedEntityTag.CHORE.value, chore_activity.target.ref_id
+                        ),
+                    )
+                    if len(inbox_tasks) > 0:
+                        inbox_task_activities = await self.find_all_generic(
+                            uow,
+                            context.user.ref_id,
+                            TimePlanActivity,
+                            parent_ref_id=activity.parent_ref_id,
+                            allow_archived=False,
+                            target=[
+                                EntityLink.std("InboxTask", it.ref_id)
+                                for it in inbox_tasks
+                            ],
+                        )
+                        for inbox_task_activity in inbox_task_activities:
+                            await generic_crown_archiver(
+                                context.domain_context,
+                                uow,
+                                progress_reporter,
+                                TimePlanActivity,
+                                inbox_task_activity.ref_id,
+                                JupiterArchivalReason.USER,
+                            )
+                    await generic_crown_archiver(
+                        context.domain_context,
+                        uow,
+                        progress_reporter,
+                        TimePlanActivity,
+                        chore_activity.ref_id,
                         JupiterArchivalReason.USER,
                     )
 

@@ -2,7 +2,9 @@ import type {
   BigPlan,
   BigPlanStats,
   Chore,
+  ChoreStack,
   Habit,
+  HabitStack,
   InboxTask,
   TimePlanActivityDoneness,
   TodoTask,
@@ -79,6 +81,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       bigPlanStats: (result.big_plan_stats ?? []) as Array<BigPlanStats>,
       targetTodoTasks: (result.target_todo_tasks ?? []) as Array<TodoTask>,
       targetHabits: (result.target_habits ?? []) as Array<Habit>,
+      targetHabitStacks: (result.target_habit_stacks ??
+        []) as Array<HabitStack>,
+      targetChoreStacks: (result.target_chore_stacks ??
+        []) as Array<ChoreStack>,
       targetChores: (result.target_chores ?? []) as Array<Chore>,
       activityDoneness: (result.activity_doneness ?? {}) as Record<
         string,
@@ -108,6 +114,8 @@ export default function PublishedTimePlan() {
     targetBigPlans,
     targetTodoTasks,
     targetHabits,
+    targetHabitStacks,
+    targetChoreStacks,
     targetChores,
     activityDoneness,
     bigPlanStats,
@@ -137,6 +145,20 @@ export default function PublishedTimePlan() {
   const targetHabitsByRefId = useMemo(
     () => new Map<string, Habit>(targetHabits.map((h) => [h.ref_id, h])),
     [targetHabits],
+  );
+  const targetHabitStacksByRefId = useMemo(
+    () =>
+      new Map<string, HabitStack>(
+        targetHabitStacks.map((stack) => [stack.ref_id, stack]),
+      ),
+    [targetHabitStacks],
+  );
+  const targetChoreStacksByRefId = useMemo(
+    () =>
+      new Map<string, ChoreStack>(
+        targetChoreStacks.map((stack) => [stack.ref_id, stack]),
+      ),
+    [targetChoreStacks],
   );
   const targetChoresByRefId = useMemo(
     () => new Map<string, Chore>(targetChores.map((c) => [c.ref_id, c])),
@@ -221,6 +243,8 @@ export default function PublishedTimePlan() {
             bigPlanStatsByRefId={bigPlanStatsByRefId}
             targetTodoTasksByRefId={targetTodoTasksByRefId}
             targetHabitsByRefId={targetHabitsByRefId}
+            targetHabitStacksByRefId={targetHabitStacksByRefId}
+            targetChoreStacksByRefId={targetChoreStacksByRefId}
             targetChoresByRefId={targetChoresByRefId}
             activityDoneness={activityDoneness}
             timeEventsByRefId={new Map()}

@@ -122,8 +122,15 @@ export function EntitySummaryLink({
       );
     case NamedEntityTag.HABIT:
       return (
-        <EntityLink to={`/app/workspace/apps/habits/${summary.ref_id}`}>
+        <EntityLink to={`/app/workspace/apps/habits/habits/${summary.ref_id}`}>
           <SlimChip label={"Habit"} color={"primary"} />
+          {commonSequence}
+        </EntityLink>
+      );
+    case NamedEntityTag.HABIT_STACK:
+      return (
+        <EntityLink to={`/app/workspace/apps/habits/stacks/${summary.ref_id}`}>
+          <SlimChip label={"Habit Stack"} color={"primary"} />
           {commonSequence}
         </EntityLink>
       );
@@ -131,6 +138,13 @@ export function EntitySummaryLink({
       return (
         <EntityLink to={`/app/workspace/apps/chores/${summary.ref_id}`}>
           <SlimChip label={"Chore"} color={"primary"} />
+          {commonSequence}
+        </EntityLink>
+      );
+    case NamedEntityTag.CHORE_STACK:
+      return (
+        <EntityLink to={`/app/workspace/apps/chores/stacks/${summary.ref_id}`}>
+          <SlimChip label={"Chore Stack"} color={"primary"} />
           {commonSequence}
         </EntityLink>
       );

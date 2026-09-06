@@ -4,7 +4,7 @@ import { aDateToDate } from "#/core/common/adate";
 import { HABIT } from "#/core/common/sub/inbox_tasks/parent-link-namespace";
 import {
   filterInboxTasksForDisplay,
-  sortInboxTasksByEisenAndDifficulty,
+  sortInboxTasksByHabitStackThenEisenAndDifficulty,
 } from "#/core/common/sub/inbox_tasks/root";
 import {
   ActionableTime,
@@ -23,45 +23,49 @@ export function HabitInboxTasksWidget(props: WidgetProps) {
     props.topLevelInfo.user.timezone,
   );
 
-  const sortedInboxTasks = sortInboxTasksByEisenAndDifficulty(
-    habitTasks.habitInboxTasks,
-  );
+  const inboxTasksForHabitsDueToday =
+    sortInboxTasksByHabitStackThenEisenAndDifficulty(
+      filterInboxTasksForDisplay(
+        habitTasks.habitInboxTasks,
+        habitTasks.habitEntriesByRefId,
+        habitTasks.optimisticUpdates,
+        {
+          allowSources: [HABIT],
+          allowStatuses: [
+            InboxTaskStatus.NOT_STARTED,
+            InboxTaskStatus.IN_PROGRESS,
+            InboxTaskStatus.BLOCKED,
+          ],
+          includeIfNoActionableDate: true,
+          actionableDateEnd: actionableTime,
+          dueDateEnd: today,
+          allowPeriodsIfHabit: [RecurringTaskPeriod.DAILY],
+        },
+      ),
+      habitTasks.habitEntriesByRefId,
+    );
 
-  const inboxTasksForHabitsDueToday = filterInboxTasksForDisplay(
-    sortedInboxTasks,
-    habitTasks.habitEntriesByRefId,
-    habitTasks.optimisticUpdates,
-    {
-      allowSources: [HABIT],
-      allowStatuses: [
-        InboxTaskStatus.NOT_STARTED,
-        InboxTaskStatus.IN_PROGRESS,
-        InboxTaskStatus.BLOCKED,
-      ],
-      includeIfNoActionableDate: true,
-      actionableDateEnd: actionableTime,
-      dueDateEnd: today,
-      allowPeriodsIfHabit: [RecurringTaskPeriod.DAILY],
-    },
-  );
-
-  const inboxTasksForHabitsDueThisWeek = filterInboxTasksForDisplay(
-    sortedInboxTasks,
-    habitTasks.habitEntriesByRefId,
-    habitTasks.optimisticUpdates,
-    {
-      allowSources: [HABIT],
-      allowStatuses: [
-        InboxTaskStatus.NOT_STARTED,
-        InboxTaskStatus.IN_PROGRESS,
-        InboxTaskStatus.BLOCKED,
-      ],
-      includeIfNoActionableDate: true,
-      actionableDateEnd: actionableTime,
-      dueDateEnd: endOfTheWeek,
-      allowPeriodsIfHabit: [RecurringTaskPeriod.WEEKLY],
-    },
-  );
+  const inboxTasksForHabitsDueThisWeek =
+    sortInboxTasksByHabitStackThenEisenAndDifficulty(
+      filterInboxTasksForDisplay(
+        habitTasks.habitInboxTasks,
+        habitTasks.habitEntriesByRefId,
+        habitTasks.optimisticUpdates,
+        {
+          allowSources: [HABIT],
+          allowStatuses: [
+            InboxTaskStatus.NOT_STARTED,
+            InboxTaskStatus.IN_PROGRESS,
+            InboxTaskStatus.BLOCKED,
+          ],
+          includeIfNoActionableDate: true,
+          actionableDateEnd: actionableTime,
+          dueDateEnd: endOfTheWeek,
+          allowPeriodsIfHabit: [RecurringTaskPeriod.WEEKLY],
+        },
+      ),
+      habitTasks.habitEntriesByRefId,
+    );
 
   const habitsStack = (
     <>
@@ -113,7 +117,7 @@ export function HabitInboxTasksWidget(props: WidgetProps) {
       <InboxTasksNoTasksCard
         parent="habit"
         parentLabel="New Habit"
-        parentNewLocations="/app/workspace/apps/habits/new"
+        parentNewLocations="/app/workspace/apps/habits/habits/new"
       />
     );
   }
