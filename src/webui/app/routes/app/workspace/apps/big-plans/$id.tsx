@@ -24,16 +24,10 @@ import { DragDropContext } from "@hello-pangea/dnd";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import {
-  Outlet,
-  useActionData,
-  useFetcher,
-  useNavigation,
-} from "@remix-run/react";
+import { useActionData, useFetcher, useNavigation } from "@remix-run/react";
 import { Fragment, useContext, useState } from "react";
 import { z } from "zod";
 import { CheckboxAsString, parseForm, parseParams } from "zodix";
-import { AnimatePresence } from "framer-motion";
 import ViewKanbanIcon from "@mui/icons-material/ViewKanban";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import { eisenIcon, eisenName } from "@jupiter/core/common/eisen";
@@ -65,6 +59,7 @@ import { InboxTaskStack } from "@jupiter/core/common/sub/inbox_tasks/component/s
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { GlobalError } from "@jupiter/core/infra/component/errors";
 import { LeafPanel } from "@jupiter/core/infra/component/layout/leaf-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { SectionCard } from "@jupiter/core/infra/component/section-card";
 import { TimePlanActivityList } from "@jupiter/core/apps/time_plans/sub/activity/component/list";
 import { saveScoreAction } from "@jupiter/core/gamification/scores.server";
@@ -959,9 +954,7 @@ export default function BigPlan() {
           )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </LeafPanel>
   );
 }

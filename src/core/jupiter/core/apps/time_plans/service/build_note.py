@@ -2,6 +2,10 @@
 
 from uuid import uuid4
 
+from jupiter.core.apps.life_plan.note_sections import (
+    period_allows_aspects_in_note,
+    period_allows_goals_in_note,
+)
 from jupiter.core.apps.life_plan.service.load_top_level import (
     LifePlanTree,
     LoadLifePlanTreeService,
@@ -179,12 +183,12 @@ class BuildNoteService:
                 time_plan_domain.order_of_questions.get(time_plan.period, []),
             )
 
-        final_include_aspects = (
+        final_include_aspects = period_allows_aspects_in_note(time_plan.period) and (
             include_aspects
             if include_aspects is not None
             else time_plan_domain.include_aspects_in_note
         )
-        final_include_goals = (
+        final_include_goals = period_allows_goals_in_note(time_plan.period) and (
             include_goals
             if include_goals is not None
             else time_plan_domain.include_goals_in_note

@@ -345,6 +345,12 @@ export function useLocationsLinkEditor({
     [allowMultiple, editable, submitResolvedPlace],
   );
 
+  // Making the location off a map candidate is part of the same piece of work
+  // as linking it, so the two read as one "Saving..." rather than a gap and
+  // then a label.
+  const isActingOrResolvingCandidate =
+    isActing || candidateFetcher.state !== "idle";
+
   const actionResult = cardActionFetcher.data ?? candidateFetcher.data;
   const noOptionsText =
     trimmedInput === ""
@@ -360,7 +366,7 @@ export function useLocationsLinkEditor({
     hasActed,
     handleInputChange,
     inputValue,
-    isActing,
+    isActing: isActingOrResolvingCandidate,
     locationsHiddenValue,
     noOptionsText,
     options,

@@ -6,13 +6,7 @@ import TuneIcon from "@mui/icons-material/Tune";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import {
-  Outlet,
-  useLocation,
-  useNavigation,
-  useSearchParams,
-} from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useLocation, useNavigation, useSearchParams } from "@remix-run/react";
 import { DateTime } from "luxon";
 import { useContext, useEffect, useState } from "react";
 import { z } from "zod";
@@ -21,6 +15,7 @@ import { periodName } from "@jupiter/core/common/recurring-task-period";
 import { statsSubperiodForPeriod } from "@jupiter/core/common/sub/time_events/time-event";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   NavMultipleCompact,
@@ -429,9 +424,7 @@ export default function CalendarView() {
         </NestingAwareBlock>
       </CalendarEventDragProvider>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

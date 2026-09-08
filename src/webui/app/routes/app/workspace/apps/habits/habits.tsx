@@ -28,8 +28,7 @@ import { Box, Card, Tab, Tabs } from "@mui/material";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet, useFetcher } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useFetcher } from "@remix-run/react";
 import { Fragment, useContext, useState } from "react";
 import { DateTime } from "luxon";
 import { z } from "zod";
@@ -48,6 +47,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import { UserLightChip } from "#/core/users/components/user-light-chip";
 import {
@@ -665,9 +665,7 @@ export default function Habits() {
         )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

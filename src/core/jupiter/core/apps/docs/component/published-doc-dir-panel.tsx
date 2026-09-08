@@ -7,8 +7,6 @@ import {
 } from "@jupiter/webapi-client";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { Outlet } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
 import { useContext, useMemo, useState } from "react";
 
 import { EntityNameOneLineComponent } from "#/core/common/component/entity-name";
@@ -23,6 +21,7 @@ import { EntityCard, EntityLink } from "#/core/infra/component/entity-card";
 import { EntityNoNothingCard } from "#/core/infra/component/entity-no-nothing-card";
 import { EntityStack } from "#/core/infra/component/entity-stack";
 import { LeafPanel } from "#/core/infra/component/layout/leaf-panel";
+import { NestedOutlet } from "#/core/infra/component/layout/nested-outlet";
 import { NestingAwareBlock } from "#/core/infra/component/layout/nesting-aware-block";
 import { SectionCard } from "#/core/infra/component/section-card";
 import {
@@ -287,9 +286,7 @@ export function PublishedDocDirPanel(props: PublishedDocDirPanelProps) {
           </EntityStack>
         </SectionCard>
       </NestingAwareBlock>
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </LeafPanel>
   );
 }

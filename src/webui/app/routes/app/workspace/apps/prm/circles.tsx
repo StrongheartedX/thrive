@@ -1,8 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
 import TuneIcon from "@mui/icons-material/Tune";
 import GroupWorkIcon from "@mui/icons-material/GroupWork";
 import { DocsHelpSubject } from "@jupiter/webapi-client";
@@ -15,6 +13,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   DisplayType,
@@ -114,9 +113,7 @@ export default function Circles() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

@@ -36,14 +36,12 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 import {
-  Outlet,
   useActionData,
   useFetcher,
   useLocation,
   useNavigation,
   useSearchParams,
 } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { z } from "zod";
 import { parseForm, parseParams } from "zodix";
@@ -108,6 +106,7 @@ import { InboxTaskStack } from "@jupiter/core/common/sub/inbox_tasks/component/s
 import { makeBranchErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { GlobalError } from "@jupiter/core/infra/component/errors";
 import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
 import { accessStatusAllowsWriterOrAbove } from "#/core/common/sub/access/access-level";
 import { TimeAndEffortView } from "@jupiter/core/apps/time_plans/component/time-and-effort-view";
@@ -1532,9 +1531,7 @@ export default function TimePlanView() {
           )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </BranchPanel>
   );
 }

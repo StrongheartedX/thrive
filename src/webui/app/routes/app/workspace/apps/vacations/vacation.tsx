@@ -14,8 +14,7 @@ import { ResponsiveTimeRange } from "@nivo/calendar";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet, useNavigate } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useNavigate } from "@remix-run/react";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { aDateToDate } from "@jupiter/core/common/adate";
 import {
@@ -34,6 +33,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import { useBigScreen } from "@jupiter/core/infra/component/use-big-screen";
 import {
@@ -246,9 +246,7 @@ export default function Vacations() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

@@ -10,13 +10,11 @@ import {
 import { parseForm } from "zodix";
 import {
   Form,
-  Outlet,
   ShouldRevalidateFunction,
   useActionData,
   useNavigation,
 } from "@remix-run/react";
 import { IconButton, Stack } from "@mui/material";
-import { AnimatePresence } from "framer-motion";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import {
@@ -39,6 +37,7 @@ import {
   EntityLink,
 } from "@jupiter/core/infra/component/entity-card";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
 import { EntityNameComponent } from "@jupiter/core/common/component/entity-name";
 import { handleActionApiError } from "@jupiter/core/infra/errors.server";
@@ -152,9 +151,7 @@ export default function JournalQuestions() {
         </Form>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </BranchPanel>
   );
 }

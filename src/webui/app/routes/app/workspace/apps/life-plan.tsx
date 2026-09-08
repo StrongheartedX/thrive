@@ -21,14 +21,7 @@ import { alpha, lighten, useTheme } from "@mui/material/styles";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import {
-  Form,
-  Link,
-  Outlet,
-  useActionData,
-  useNavigation,
-} from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
 import { z } from "zod";
 import { parseForm } from "zodix";
 import {
@@ -48,6 +41,7 @@ import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { GlobalError } from "@jupiter/core/infra/component/errors";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   DisplayType,
@@ -644,9 +638,7 @@ export default function LifePlanView() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

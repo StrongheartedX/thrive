@@ -34,7 +34,7 @@ import Grid from "@mui/material/Grid2";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Link, Outlet, useFetcher } from "@remix-run/react";
+import { Link, useFetcher } from "@remix-run/react";
 import { AnimatePresence } from "framer-motion";
 import { Fragment, useContext, useState } from "react";
 import { z } from "zod";
@@ -65,6 +65,7 @@ import { InboxTasksNoTasksCard } from "@jupiter/core/common/sub/inbox_tasks/comp
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { FieldError, GlobalError } from "@jupiter/core/infra/component/errors";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   FilterFewOptionsCompact,
@@ -481,9 +482,7 @@ export default function InboxTasks() {
         )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

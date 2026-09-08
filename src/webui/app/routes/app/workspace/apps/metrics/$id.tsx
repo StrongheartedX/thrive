@@ -11,8 +11,7 @@ import { ResponsiveLine } from "@nivo/line";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet, useNavigation } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useNavigation } from "@remix-run/react";
 import { useContext, useState } from "react";
 import { z } from "zod";
 import { parseForm, parseParams } from "zodix";
@@ -27,6 +26,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeBranchErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
 import { TimeDiffTag } from "@jupiter/core/common/component/time-diff-tag";
 import {
@@ -355,9 +355,7 @@ export default function Metric() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </BranchPanel>
   );
 }

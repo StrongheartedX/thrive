@@ -19,8 +19,7 @@ import { Grid, Tab, Tabs, Typography } from "@mui/material";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet, useFetcher } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useFetcher } from "@remix-run/react";
 import { Fragment, useContext, useState } from "react";
 import { EntityNameComponent } from "@jupiter/core/common/component/entity-name";
 import { ADateTag } from "@jupiter/core/common/component/adate-tag";
@@ -34,6 +33,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import { useBigScreen } from "@jupiter/core/infra/component/use-big-screen";
 import {
@@ -610,9 +610,7 @@ export default function Todos() {
           )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

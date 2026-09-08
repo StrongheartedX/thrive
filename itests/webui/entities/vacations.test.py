@@ -542,6 +542,29 @@ def test_webui_vacations_travel_wish_create(
     expect(page.locator(f"#travel-wish-{entity_id}")).to_contain_text("Osaka")
 
 
+def test_webui_vacations_travel_wish_create_waits_for_the_location(
+    page: Page, create_location
+) -> None:
+    nara = create_location("Nara")
+
+    page.goto("/app/workspace/apps/vacations/wish-list")
+    page.wait_for_selector("#trunk-panel")
+    page.locator("a[id='trunk-new-leaf-entity']").click()
+    page.wait_for_selector("#leaf-panel")
+
+    # Nothing picked yet, so there is no location to make a wish out of.
+    expect(page.locator("button[id='travel-wish-create']")).to_be_disabled()
+    expect(page.locator("button[id='travel-wish-create-and-another']")).to_be_disabled()
+
+    page.get_by_label("Location").click()
+    page.keyboard.type("Nara")
+    page.get_by_role("option").filter(has_text="Nara").first.click()
+    expect(page.locator('input[name="locations"]')).to_have_value(nara.ref_id)
+
+    expect(page.locator("button[id='travel-wish-create']")).to_be_enabled()
+    expect(page.locator("button[id='travel-wish-create-and-another']")).to_be_enabled()
+
+
 def test_webui_vacations_travel_wish_add_location_after_create(
     page: Page, create_travel_wish, create_location
 ) -> None:

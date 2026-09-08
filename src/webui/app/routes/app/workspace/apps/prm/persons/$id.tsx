@@ -15,12 +15,7 @@ import {
   redirect,
 } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import {
-  Outlet,
-  useActionData,
-  useFetcher,
-  useNavigation,
-} from "@remix-run/react";
+import { useActionData, useFetcher, useNavigation } from "@remix-run/react";
 import { useContext } from "react";
 import { z } from "zod";
 import { parseForm, parseParams, parseQuery } from "zodix";
@@ -33,6 +28,7 @@ import { InboxTaskStack } from "@jupiter/core/common/sub/inbox_tasks/component/s
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { GlobalError } from "@jupiter/core/infra/component/errors";
 import { LeafPanel } from "@jupiter/core/infra/component/layout/leaf-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TimeEventFullDaysBlockStack } from "@jupiter/core/common/sub/time_events/sub/full_days_block/component/stack";
 import {
   DisplayType,
@@ -48,7 +44,6 @@ import { EntityLocationMapSection } from "@jupiter/core/common/sub/locations/com
 import { SectionCard } from "@jupiter/core/infra/component/section-card";
 import { PersonEditor } from "@jupiter/core/apps/prm/sub/person/component/editor";
 import { OccasionStack } from "@jupiter/core/apps/prm/sub/person/sub/occasion/components/stack";
-import { AnimatePresence } from "framer-motion";
 import { NestingAwareBlock } from "#/core/infra/component/layout/nesting-aware-block";
 import { noteStdOwner } from "#/core/common/sub/notes/note-std-owner";
 import {
@@ -569,9 +564,7 @@ export default function Person() {
           )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </LeafPanel>
   );
 }

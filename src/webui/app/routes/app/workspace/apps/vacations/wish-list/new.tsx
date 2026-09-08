@@ -5,7 +5,7 @@ import type { ShouldRevalidateFunction } from "@remix-run/react";
 import { useActionData, useNavigation } from "@remix-run/react";
 import { z } from "zod";
 import { parseForm } from "zodix";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { LocationsEditor } from "@jupiter/core/common/sub/locations/component/locations-editor";
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { FieldError, GlobalError } from "@jupiter/core/infra/component/errors";
@@ -70,6 +70,10 @@ export default function NewTravelWish() {
   const actionData = useActionData<typeof action>();
   const topLevelInfo = useContext(TopLevelInfoContext);
   const inputsEnabled = navigation.state === "idle";
+  // Picking an address off the map makes the location in the background, and
+  // there's no travel wish to make until that comes back with a ref id.
+  const [locationRefIds, setLocationRefIds] = useState<Array<string>>([]);
+  const hasLocation = locationRefIds.length > 0;
 
   return (
     <LeafPanel
@@ -93,11 +97,13 @@ export default function NewTravelWish() {
                 text: "Create",
                 value: "create",
                 highlight: true,
+                disabled: !hasLocation,
               }),
               ActionSingle({
                 id: "travel-wish-create-and-another",
                 text: "Create & Another",
                 value: CREATE_AND_ANOTHER_INTENT,
+                disabled: !hasLocation,
               }),
             ]}
           />
@@ -108,6 +114,7 @@ export default function NewTravelWish() {
             name="locations"
             aloneOnLine
             inputsEnabled={inputsEnabled}
+            onSelectionChange={setLocationRefIds}
           />
           <FieldError actionResult={actionData} fieldName="/location_ref_id" />
         </FormControl>

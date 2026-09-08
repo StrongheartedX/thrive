@@ -14,8 +14,6 @@ import ViewTimelineIcon from "@mui/icons-material/ViewTimeline";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
 import { DateTime } from "luxon";
 import { Fragment, useContext, useState } from "react";
 import { isWorkspaceFeatureAvailable } from "@jupiter/core/workspaces/root";
@@ -34,6 +32,7 @@ import { BigPlanTimelineSmallScreen } from "@jupiter/core/apps/big_plans/compone
 import { EntityNoNothingCard } from "@jupiter/core/infra/component/entity-no-nothing-card";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   FilterFewOptionsCompact,
@@ -688,9 +687,7 @@ export default function BigPlans() {
         )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

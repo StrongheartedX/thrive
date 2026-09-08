@@ -45,6 +45,10 @@ import { AspectMultiSelect } from "#/core/apps/life_plan/sub/aspects/component/m
 import { ChapterMultiSelect } from "#/core/apps/life_plan/sub/chapters/components/multi-select";
 import { GoalMultiSelect } from "#/core/apps/life_plan/sub/goals/components/multi-select";
 import { lifePlanBirthdayDate } from "#/core/apps/life_plan/root";
+import {
+  periodAllowsAspectsInNote,
+  periodAllowsGoalsInNote,
+} from "#/core/apps/life_plan/note-sections";
 import { aDateToDate } from "#/core/common/adate";
 import {
   fixSelectOutputEntityId,
@@ -348,41 +352,45 @@ export default function NewTimePlan() {
                 <FieldError actionResult={actionData} fieldName="/goalRefIds" />
               </FormControl>
 
-              <FormControl fullWidth>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="includeAspects"
-                      readOnly={!inputsEnabled}
-                      disabled={!inputsEnabled}
-                      defaultChecked={loaderData.includeAspectsInNote}
-                    />
-                  }
-                  label="Include Aspects Of The Life Plan"
-                />
-                <FieldError
-                  actionResult={actionData}
-                  fieldName="/include_aspects"
-                />
-              </FormControl>
+              {periodAllowsAspectsInNote(period) && (
+                <FormControl fullWidth>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="includeAspects"
+                        readOnly={!inputsEnabled}
+                        disabled={!inputsEnabled}
+                        defaultChecked={loaderData.includeAspectsInNote}
+                      />
+                    }
+                    label="Include Aspects Of The Life Plan"
+                  />
+                  <FieldError
+                    actionResult={actionData}
+                    fieldName="/include_aspects"
+                  />
+                </FormControl>
+              )}
 
-              <FormControl fullWidth>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="includeGoals"
-                      readOnly={!inputsEnabled}
-                      disabled={!inputsEnabled}
-                      defaultChecked={loaderData.includeGoalsInNote}
-                    />
-                  }
-                  label="Include Goals Of The Life Plan"
-                />
-                <FieldError
-                  actionResult={actionData}
-                  fieldName="/include_goals"
-                />
-              </FormControl>
+              {periodAllowsGoalsInNote(period) && (
+                <FormControl fullWidth>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="includeGoals"
+                        readOnly={!inputsEnabled}
+                        disabled={!inputsEnabled}
+                        defaultChecked={loaderData.includeGoalsInNote}
+                      />
+                    }
+                    label="Include Goals Of The Life Plan"
+                  />
+                  <FieldError
+                    actionResult={actionData}
+                    fieldName="/include_goals"
+                  />
+                </FormControl>
+              )}
             </>
           )}
       </SectionCard>

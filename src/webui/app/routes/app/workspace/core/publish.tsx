@@ -7,8 +7,6 @@ import {
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
 import { Button, Box, Stack, Typography } from "@mui/material";
 import { useContext, useMemo, useState } from "react";
 import { parseEntityLinkStd } from "@jupiter/core/common/entity-link";
@@ -20,6 +18,7 @@ import { EntityNoNothingCard } from "@jupiter/core/infra/component/entity-no-not
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   DisplayType,
@@ -189,9 +188,7 @@ export default function PublishEntities() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

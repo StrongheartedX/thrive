@@ -1,5 +1,6 @@
 import type { Location } from "@jupiter/webapi-client";
 import { Autocomplete, CircularProgress, TextField } from "@mui/material";
+import { useEffect, useRef } from "react";
 
 import { LocationSearchPopper } from "#/core/common/sub/locations/component/location-search-instant";
 import {
@@ -20,8 +21,16 @@ export function LocationsEditor({
   owner,
   label,
   aloneOnLine = false,
+  onSelectionChange,
 }: Omit<LocationsEditorBaseProps, "linkedLocations" | "defaultValue"> & {
   linkedLocation?: Location | null;
+  /**
+   * Told which locations are picked, whenever that changes. A creation page
+   * has nothing to hang a location off yet, so choosing an address off the
+   * map makes the location in the background - and there is nothing to
+   * create with until that comes back. Pass this to know when it has.
+   */
+  onSelectionChange?: (locationRefIds: Array<string>) => void;
 }) {
   const linkedLocations = linkedLocation ? [linkedLocation] : [];
   const {
@@ -45,6 +54,18 @@ export function LocationsEditor({
     entityOwnerRefId,
     allowMultiple: false,
   });
+
+  // Only on a real change, so an inline callback here can't loop.
+  const lastReportedSelection = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastReportedSelection.current === locationsHiddenValue) {
+      return;
+    }
+    lastReportedSelection.current = locationsHiddenValue;
+    onSelectionChange?.(
+      locationsHiddenValue === "" ? [] : locationsHiddenValue.split(","),
+    );
+  }, [locationsHiddenValue, onSelectionChange]);
 
   return (
     <LocationsEditorFrame

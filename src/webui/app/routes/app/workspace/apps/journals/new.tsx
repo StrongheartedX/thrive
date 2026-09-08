@@ -20,6 +20,10 @@ import { useContext, useMemo, useState } from "react";
 import { z } from "zod";
 import { CheckboxAsString, parseForm, parseQuery } from "zodix";
 import { sortQuestionsByOrder } from "@jupiter/core/apps/journals/sub/question/root";
+import {
+  periodAllowsAspectsInNote,
+  periodAllowsGoalsInNote,
+} from "@jupiter/core/apps/life_plan/note-sections";
 import { EntityNameComponent } from "@jupiter/core/common/component/entity-name";
 import { PeriodSelect } from "@jupiter/core/common/component/period-select";
 import {
@@ -272,41 +276,45 @@ export default function NewJournal() {
           WorkspaceFeature.LIFE_PLAN,
         ) && (
           <>
-            <FormControl fullWidth>
-              <FormControlLabel
-                control={
-                  <Switch
-                    name="includeAspects"
-                    readOnly={!inputsEnabled}
-                    disabled={!inputsEnabled}
-                    defaultChecked={loaderData.includeAspectsInNote}
-                  />
-                }
-                label="Include Aspects Of The Life Plan"
-              />
-              <FieldError
-                actionResult={actionData}
-                fieldName="/include_aspects"
-              />
-            </FormControl>
+            {periodAllowsAspectsInNote(period) && (
+              <FormControl fullWidth>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      name="includeAspects"
+                      readOnly={!inputsEnabled}
+                      disabled={!inputsEnabled}
+                      defaultChecked={loaderData.includeAspectsInNote}
+                    />
+                  }
+                  label="Include Aspects Of The Life Plan"
+                />
+                <FieldError
+                  actionResult={actionData}
+                  fieldName="/include_aspects"
+                />
+              </FormControl>
+            )}
 
-            <FormControl fullWidth>
-              <FormControlLabel
-                control={
-                  <Switch
-                    name="includeGoals"
-                    readOnly={!inputsEnabled}
-                    disabled={!inputsEnabled}
-                    defaultChecked={loaderData.includeGoalsInNote}
-                  />
-                }
-                label="Include Goals Of The Life Plan"
-              />
-              <FieldError
-                actionResult={actionData}
-                fieldName="/include_goals"
-              />
-            </FormControl>
+            {periodAllowsGoalsInNote(period) && (
+              <FormControl fullWidth>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      name="includeGoals"
+                      readOnly={!inputsEnabled}
+                      disabled={!inputsEnabled}
+                      defaultChecked={loaderData.includeGoalsInNote}
+                    />
+                  }
+                  label="Include Goals Of The Life Plan"
+                />
+                <FieldError
+                  actionResult={actionData}
+                  fieldName="/include_goals"
+                />
+              </FormControl>
+            )}
           </>
         )}
       </SectionCard>

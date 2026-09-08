@@ -7,8 +7,6 @@ import { DocsHelpSubject } from "@jupiter/webapi-client";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
 import { useContext } from "react";
 import { EntityNameComponent } from "@jupiter/core/common/component/entity-name";
 import { EntityNoNothingCard } from "@jupiter/core/infra/component/entity-no-nothing-card";
@@ -19,6 +17,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeBranchErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
 import {
   DisplayType,
@@ -139,9 +138,7 @@ export default function ChoreStacks() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </BranchPanel>
   );
 }

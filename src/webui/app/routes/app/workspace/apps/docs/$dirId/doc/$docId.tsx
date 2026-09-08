@@ -3,8 +3,7 @@ import { Button, Stack } from "@mui/material";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Link, Outlet, useActionData, useNavigation } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { Link, useActionData, useNavigation } from "@remix-run/react";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { z } from "zod";
 import { parseForm, parseParams } from "zodix";
@@ -16,6 +15,7 @@ import { TagsEditor } from "@jupiter/core/common/sub/tags/component/tags-editor"
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { GlobalError } from "@jupiter/core/infra/component/errors";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { LeafPanel } from "@jupiter/core/infra/component/layout/leaf-panel";
 import { SectionCard } from "@jupiter/core/infra/component/section-card";
 import { LeafPanelExpansionState } from "@jupiter/core/infra/leaf-panel-expansion";
@@ -237,9 +237,7 @@ export default function DocInFolder() {
         <EntityLocationMapSection location={loaderData.location} />
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </LeafPanel>
   );
 }

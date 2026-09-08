@@ -2376,6 +2376,8 @@ export function bigPlanNameForEvent(bigPlan: BigPlan): string {
     return `✅ ${bigPlan.name}`;
   } else if (bigPlan.status === BigPlanStatus.NOT_DONE) {
     return `❌ ${bigPlan.name}`;
+  } else if (bigPlan.status === BigPlanStatus.IN_PROGRESS) {
+    return `🚧 ${bigPlan.name}`;
   } else {
     return `${bigPlan.name}`;
   }
@@ -2389,6 +2391,8 @@ export function todoTaskNameForEvent(
     return `✅ ${todoTask.name}`;
   } else if (inboxTask.status === InboxTaskStatus.NOT_DONE) {
     return `❌ ${todoTask.name}`;
+  } else if (inboxTask.status === InboxTaskStatus.IN_PROGRESS) {
+    return `🚧 ${todoTask.name}`;
   } else {
     return `${todoTask.name}`;
   }

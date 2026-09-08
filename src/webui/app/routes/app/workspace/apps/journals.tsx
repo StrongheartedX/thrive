@@ -10,8 +10,7 @@ import { RecurringTaskPeriod, DocsHelpSubject } from "@jupiter/webapi-client";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Link, Outlet } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { Link } from "@remix-run/react";
 import { useContext, useState } from "react";
 import { Button, Stack } from "@mui/material";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -23,6 +22,7 @@ import {
 import { EntityNoNothingCard } from "@jupiter/core/infra/component/entity-no-nothing-card";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import { JournalCard } from "@jupiter/core/apps/journals/component/card";
 import { JournalStack } from "@jupiter/core/apps/journals/component/stack";
@@ -330,9 +330,7 @@ export default function Journals() {
         />
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

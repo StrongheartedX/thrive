@@ -4,8 +4,7 @@ import { Typography } from "@mui/material";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet, useNavigate } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useNavigate } from "@remix-run/react";
 import { useCallback, useMemo } from "react";
 import { EntityNameComponent } from "@jupiter/core/common/component/entity-name";
 import { IsKeyTag } from "@jupiter/core/common/component/is-key-tag";
@@ -27,6 +26,7 @@ import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { SlimChip } from "@jupiter/core/infra/component/chips";
 import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   DisplayType,
@@ -137,9 +137,7 @@ export default function Locations() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

@@ -1,7 +1,6 @@
 import { json, LoaderFunctionArgs } from "@remix-run/node";
 import {
   Link,
-  Outlet,
   useFetcher,
   useNavigation,
   useSearchParams,
@@ -33,7 +32,6 @@ import {
 } from "@jupiter/webapi-client";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { DateTime } from "luxon";
-import { AnimatePresence } from "framer-motion";
 import TuneIcon from "@mui/icons-material/Tune";
 import { z } from "zod";
 import { parseQuery } from "zodix";
@@ -57,6 +55,7 @@ import {
   DisplayType,
 } from "@jupiter/core/infra/component/use-nested-entities";
 import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { makeRootErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
 import { MOTDWidget } from "@jupiter/core/apps/motd/component/widget";
@@ -800,9 +799,7 @@ export default function WorkspaceHome() {
         )}
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </TrunkPanel>
   );
 }

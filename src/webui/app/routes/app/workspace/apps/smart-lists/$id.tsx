@@ -5,8 +5,7 @@ import TuneIcon from "@mui/icons-material/Tune";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet, useNavigation } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useNavigation } from "@remix-run/react";
 import { z } from "zod";
 import { parseForm, parseParams } from "zodix";
 import { useContext, useState } from "react";
@@ -20,6 +19,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeBranchErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
 import { TagTag } from "@jupiter/core/common/sub/tags/component/tag-tag";
 import { ContactTag } from "@jupiter/core/common/sub/contacts/component/contact-tag";
@@ -312,9 +312,7 @@ export default function SmartListViewItems() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </BranchPanel>
   );
 }

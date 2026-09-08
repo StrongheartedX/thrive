@@ -1,8 +1,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
-import { Outlet, useNavigation, useSearchParams } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
+import { useNavigation, useSearchParams } from "@remix-run/react";
 import { z } from "zod";
 import { useContext, useState } from "react";
 import { EntityNameComponent } from "@jupiter/core/common/component/entity-name";
@@ -13,6 +12,7 @@ import {
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { makeBranchErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
 import { ScheduleStreamColorTag } from "@jupiter/core/apps/schedule/component/color-tag";
 import {
@@ -130,9 +130,7 @@ export default function ScheduleStreamViewAll() {
         </EntityStack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </BranchPanel>
   );
 }

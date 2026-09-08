@@ -219,6 +219,39 @@ def test_webui_location_create(page: Page) -> None:
     expect(page.locator(f"#location-{entity_id}")).to_contain_text("Home Office")
 
 
+def test_webui_location_create_and_another_gives_a_blank_form(page: Page) -> None:
+    page.goto(_LOCATIONS_PATH)
+    page.wait_for_selector("#trunk-panel")
+    page.locator("a[id='trunk-new-leaf-entity']").click()
+    page.wait_for_selector("#leaf-panel")
+
+    fill_after_hydration(page.locator('input[name="name"]'), "First Of Many")
+    page.keyboard.press("Escape")
+    fill_after_hydration(page.locator('input[name="addressLine"]'), "1 First St")
+
+    page.locator("button[id='location-create-and-another']").click()
+
+    page.wait_for_url(re.compile(rf"{_LOCATIONS_PATH}/new\?.*createAnotherNonce=1"))
+    page.wait_for_selector("#leaf-panel")
+
+    expect(page.locator('input[name="name"]')).to_have_value("")
+    expect(page.locator('input[name="addressLine"]')).to_have_value("")
+
+    fill_after_hydration(page.locator('input[name="name"]'), "Second Of Many")
+    page.keyboard.press("Escape")
+    page.locator("button[id='location-create-and-another']").click()
+
+    page.wait_for_url(re.compile(rf"{_LOCATIONS_PATH}/new\?.*createAnotherNonce=2"))
+    page.wait_for_selector("#leaf-panel")
+
+    expect(page.locator('input[name="name"]')).to_have_value("")
+
+    page.goto(_LOCATIONS_PATH)
+    page.wait_for_selector("#trunk-panel")
+    expect(page.locator("#trunk-panel")).to_contain_text("First Of Many")
+    expect(page.locator("#trunk-panel")).to_contain_text("Second Of Many")
+
+
 def test_webui_location_create_shows_dedup_banner(page: Page, create_location) -> None:
     location = create_location(
         "Dedup Banner Cafe",

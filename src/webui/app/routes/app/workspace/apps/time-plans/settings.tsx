@@ -297,7 +297,7 @@ export default function TimePlansSettings() {
                           defaultChecked={loaderData.includeAspectsInNote}
                         />
                       }
-                      label="Include Aspects Of The Life Plan"
+                      label="Include Aspects Of The Life Plan (Monthly And Up)"
                     />
                     <FieldError
                       actionResult={actionData}
@@ -315,7 +315,7 @@ export default function TimePlansSettings() {
                           defaultChecked={loaderData.includeGoalsInNote}
                         />
                       }
-                      label="Include Goals Of The Life Plan"
+                      label="Include Goals Of The Life Plan (Quarterly And Up)"
                     />
                     <FieldError
                       actionResult={actionData}

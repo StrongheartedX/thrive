@@ -56,6 +56,9 @@ export function timePlanActivityTargetNameForEvent(
     if (targetInboxTask.status === InboxTaskStatus.NOT_DONE) {
       return `❌ ${name}`;
     }
+    if (targetInboxTask.status === InboxTaskStatus.IN_PROGRESS) {
+      return `🚧 ${name}`;
+    }
     return `${name}`;
   }
   if (targetTodoTask) {
@@ -72,6 +75,9 @@ export function timePlanActivityTargetNameForEvent(
     }
     if (targetBigPlan.status === BigPlanStatus.NOT_DONE) {
       return `❌ ${name}`;
+    }
+    if (targetBigPlan.status === BigPlanStatus.IN_PROGRESS) {
+      return `🚧 ${name}`;
     }
     return `${name}`;
   }

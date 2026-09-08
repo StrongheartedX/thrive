@@ -23,8 +23,20 @@ from jupiter_webapi_client.api.schedule.schedule_stream_create_for_user import (
 from jupiter_webapi_client.api.test_helper.workspace_set_feature import (
     sync_detailed as workspace_set_feature_sync,
 )
+from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_todo_task import (
+    sync_detailed as time_event_in_day_block_create_for_todo_task_sync,
+)
+from jupiter_webapi_client.api.todo.todo_task_create import (
+    sync_detailed as todo_task_create_sync,
+)
+from jupiter_webapi_client.api.todo.todo_task_update import (
+    sync_detailed as todo_task_update_sync,
+)
 from jupiter_webapi_client.client import AuthenticatedClient
 from jupiter_webapi_client.models.access_level import AccessLevel
+from jupiter_webapi_client.models.difficulty import Difficulty
+from jupiter_webapi_client.models.eisen import Eisen
+from jupiter_webapi_client.models.inbox_task_status import InboxTaskStatus
 from jupiter_webapi_client.models.invite_users_to_entity_args import (
     InviteUsersToEntityArgs,
 )
@@ -57,6 +69,43 @@ from jupiter_webapi_client.models.schedule_stream_create_for_user_args import (
 )
 from jupiter_webapi_client.models.schedule_stream_create_for_user_result import (
     ScheduleStreamCreateForUserResult,
+)
+from jupiter_webapi_client.models.time_event_in_day_block_create_for_todo_task_args import (
+    TimeEventInDayBlockCreateForTodoTaskArgs,
+)
+from jupiter_webapi_client.models.todo_task import TodoTask
+from jupiter_webapi_client.models.todo_task_create_args import TodoTaskCreateArgs
+from jupiter_webapi_client.models.todo_task_create_result import TodoTaskCreateResult
+from jupiter_webapi_client.models.todo_task_update_args import TodoTaskUpdateArgs
+from jupiter_webapi_client.models.todo_task_update_args_actionable_date import (
+    TodoTaskUpdateArgsActionableDate,
+)
+from jupiter_webapi_client.models.todo_task_update_args_aspect_ref_id import (
+    TodoTaskUpdateArgsAspectRefId,
+)
+from jupiter_webapi_client.models.todo_task_update_args_chapter_ref_id import (
+    TodoTaskUpdateArgsChapterRefId,
+)
+from jupiter_webapi_client.models.todo_task_update_args_difficulty import (
+    TodoTaskUpdateArgsDifficulty,
+)
+from jupiter_webapi_client.models.todo_task_update_args_due_date import (
+    TodoTaskUpdateArgsDueDate,
+)
+from jupiter_webapi_client.models.todo_task_update_args_eisen import (
+    TodoTaskUpdateArgsEisen,
+)
+from jupiter_webapi_client.models.todo_task_update_args_goal_ref_id import (
+    TodoTaskUpdateArgsGoalRefId,
+)
+from jupiter_webapi_client.models.todo_task_update_args_is_key import (
+    TodoTaskUpdateArgsIsKey,
+)
+from jupiter_webapi_client.models.todo_task_update_args_name import (
+    TodoTaskUpdateArgsName,
+)
+from jupiter_webapi_client.models.todo_task_update_args_status import (
+    TodoTaskUpdateArgsStatus,
 )
 from jupiter_webapi_client.models.workspace_feature import WorkspaceFeature
 from jupiter_webapi_client.models.workspace_set_feature_args import (
@@ -235,6 +284,97 @@ def test_webui_schedule_view_with_events(
     expect(
         page.locator(f"#schedule-event-in-day-block-{event3.ref_id}")
     ).to_contain_text(re.compile(r".*Aspect.*"))
+
+
+@pytest.fixture(scope="module")
+def _enable_todo_feature(logged_in_client: AuthenticatedClient) -> Iterator[None]:
+    try:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(
+                feature=WorkspaceFeature.TODO_TASK, value=True
+            ),
+        )
+        yield
+    finally:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(
+                feature=WorkspaceFeature.TODO_TASK, value=False
+            ),
+        )
+
+
+@pytest.fixture()
+def create_todo_task_with_time_event(logged_in_client: AuthenticatedClient):
+    def _create(name: str, status: InboxTaskStatus, start_date: str) -> TodoTask:
+        todo_task = get_parsed_from_response(
+            TodoTaskCreateResult,
+            todo_task_create_sync(
+                client=logged_in_client,
+                body=TodoTaskCreateArgs(
+                    name=name,
+                    is_key=False,
+                    eisen=Eisen.REGULAR,
+                    difficulty=Difficulty.EASY,
+                ),
+            ),
+        ).new_todo_task
+
+        todo_task_update_sync(
+            client=logged_in_client,
+            body=TodoTaskUpdateArgs(
+                ref_id=todo_task.ref_id,
+                name=TodoTaskUpdateArgsName(should_change=False),
+                status=TodoTaskUpdateArgsStatus(should_change=True, value=status),
+                aspect_ref_id=TodoTaskUpdateArgsAspectRefId(should_change=False),
+                chapter_ref_id=TodoTaskUpdateArgsChapterRefId(should_change=False),
+                goal_ref_id=TodoTaskUpdateArgsGoalRefId(should_change=False),
+                is_key=TodoTaskUpdateArgsIsKey(should_change=False),
+                eisen=TodoTaskUpdateArgsEisen(should_change=False),
+                difficulty=TodoTaskUpdateArgsDifficulty(should_change=False),
+                actionable_date=TodoTaskUpdateArgsActionableDate(should_change=False),
+                due_date=TodoTaskUpdateArgsDueDate(should_change=False),
+            ),
+        )
+
+        time_event_in_day_block_create_for_todo_task_sync(
+            client=logged_in_client,
+            body=TimeEventInDayBlockCreateForTodoTaskArgs(
+                todo_task_ref_id=todo_task.ref_id,
+                start_date=start_date,
+                start_time_in_day="10:00",
+                duration_mins=90,
+            ),
+        )
+
+        return todo_task
+
+    return _create
+
+
+@pytest.mark.usefixtures("_enable_todo_feature")
+def test_webui_calendar_marks_task_events_with_their_status(
+    page: Page, create_todo_task_with_time_event
+) -> None:
+    today = pendulum.now().to_date_string()
+
+    create_todo_task_with_time_event(
+        "Task Under Way", InboxTaskStatus.IN_PROGRESS, today
+    )
+    create_todo_task_with_time_event("Task Wrapped Up", InboxTaskStatus.DONE, today)
+    create_todo_task_with_time_event(
+        "Task Not Begun", InboxTaskStatus.NOT_STARTED, today
+    )
+
+    page.goto(f"/app/workspace/calendar?date={today}&period=daily&view=schedule")
+    page.wait_for_selector("#trunk-panel")
+
+    trunk = page.locator("#trunk-panel")
+    expect(trunk).to_contain_text("🚧 Task Under Way")
+    expect(trunk).to_contain_text("✅ Task Wrapped Up")
+    expect(trunk).to_contain_text("Task Not Begun")
+    expect(trunk).not_to_contain_text("🚧 Task Not Begun")
 
 
 def test_webui_calendar_shows_additional_timezones(page: Page) -> None:

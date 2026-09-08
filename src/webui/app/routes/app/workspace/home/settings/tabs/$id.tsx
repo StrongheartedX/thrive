@@ -12,12 +12,10 @@ import type { ShouldRevalidateFunction } from "@remix-run/react";
 import {
   useParams,
   Link,
-  Outlet,
   useLocation,
   useNavigation,
   useSearchParams,
 } from "@remix-run/react";
-import { AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { parseForm, parseParams, parseQuery, parseQuerySafe } from "zodix";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -30,6 +28,7 @@ import {
 } from "@jupiter/core/home/sub/widget/root";
 import { makeBranchErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
+import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
 import {
   DisplayType,
@@ -196,9 +195,7 @@ export default function HomeTab() {
         </Stack>
       </NestingAwareBlock>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <Outlet />
-      </AnimatePresence>
+      <NestedOutlet />
     </BranchPanel>
   );
 }

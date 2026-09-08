@@ -819,7 +819,9 @@ def test_api_journal_create_includes_top_level_life_plan_aspects_and_goals_in_no
     create_aspect,
     create_goal,
 ) -> None:
-    question = create_question("Journal question with life plan")
+    question = create_question(
+        "Journal question with life plan", RecurringTaskPeriod.YEARLY
+    )
     health = create_aspect("Health In Journals")
     create_aspect("Career In Journals")
     create_aspect("Nested Aspect In Journals", parent_aspect_ref_id=health.ref_id)
@@ -834,7 +836,7 @@ def test_api_journal_create_includes_top_level_life_plan_aspects_and_goals_in_no
             client=logged_in_client,
             body=JournalCreateArgs(
                 right_now="2025-06-02",
-                period=RecurringTaskPeriod.WEEKLY,
+                period=RecurringTaskPeriod.YEARLY,
                 question_ref_ids=[question.ref_id],
                 include_aspects=True,
                 include_goals=True,
@@ -872,6 +874,76 @@ def test_api_journal_create_includes_top_level_life_plan_aspects_and_goals_in_no
     assert headings.index(nested_goal_heading) < headings.index(nested_aspect_heading)
     assert headings.index(nested_aspect_heading) < headings.index(career_heading)
     assert all(block.text == "" for block in paragraphs)
+
+
+@pytest.mark.usefixtures("_with_life_plan_enabled")
+def test_api_journal_create_skips_aspects_and_goals_in_note_for_small_periods(
+    logged_in_client: AuthenticatedClient,
+    create_question,
+    create_aspect,
+    create_goal,
+) -> None:
+    question = create_question("Journal question for a week")
+    aspect = create_aspect("Health In Weekly Journals")
+    create_goal("Run A Marathon In Weekly Journals", aspect.ref_id)
+
+    result = get_parsed_from_response(
+        JournalCreateResult,
+        journal_create_sync(
+            client=logged_in_client,
+            body=JournalCreateArgs(
+                right_now="2025-07-07",
+                period=RecurringTaskPeriod.WEEKLY,
+                question_ref_ids=[question.ref_id],
+                include_aspects=True,
+                include_goals=True,
+            ),
+        ),
+    )
+
+    headings = [
+        block.text
+        for block in result.new_note.content
+        if isinstance(block, HeadingBlock)
+    ]
+    assert headings == ["Journal question for a week"]
+
+
+@pytest.mark.usefixtures("_with_life_plan_enabled")
+def test_api_journal_create_includes_only_aspects_in_note_for_monthly_period(
+    logged_in_client: AuthenticatedClient,
+    create_question,
+    create_aspect,
+    create_goal,
+) -> None:
+    question = create_question(
+        "Journal question for a month", RecurringTaskPeriod.MONTHLY
+    )
+    aspect = create_aspect("Health In Monthly Journals")
+    create_goal("Run A Marathon In Monthly Journals", aspect.ref_id)
+
+    result = get_parsed_from_response(
+        JournalCreateResult,
+        journal_create_sync(
+            client=logged_in_client,
+            body=JournalCreateArgs(
+                right_now="2025-08-04",
+                period=RecurringTaskPeriod.MONTHLY,
+                question_ref_ids=[question.ref_id],
+                include_aspects=True,
+                include_goals=True,
+            ),
+        ),
+    )
+
+    headings = [
+        block.text
+        for block in result.new_note.content
+        if isinstance(block, HeadingBlock)
+    ]
+    assert "Journal question for a month" in headings
+    assert "⭐ Health In Monthly Journals" in headings
+    assert not any(heading.startswith("🎯") for heading in headings)
 
 
 @pytest.mark.usefixtures("_with_life_plan_enabled")
