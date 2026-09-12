@@ -964,7 +964,7 @@ export default function TimePlanView() {
                           NavSingle({
                             text: "New Chore",
                             link: withTimePlanDisplay(
-                              `/app/workspace/apps/chores/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
+                              `/app/workspace/apps/chores/chores/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
                               query,
                             ),
                             gatedOn: WorkspaceFeature.CHORES,

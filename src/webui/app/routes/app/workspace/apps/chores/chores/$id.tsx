@@ -328,7 +328,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           },
         });
 
-        return redirect(`/app/workspace/apps/chores`);
+        return redirect(`/app/workspace/apps/chores/chores`);
       }
 
       case "gen": {
@@ -336,7 +336,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           ref_id: id,
         });
 
-        return redirect(`/app/workspace/apps/chores/${id}`);
+        return redirect(`/app/workspace/apps/chores/chores/${id}`);
       }
 
       case "create-note": {
@@ -345,7 +345,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           content: [],
         });
 
-        return redirect(`/app/workspace/apps/chores/${id}`);
+        return redirect(`/app/workspace/apps/chores/chores/${id}`);
       }
 
       case "archive": {
@@ -353,7 +353,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           ref_id: id,
         });
 
-        return redirect(`/app/workspace/apps/chores`);
+        return redirect(`/app/workspace/apps/chores/chores`);
       }
 
       case "remove": {
@@ -361,7 +361,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           ref_id: id,
         });
 
-        return redirect(`/app/workspace/apps/chores`);
+        return redirect(`/app/workspace/apps/chores/chores`);
       }
 
       case "create-publish": {
@@ -369,7 +369,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           owner: form.publishOwner,
         });
 
-        return redirect(`/app/workspace/apps/chores/${id}`);
+        return redirect(`/app/workspace/apps/chores/chores/${id}`);
       }
 
       case "activate-publish": {
@@ -377,7 +377,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           ref_id: form.publishEntityRefId,
         });
 
-        return redirect(`/app/workspace/apps/chores/${id}`);
+        return redirect(`/app/workspace/apps/chores/chores/${id}`);
       }
 
       case "to-draft-publish": {
@@ -385,7 +385,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           ref_id: form.publishEntityRefId,
         });
 
-        return redirect(`/app/workspace/apps/chores/${id}`);
+        return redirect(`/app/workspace/apps/chores/chores/${id}`);
       }
 
       default:
@@ -479,7 +479,7 @@ export default function Chore() {
       showArchiveAndRemoveButton
       inputsEnabled={inputsEnabled}
       entityArchived={loaderData.chore.archived}
-      returnLocation="/app/workspace/apps/chores"
+      returnLocation="/app/workspace/apps/chores/chores"
       publishable
       publishEntity={loaderData.publishEntity ?? undefined}
       accessable
@@ -631,7 +631,7 @@ export default function Chore() {
 }
 
 export const ErrorBoundary = makeLeafErrorBoundary(
-  "/app/workspace/apps/chores",
+  "/app/workspace/apps/chores/chores",
   ParamsSchema,
   {
     notFound: (params) => `Could not find chore #${params.id}!`,

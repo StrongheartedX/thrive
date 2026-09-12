@@ -83,7 +83,7 @@ export function TimeEventSourceLink(props: TimeEventSourceLinkProps) {
           variant="outlined"
           size="small"
           component={Link}
-          to={`/app/workspace/apps/chores/${refId}`}
+          to={`/app/workspace/apps/chores/chores/${refId}`}
         >
           Link
         </Button>

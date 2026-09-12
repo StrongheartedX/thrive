@@ -210,7 +210,7 @@ export async function action({ request }: ActionFunctionArgs) {
     switch (timePlanReason) {
       case "standard":
         return redirect(
-          `/app/workspace/apps/chores/${result.new_chore.ref_id}`,
+          `/app/workspace/apps/chores/chores/${result.new_chore.ref_id}`,
         );
 
       case "for-time-plan":
@@ -262,7 +262,7 @@ export default function NewChore() {
               `/app/workspace/apps/time-plans/${(loaderData.associatedTimePlan as TimePlan).ref_id}`,
               query,
             )
-          : "/app/workspace/apps/chores"
+          : "/app/workspace/apps/chores/chores"
       }
       inputsEnabled={inputsEnabled}
     >
@@ -456,7 +456,7 @@ export default function NewChore() {
 }
 
 export const ErrorBoundary = makeLeafErrorBoundary(
-  "/app/workspace/apps/chores",
+  "/app/workspace/apps/chores/chores",
   ParamsSchema,
   {
     error: () => `There was an error creating the chore! Please try again!`,

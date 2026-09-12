@@ -136,7 +136,7 @@ export function EntitySummaryLink({
       );
     case NamedEntityTag.CHORE:
       return (
-        <EntityLink to={`/app/workspace/apps/chores/${summary.ref_id}`}>
+        <EntityLink to={`/app/workspace/apps/chores/chores/${summary.ref_id}`}>
           <SlimChip label={"Chore"} color={"primary"} />
           {commonSequence}
         </EntityLink>

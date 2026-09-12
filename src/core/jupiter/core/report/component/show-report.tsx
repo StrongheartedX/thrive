@@ -415,7 +415,7 @@ export function ShowReport({
                           <TableRow key={`${period}-${pcb.ref_id}`}>
                             <SmallTableCell className="name-value">
                               <EntityLink
-                                to={`/app/workspace/apps/chores/${pcb.ref_id}`}
+                                to={`/app/workspace/apps/chores/chores/${pcb.ref_id}`}
                               >
                                 <EntityNameOneLineComponent name={pcb.name} />
                               </EntityLink>

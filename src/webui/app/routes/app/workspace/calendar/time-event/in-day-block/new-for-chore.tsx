@@ -131,7 +131,7 @@ export async function action({ request }: ActionFunctionArgs) {
           `/app/workspace/apps/time-plans/${query.timePlanRefId}/${query.timePlanActivityRefId}`,
         );
       case "standard":
-        return redirect(`/app/workspace/apps/chores/${query.choreRefId}`);
+        return redirect(`/app/workspace/apps/chores/chores/${query.choreRefId}`);
     }
   } catch (error) {
     return handleActionApiError(error);

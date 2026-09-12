@@ -161,7 +161,7 @@ export function ChorePropertiesEditor(props: ChorePropertiesEditorProps) {
                 ? [
                     NavSingle({
                       text: "Chore",
-                      link: `/app/workspace/apps/chores/${props.chore.ref_id}`,
+                      link: `/app/workspace/apps/chores/chores/${props.chore.ref_id}`,
                       icon: <LaunchIcon />,
                     }),
                   ]

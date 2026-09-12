@@ -2365,7 +2365,7 @@ export default function TimePlanActivity() {
                     entityId={`chore-${chore.ref_id}`}
                   >
                     <EntityLink
-                      to={`/app/workspace/apps/chores/${chore.ref_id}`}
+                      to={`/app/workspace/apps/chores/chores/${chore.ref_id}`}
                     >
                       <EntityNameComponent name={chore.name} />
                       <PeriodTag period={chore.gen_params.period} />

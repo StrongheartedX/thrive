@@ -67,7 +67,7 @@ export function InboxTasksNoNothingCard(props: InboxTasksNoNothingCardProps) {
             variant="contained"
             size="small"
             component={Link}
-            to="/app/workspace/apps/chores/new"
+            to="/app/workspace/apps/chores/chores/new"
           >
             New Chore
           </Button>

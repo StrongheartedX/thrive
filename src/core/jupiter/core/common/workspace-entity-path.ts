@@ -30,7 +30,7 @@ export function workspacePathForEntityTag(
     case NamedEntityTag.HABIT_STACK:
       return `/app/workspace/apps/habits/stacks/${refId}`;
     case NamedEntityTag.CHORE:
-      return `/app/workspace/apps/chores/${refId}`;
+      return `/app/workspace/apps/chores/chores/${refId}`;
     case NamedEntityTag.CHORE_STACK:
       return `/app/workspace/apps/chores/stacks/${refId}`;
     case NamedEntityTag.BIG_PLAN:

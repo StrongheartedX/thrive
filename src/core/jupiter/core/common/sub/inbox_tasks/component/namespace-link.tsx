@@ -84,7 +84,7 @@ export function InboxTaskNamespaceLink(props: InboxTaskNamespaceLinkProps) {
           variant="outlined"
           size="small"
           component={Link}
-          to={`/app/workspace/apps/chores/${props.inboxTaskResult.chore?.ref_id}`}
+          to={`/app/workspace/apps/chores/chores/${props.inboxTaskResult.chore?.ref_id}`}
           sx={{ flexGrow: 1 }}
         >
           {isBigScreen ? "Chore" : "C"}

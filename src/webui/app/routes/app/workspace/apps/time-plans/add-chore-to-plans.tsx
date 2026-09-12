@@ -103,7 +103,7 @@ export async function action({ request }: ActionFunctionArgs) {
           feasability: form.feasability,
         });
 
-        return redirect(`/app/workspace/apps/chores/${query.choreRefId}`);
+        return redirect(`/app/workspace/apps/chores/chores/${query.choreRefId}`);
       }
 
       default:
@@ -146,7 +146,7 @@ export default function AddChoreToPlans() {
     <LeafPanel
       key="add-chore-to-plans"
       fakeKey={`add-chore-to-plans/${searchParams.get("choreRefId")}`}
-      returnLocation={`/app/workspace/apps/chores/${searchParams.get("choreRefId")}`}
+      returnLocation={`/app/workspace/apps/chores/chores/${searchParams.get("choreRefId")}`}
       returnLocationDiscriminator="add-chore-to-plans"
       inputsEnabled={inputsEnabled}
       initialExpansionState={LeafPanelExpansionState.MEDIUM}
@@ -248,7 +248,7 @@ export default function AddChoreToPlans() {
 
 export const ErrorBoundary = makeLeafErrorBoundary(
   (params, searchParams) =>
-    `/app/workspace/apps/chores/${searchParams.get("choreRefId")}`,
+    `/app/workspace/apps/chores/chores/${searchParams.get("choreRefId")}`,
   ParamsSchema,
   {
     error: () =>

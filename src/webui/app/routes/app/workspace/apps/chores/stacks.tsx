@@ -15,13 +15,13 @@ import {
   EntityLink,
 } from "@jupiter/core/infra/component/entity-card";
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
-import { makeBranchErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
+import { makeTrunkErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { NestingAwareBlock } from "@jupiter/core/infra/component/layout/nesting-aware-block";
 import { NestedOutlet } from "@jupiter/core/infra/component/layout/nested-outlet";
-import { BranchPanel } from "@jupiter/core/infra/component/layout/branch-panel";
+import { TrunkPanel } from "@jupiter/core/infra/component/layout/trunk-panel";
 import {
   DisplayType,
-  useBranchNeedsToShowLeaf,
+  useTrunkNeedsToShowLeaf,
 } from "@jupiter/core/infra/component/use-nested-entities";
 import { TopLevelInfoContext } from "@jupiter/core/infra/top-level-context";
 import {
@@ -34,16 +34,13 @@ import { ContactTag } from "#/core/common/sub/contacts/component/contact-tag";
 import { LocationTag } from "#/core/common/sub/locations/component/location-tag";
 import { UserLightChip } from "#/core/users/components/user-light-chip";
 import { sortChoreStacksNaturally } from "@jupiter/core/apps/chores/root";
-import { z } from "zod";
 
 import { useLoaderDataSafeForAnimation } from "~/rendering/use-loader-data-for-animation";
 import { basicShouldRevalidate } from "~/rendering/standard-should-revalidate";
 import { getLoggedInApiClient } from "~/api-clients.server";
 
-const ParamsSchema = z.object({});
-
 export const handle = {
-  displayType: DisplayType.BRANCH,
+  displayType: DisplayType.TRUNK,
 };
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -66,7 +63,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = basicShouldRevalidate;
 export default function ChoreStacks() {
   const loaderData = useLoaderDataSafeForAnimation<typeof loader>();
   const topLevelInfo = useContext(TopLevelInfoContext);
-  const shouldShowALeaf = useBranchNeedsToShowLeaf();
+  const shouldShowALeaf = useTrunkNeedsToShowLeaf();
 
   const sortedStacks = sortChoreStacksNaturally(
     loaderData.entries.map((entry) => entry.chore_stack),
@@ -76,10 +73,10 @@ export default function ChoreStacks() {
   );
 
   return (
-    <BranchPanel
+    <TrunkPanel
       key="chores-stacks"
       createLocation="/app/workspace/apps/chores/stacks/new"
-      returnLocation="/app/workspace/apps/chores"
+      returnLocation="/app/workspace"
       actions={
         <SectionActions
           id="chore-stacks-actions"
@@ -89,7 +86,7 @@ export default function ChoreStacks() {
             NavSingle({
               id: "chores-all",
               text: "All chores",
-              link: "/app/workspace/apps/chores",
+              link: "/app/workspace/apps/chores/chores",
             }),
           ]}
         />
@@ -139,14 +136,10 @@ export default function ChoreStacks() {
       </NestingAwareBlock>
 
       <NestedOutlet />
-    </BranchPanel>
+    </TrunkPanel>
   );
 }
 
-export const ErrorBoundary = makeBranchErrorBoundary(
-  "/app/workspace/apps/chores",
-  ParamsSchema,
-  {
-    error: () => `There was an error loading chore stacks! Please try again!`,
-  },
-);
+export const ErrorBoundary = makeTrunkErrorBoundary("/app/workspace", {
+  error: () => `There was an error loading chore stacks! Please try again!`,
+});

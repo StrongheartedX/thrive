@@ -247,7 +247,7 @@ export default function LifePlanHistoryOfWork() {
                           {goalChores.map((c) => (
                             <DenseLinksItem key={`chore-${c.ref_id}`}>
                               <DenseSingleLineLink
-                                to={`/app/workspace/apps/chores/${c.ref_id}`}
+                                to={`/app/workspace/apps/chores/chores/${c.ref_id}`}
                               >
                                 <span style={{ flexShrink: 0 }}>
                                   <PeriodTag period={c.gen_params.period} />
@@ -370,7 +370,7 @@ export default function LifePlanHistoryOfWork() {
                             {noGoalChores.map((c) => (
                               <DenseLinksItem key={`chore-${c.ref_id}`}>
                                 <DenseSingleLineLink
-                                  to={`/app/workspace/apps/chores/${c.ref_id}`}
+                                  to={`/app/workspace/apps/chores/chores/${c.ref_id}`}
                                 >
                                   <span style={{ flexShrink: 0 }}>
                                     <PeriodTag period={c.gen_params.period} />

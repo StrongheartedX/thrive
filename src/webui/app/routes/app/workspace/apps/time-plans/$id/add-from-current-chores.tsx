@@ -428,7 +428,7 @@ export default function TimePlanAddFromCurrentChores() {
           });
         }}
       >
-        <EntityLink to={`/app/workspace/apps/chores/${chore.ref_id}`} block>
+        <EntityLink to={`/app/workspace/apps/chores/chores/${chore.ref_id}`} block>
           <Typography>{chore.name}</Typography>
           {entry.aspect && <AspectTag aspect={entry.aspect} />}
           {periodProgress && (

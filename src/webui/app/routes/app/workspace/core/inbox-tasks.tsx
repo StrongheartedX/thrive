@@ -1215,7 +1215,7 @@ function SwiftView(props: SwiftViewProps) {
     <InboxTasksNoTasksCard
       parent="chore"
       parentLabel="New Chore"
-      parentNewLocations="/app/workspace/apps/chores/new"
+      parentNewLocations="/app/workspace/apps/chores/chores/new"
     />
   );
   const noRestsCard = <InboxTasksNoTasksCard parent="inbox task" />;
