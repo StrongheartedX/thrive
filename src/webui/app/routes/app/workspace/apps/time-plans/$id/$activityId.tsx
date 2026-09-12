@@ -421,110 +421,110 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const apiClient = await getLoggedInApiClient(request);
   const { activityId } = parseParams(params, ParamsSchema);
 
-  const summaryResponse = await apiClient.application.getSummaries({
-    allow_archived: false,
-    include_workspace: true,
-    include_life_plan: true,
-    include_aspects: true,
-    include_chapters: true,
-    include_goals: true,
-    include_milestones: true,
-    include_big_plans: true,
-  });
-
   try {
-    const allTags = await apiClient.tags.tagFind({
+    const summaryPromise = apiClient.application.getSummaries({
+      allow_archived: false,
+      include_workspace: true,
+      include_life_plan: true,
+      include_aspects: true,
+      include_chapters: true,
+      include_goals: true,
+      include_milestones: true,
+      include_big_plans: true,
+    });
+    const resultPromise = apiClient.timePlans.timePlanActivityLoad({
+      ref_id: activityId,
+      allow_archived: true,
+    });
+    const tagsPromise = apiClient.tags.tagFind({
       allow_archived: false,
     });
-    const allContacts = await apiClient.contacts.contactFind({
+    const contactsPromise = apiClient.contacts.contactFind({
       allow_archived: false,
     });
-    const stacksResponse =
-      summaryResponse.workspace &&
-      isWorkspaceFeatureAvailable(
-        summaryResponse.workspace,
-        WorkspaceFeature.HABITS,
-      )
-        ? await apiClient.habits.habitStackFind({
+
+    const summaryResponse = await summaryPromise;
+    const workspace = summaryResponse.workspace;
+    const habitsAvailable =
+      workspace !== undefined &&
+      isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.HABITS);
+    const choresAvailable =
+      workspace !== undefined &&
+      isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.CHORES);
+    const emptyFind = { entries: [] };
+
+    const [
+      result,
+      allTags,
+      allContacts,
+      stacksResponse,
+      choreStacksResponse,
+      habitsResponse,
+      choresResponse,
+    ] = await Promise.all([
+      resultPromise,
+      tagsPromise,
+      contactsPromise,
+      habitsAvailable
+        ? apiClient.habits.habitStackFind({
             allow_archived: false,
             include_tags: false,
             include_notes: false,
             include_life_plan: false,
             include_habits: false,
           })
-        : { entries: [] };
-
-    const choreStacksResponse =
-      summaryResponse.workspace &&
-      isWorkspaceFeatureAvailable(
-        summaryResponse.workspace,
-        WorkspaceFeature.CHORES,
-      )
-        ? await apiClient.chores.choreStackFind({
+        : Promise.resolve(emptyFind),
+      choresAvailable
+        ? apiClient.chores.choreStackFind({
             allow_archived: false,
             include_tags: false,
             include_notes: false,
             include_life_plan: false,
             include_chores: false,
           })
-        : { entries: [] };
-
-    const result = await apiClient.timePlans.timePlanActivityLoad({
-      ref_id: activityId,
-      allow_archived: true,
-    });
-
-    const habitsResponse =
-      summaryResponse.workspace &&
-      isWorkspaceFeatureAvailable(
-        summaryResponse.workspace,
-        WorkspaceFeature.HABITS,
-      )
-        ? await apiClient.habits.habitFind({
+        : Promise.resolve(emptyFind),
+      habitsAvailable
+        ? apiClient.habits.habitFind({
             allow_archived: false,
             include_tags: false,
             include_notes: false,
             include_life_plan: false,
             include_inbox_tasks: false,
           })
-        : { entries: [] };
-
-    const choresResponse =
-      summaryResponse.workspace &&
-      isWorkspaceFeatureAvailable(
-        summaryResponse.workspace,
-        WorkspaceFeature.CHORES,
-      )
-        ? await apiClient.chores.choreFind({
+        : Promise.resolve(emptyFind),
+      choresAvailable
+        ? apiClient.chores.choreFind({
             allow_archived: false,
             include_tags: false,
             include_notes: false,
             include_life_plan: false,
             include_inbox_tasks: false,
           })
-        : { entries: [] };
+        : Promise.resolve(emptyFind),
+    ]);
 
     const stackMemberHabitRefIds =
       result.target_habit_stack_info?.habits.map((habit) => habit.ref_id) ?? [];
-    const stackInboxTasksResult =
-      stackMemberHabitRefIds.length > 0
-        ? await apiClient.inboxTasks.inboxTaskFind({
-            allow_archived: false,
-            filter_namespace: [HABIT],
-            filter_source_entity_ref_ids: stackMemberHabitRefIds,
-          })
-        : { entries: [] };
-
     const stackMemberChoreRefIds =
       result.target_chore_stack_info?.chores.map((chore) => chore.ref_id) ?? [];
-    const choreStackInboxTasksResult =
-      stackMemberChoreRefIds.length > 0
-        ? await apiClient.inboxTasks.inboxTaskFind({
-            allow_archived: false,
-            filter_namespace: [CHORE],
-            filter_source_entity_ref_ids: stackMemberChoreRefIds,
-          })
-        : { entries: [] };
+
+    const [stackInboxTasksResult, choreStackInboxTasksResult] =
+      await Promise.all([
+        stackMemberHabitRefIds.length > 0
+          ? apiClient.inboxTasks.inboxTaskFind({
+              allow_archived: false,
+              filter_namespace: [HABIT],
+              filter_source_entity_ref_ids: stackMemberHabitRefIds,
+            })
+          : Promise.resolve(emptyFind),
+        stackMemberChoreRefIds.length > 0
+          ? apiClient.inboxTasks.inboxTaskFind({
+              allow_archived: false,
+              filter_namespace: [CHORE],
+              filter_source_entity_ref_ids: stackMemberChoreRefIds,
+            })
+          : Promise.resolve(emptyFind),
+      ]);
 
     return json({
       rootAspect: summaryResponse.root_aspect as AspectSummary,

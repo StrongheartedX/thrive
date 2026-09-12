@@ -225,21 +225,18 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const apiClient = await getLoggedInApiClient(request);
   const { id } = parseParams(params, ParamsSchema);
 
-  const summaryResponse = await apiClient.application.getSummaries({
-    include_workspace: true,
-    include_life_plan: true,
-    include_aspects: true,
-    include_chapters: true,
-    include_goals: true,
-    include_milestones: true,
-  });
-
   try {
-    const workspace = summaryResponse.workspace!;
-
-    // These two are independent of each other - fetch them concurrently
-    // instead of paying for two sequential round trips.
-    const [result, allTags] = await Promise.all([
+    // Summaries, the time plan, and tags do not depend on each other — start
+    // them together instead of waiting for summaries before the heavy load.
+    const [summaryResponse, result, allTags] = await Promise.all([
+      apiClient.application.getSummaries({
+        include_workspace: true,
+        include_life_plan: true,
+        include_aspects: true,
+        include_chapters: true,
+        include_goals: true,
+        include_milestones: true,
+      }),
       apiClient.timePlans.timePlanLoad({
         ref_id: id,
         allow_archived: true,
@@ -252,8 +249,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       }),
     ]);
 
-    // Both depend on the time plan's right_now/period (from the load above),
-    // but not on each other - fetch them concurrently too.
+    const workspace = summaryResponse.workspace!;
+
+    // Journal and calendar need the time plan's dates and workspace features,
+    // but not each other.
     const [journalResult, timeEventResult] = await Promise.all([
       isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.JOURNALS)
         ? apiClient.journals.journalLoadForDateAndPeriod({

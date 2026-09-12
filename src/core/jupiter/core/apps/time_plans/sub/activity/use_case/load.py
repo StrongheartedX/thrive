@@ -1,5 +1,8 @@
 """Use case for loading a time plan activity activity."""
 
+import asyncio
+from typing import cast
+
 from jupiter.core.app import AppCore
 from jupiter.core.apps.big_plans.root import BigPlan
 from jupiter.core.apps.big_plans.service.load import (
@@ -55,6 +58,23 @@ from jupiter.framework.use_case_io import (
     use_case_args,
     use_case_result,
 )
+
+_TargetBundle = tuple[
+    InboxTask | None,
+    InboxTaskLoadResult | None,
+    BigPlan | None,
+    BigPlanLoadResult | None,
+    TodoTask | None,
+    TodoTaskLoadResult | None,
+    Habit | None,
+    HabitLoadResult | None,
+    HabitStack | None,
+    HabitStackLoadResult | None,
+    Chore | None,
+    ChoreLoadResult | None,
+    ChoreStack | None,
+    ChoreStackLoadResult | None,
+]
 
 
 @use_case_args
@@ -114,124 +134,164 @@ class TimePlanActivityLoadUseCase(
             allow_archived=allow_archived,
         )
 
-        target_inbox_task = None
-        target_inbox_task_info = None
-        target_big_plan = None
-        target_big_plan_info = None
-        target_todo_task = None
-        target_todo_task_info = None
-        target_habit = None
-        target_habit_info = None
-        target_habit_stack = None
-        target_habit_stack_info = None
-        target_chore = None
-        target_chore_info = None
-        target_chore_stack = None
-        target_chore_stack_info = None
-        # Activity targets are loadable whenever the activity is — access to the
-        # time plan / activity does not require separate ACL on the target.
-        if time_plan_activity.is_target_inbox_task:
-            target_inbox_task = await uow.get_for(InboxTask).load_by_id(
-                time_plan_activity.target.ref_id,
-                allow_archived=allow_archived,
-            )
-            target_inbox_task_info = await InboxTaskLoadService().do_it(
-                uow,
+        activity_owner_link = EntityLink.std(
+            NamedEntityTag.TIME_PLAN_ACTIVITY.value,
+            time_plan_activity.ref_id,
+        )
+
+        async def load_target() -> _TargetBundle:
+            target_inbox_task = None
+            target_inbox_task_info = None
+            target_big_plan = None
+            target_big_plan_info = None
+            target_todo_task = None
+            target_todo_task_info = None
+            target_habit = None
+            target_habit_info = None
+            target_habit_stack = None
+            target_habit_stack_info = None
+            target_chore = None
+            target_chore_info = None
+            target_chore_stack = None
+            target_chore_stack_info = None
+            # Activity targets are loadable whenever the activity is — access to the
+            # time plan / activity does not require separate ACL on the target.
+            if time_plan_activity.is_target_inbox_task:
+                target_inbox_task = await uow.get_for(InboxTask).load_by_id(
+                    time_plan_activity.target.ref_id,
+                    allow_archived=allow_archived,
+                )
+                target_inbox_task_info = await InboxTaskLoadService().do_it(
+                    uow,
+                    target_inbox_task,
+                    user_ref_id=context.user.ref_id,
+                    allow_archived=allow_archived,
+                )
+            elif time_plan_activity.is_target_big_plan:
+                if workspace.is_feature_available(WorkspaceFeature.BIG_PLANS):
+                    target_big_plan = await uow.get_for(BigPlan).load_by_id(
+                        time_plan_activity.target.ref_id,
+                        allow_archived=allow_archived,
+                    )
+                    target_big_plan_info = await BigPlanLoadService().do_it(
+                        uow,
+                        workspace.ref_id,
+                        target_big_plan,
+                        user_ref_id=context.user.ref_id,
+                        allow_archived=allow_archived,
+                    )
+            elif time_plan_activity.is_target_todo_task:
+                if workspace.is_feature_available(WorkspaceFeature.TODO_TASK):
+                    target_todo_task = await uow.get_for(TodoTask).load_by_id(
+                        time_plan_activity.target.ref_id,
+                        allow_archived=allow_archived,
+                    )
+                    target_todo_task_info = await TodoTaskLoadService().do_it(
+                        uow,
+                        workspace.ref_id,
+                        target_todo_task,
+                        user_ref_id=context.user.ref_id,
+                        allow_archived=allow_archived,
+                    )
+            elif time_plan_activity.is_target_habit:
+                if workspace.is_feature_available(WorkspaceFeature.HABITS):
+                    target_habit = await uow.get_for(Habit).load_by_id(
+                        time_plan_activity.target.ref_id,
+                        allow_archived=allow_archived,
+                    )
+                    target_habit_info = await HabitLoadService(
+                        self._time_provider
+                    ).do_it(
+                        uow,
+                        workspace.ref_id,
+                        target_habit,
+                        user_ref_id=context.user.ref_id,
+                        allow_archived=allow_archived,
+                    )
+            elif time_plan_activity.is_target_habit_stack:
+                if workspace.is_feature_available(WorkspaceFeature.HABITS):
+                    target_habit_stack = await uow.get_for(HabitStack).load_by_id(
+                        time_plan_activity.target.ref_id,
+                        allow_archived=allow_archived,
+                    )
+                    target_habit_stack_info = await HabitStackLoadService().do_it(
+                        uow,
+                        target_habit_stack,
+                        user_ref_id=context.user.ref_id,
+                        allow_archived=allow_archived,
+                    )
+            elif time_plan_activity.is_target_chore:
+                if workspace.is_feature_available(WorkspaceFeature.CHORES):
+                    target_chore = await uow.get_for(Chore).load_by_id(
+                        time_plan_activity.target.ref_id,
+                        allow_archived=allow_archived,
+                    )
+                    target_chore_info = await ChoreLoadService().do_it(
+                        uow,
+                        workspace.ref_id,
+                        target_chore,
+                        user_ref_id=context.user.ref_id,
+                        allow_archived=allow_archived,
+                    )
+            elif time_plan_activity.is_target_chore_stack:
+                if workspace.is_feature_available(WorkspaceFeature.CHORES):
+                    target_chore_stack = await uow.get_for(ChoreStack).load_by_id(
+                        time_plan_activity.target.ref_id,
+                        allow_archived=allow_archived,
+                    )
+                    target_chore_stack_info = await ChoreStackLoadService().do_it(
+                        uow,
+                        target_chore_stack,
+                        user_ref_id=context.user.ref_id,
+                        allow_archived=allow_archived,
+                    )
+            return (
                 target_inbox_task,
-                user_ref_id=context.user.ref_id,
-                allow_archived=allow_archived,
+                target_inbox_task_info,
+                target_big_plan,
+                target_big_plan_info,
+                target_todo_task,
+                target_todo_task_info,
+                target_habit,
+                target_habit_info,
+                target_habit_stack,
+                target_habit_stack_info,
+                target_chore,
+                target_chore_info,
+                target_chore_stack,
+                target_chore_stack_info,
             )
-        elif time_plan_activity.is_target_big_plan:
-            if workspace.is_feature_available(WorkspaceFeature.BIG_PLANS):
-                target_big_plan = await uow.get_for(BigPlan).load_by_id(
-                    time_plan_activity.target.ref_id,
-                    allow_archived=allow_archived,
-                )
-                target_big_plan_info = await BigPlanLoadService().do_it(
-                    uow,
-                    workspace.ref_id,
-                    target_big_plan,
-                    user_ref_id=context.user.ref_id,
-                    allow_archived=allow_archived,
-                )
-        elif time_plan_activity.is_target_todo_task:
-            if workspace.is_feature_available(WorkspaceFeature.TODO_TASK):
-                target_todo_task = await uow.get_for(TodoTask).load_by_id(
-                    time_plan_activity.target.ref_id,
-                    allow_archived=allow_archived,
-                )
-                target_todo_task_info = await TodoTaskLoadService().do_it(
-                    uow,
-                    workspace.ref_id,
-                    target_todo_task,
-                    user_ref_id=context.user.ref_id,
-                    allow_archived=allow_archived,
-                )
-        elif time_plan_activity.is_target_habit:
-            if workspace.is_feature_available(WorkspaceFeature.HABITS):
-                target_habit = await uow.get_for(Habit).load_by_id(
-                    time_plan_activity.target.ref_id,
-                    allow_archived=allow_archived,
-                )
-                target_habit_info = await HabitLoadService(self._time_provider).do_it(
-                    uow,
-                    workspace.ref_id,
-                    target_habit,
-                    user_ref_id=context.user.ref_id,
-                    allow_archived=allow_archived,
-                )
-        elif time_plan_activity.is_target_habit_stack:
-            if workspace.is_feature_available(WorkspaceFeature.HABITS):
-                target_habit_stack = await uow.get_for(HabitStack).load_by_id(
-                    time_plan_activity.target.ref_id,
-                    allow_archived=allow_archived,
-                )
-                target_habit_stack_info = await HabitStackLoadService().do_it(
-                    uow,
-                    target_habit_stack,
-                    user_ref_id=context.user.ref_id,
-                    allow_archived=allow_archived,
-                )
-        elif time_plan_activity.is_target_chore:
-            if workspace.is_feature_available(WorkspaceFeature.CHORES):
-                target_chore = await uow.get_for(Chore).load_by_id(
-                    time_plan_activity.target.ref_id,
-                    allow_archived=allow_archived,
-                )
-                target_chore_info = await ChoreLoadService().do_it(
-                    uow,
-                    workspace.ref_id,
-                    target_chore,
-                    user_ref_id=context.user.ref_id,
-                    allow_archived=allow_archived,
-                )
-        elif time_plan_activity.is_target_chore_stack:
-            if workspace.is_feature_available(WorkspaceFeature.CHORES):
-                target_chore_stack = await uow.get_for(ChoreStack).load_by_id(
-                    time_plan_activity.target.ref_id,
-                    allow_archived=allow_archived,
-                )
-                target_chore_stack_info = await ChoreStackLoadService().do_it(
-                    uow,
-                    target_chore_stack,
-                    user_ref_id=context.user.ref_id,
-                    allow_archived=allow_archived,
-                )
 
-        note = await uow.get(NoteRepository).load_optional_for_owner(
-            EntityLink.std(
-                NamedEntityTag.TIME_PLAN_ACTIVITY.value,
-                time_plan_activity.ref_id,
-            ),
-            allow_archived=allow_archived,
-        )
-
-        time_event_blocks = await uow.get_for(TimeEventInDayBlock).find_all_generic(
-            allow_archived=False,
-            owner=EntityLink.std(
-                NamedEntityTag.TIME_PLAN_ACTIVITY.value, time_plan_activity.ref_id
+        note, time_event_blocks, target_bundle = cast(
+            tuple[Note | None, list[TimeEventInDayBlock], _TargetBundle],
+            await asyncio.gather(
+                uow.get(NoteRepository).load_optional_for_owner(
+                    activity_owner_link,
+                    allow_archived=allow_archived,
+                ),
+                uow.get_for(TimeEventInDayBlock).find_all_generic(
+                    allow_archived=False,
+                    owner=activity_owner_link,
+                ),
+                load_target(),
             ),
         )
+        (
+            target_inbox_task,
+            target_inbox_task_info,
+            target_big_plan,
+            target_big_plan_info,
+            target_todo_task,
+            target_todo_task_info,
+            target_habit,
+            target_habit_info,
+            target_habit_stack,
+            target_habit_stack_info,
+            target_chore,
+            target_chore_info,
+            target_chore_stack,
+            target_chore_stack_info,
+        ) = target_bundle
 
         return TimePlanActivityLoadResult(
             time_plan_activity=time_plan_activity,

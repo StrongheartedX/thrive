@@ -1,5 +1,6 @@
 """Shared service for loading a time plan and its dependent entities."""
 
+import asyncio
 from collections import defaultdict
 from typing import cast
 
@@ -117,18 +118,225 @@ class TimePlanLoadService:
         time_plan = await crown_entity_reader.load_entity(
             TimePlan, time_plan.ref_id, allow_archived=allow_archived
         )
-        # Activities hang off the time plan; do not ACL-filter them separately.
-        activities = list(
-            await uow.get_for(TimePlanActivity).find_all(
-                parent_ref_id=time_plan.ref_id,
+        time_plan_link = EntityLink.std(
+            NamedEntityTag.TIME_PLAN.value, time_plan.ref_id
+        )
+        schedule = schedules.get_schedule(
+            period=time_plan.period,
+            name=time_plan.name,
+            right_now=time_plan.right_now.to_timestamp_at_end_of_day(),
+        )
+
+        async def load_activities() -> list[TimePlanActivity]:
+            # Activities hang off the time plan; do not ACL-filter them separately.
+            return list(
+                await uow.get_for(TimePlanActivity).find_all(
+                    parent_ref_id=time_plan.ref_id,
+                    allow_archived=False,
+                )
+            )
+
+        async def load_note() -> Note:
+            notes = await uow.get_for(Note).find_all_generic(
+                parent_ref_id=None,
+                allow_archived=allow_archived,
+                owner=time_plan_link,
+            )
+            if not notes:
+                raise EntityNotFoundError(
+                    f"Could not find note for time plan {time_plan.ref_id}"
+                )
+            return notes[0]
+
+        async def load_tags() -> list[Tag]:
+            tag_link = await uow.get(TagLinkRepository).load_optional_for_owner(
+                owner=time_plan_link,
+            )
+            if tag_link is None:
+                return []
+            return list(
+                await uow.get(TagRepository).find_all_generic(
+                    allow_archived=False,
+                    ref_id=tag_link.ref_ids,
+                )
+            )
+
+        async def load_chapters() -> list[Chapter]:
+            if not workspace.is_feature_available(WorkspaceFeature.LIFE_PLAN):
+                return []
+            chapter_links = await uow.get_for_record(TimePlanChapterLink).find_all(
+                time_plan.ref_id
+            )
+            chapter_ref_ids = list({link.chapter_ref_id for link in chapter_links})
+            if not chapter_ref_ids:
+                return []
+            return list(
+                await uow.get_for(Chapter).find_all_generic(
+                    allow_archived=True,
+                    ref_id=chapter_ref_ids,
+                )
+            )
+
+        async def load_aspects() -> list[Aspect]:
+            if not workspace.is_feature_available(WorkspaceFeature.LIFE_PLAN):
+                return []
+            aspect_links = await uow.get_for_record(TimePlanAspectLink).find_all(
+                time_plan.ref_id
+            )
+            aspect_ref_ids = list({link.aspect_ref_id for link in aspect_links})
+            if not aspect_ref_ids:
+                return []
+            return list(
+                await uow.get_for(Aspect).find_all_generic(
+                    allow_archived=True,
+                    ref_id=aspect_ref_ids,
+                )
+            )
+
+        async def load_goals() -> list[Goal]:
+            if not workspace.is_feature_available(WorkspaceFeature.LIFE_PLAN):
+                return []
+            goal_links = await uow.get_for_record(TimePlanGoalLink).find_all(
+                time_plan.ref_id
+            )
+            goal_ref_ids = list({link.goal_ref_id for link in goal_links})
+            if not goal_ref_ids:
+                return []
+            return list(
+                await uow.get_for(Goal).find_all_generic(
+                    allow_archived=True,
+                    ref_id=goal_ref_ids,
+                )
+            )
+
+        async def load_big_plan_collection() -> BigPlanCollection | None:
+            if not workspace.is_feature_available(WorkspaceFeature.BIG_PLANS):
+                return None
+            return await uow.get_for(BigPlanCollection).load_by_parent(workspace.ref_id)
+
+        async def load_sub_period_time_plans() -> list[TimePlan] | None:
+            if not include_other_time_plans:
+                return None
+            return await crown_entity_reader.retain_accessible_entities(
+                TimePlan,
+                await uow.get(TimePlanRepository).find_all_in_range(
+                    parent_ref_id=time_plan.time_plan_domain.ref_id,
+                    allow_archived=False,
+                    filter_periods=time_plan.period.all_smaller_periods,
+                    filter_start_date=schedule.first_day,
+                    filter_end_date=schedule.end_day,
+                ),
                 allow_archived=False,
             )
+
+        async def load_higher_time_plan() -> TimePlan | None:
+            if not include_other_time_plans:
+                return None
+            candidate = await uow.get(TimePlanRepository).find_higher(
+                parent_ref_id=time_plan.time_plan_domain.ref_id,
+                allow_archived=False,
+                period=time_plan.period,
+                right_now=time_plan.right_now,
+            )
+            if candidate is None:
+                return None
+            accessible = await crown_entity_reader.load_all_entities(
+                TimePlan,
+                [candidate.ref_id],
+                allow_archived=False,
+            )
+            return accessible[0] if len(accessible) > 0 else None
+
+        async def load_previous_time_plan() -> TimePlan | None:
+            if not include_other_time_plans:
+                return None
+            candidate = await uow.get(TimePlanRepository).find_previous(
+                parent_ref_id=time_plan.time_plan_domain.ref_id,
+                allow_archived=False,
+                period=time_plan.period,
+                right_now=time_plan.right_now,
+            )
+            if candidate is None:
+                return None
+            accessible = await crown_entity_reader.load_all_entities(
+                TimePlan,
+                [candidate.ref_id],
+                allow_archived=False,
+            )
+            return accessible[0] if len(accessible) > 0 else None
+
+        async def load_publish_entity() -> PublishEntity | None:
+            if not include_publish_entity:
+                return None
+            return await uow.get(PublishEntityRepository).load_optional_for_owner(
+                time_plan_link,
+                allow_archived=allow_archived,
+            )
+
+        async def load_access_status() -> AccessStatus | None:
+            if user_ref_id is None:
+                return None
+            return await GetAccessLevelForEntityService().do_it(
+                uow, time_plan_link, user_ref_id
+            )
+
+        # Independent of each other — keyed only by the time plan / workspace.
+        (
+            activities,
+            note,
+            tags,
+            chapters,
+            aspects,
+            goals,
+            inbox_task_collection,
+            big_plan_collection,
+            sub_period_time_plans,
+            higher_time_plan,
+            previous_time_plan,
+            publish_entity,
+            owner,
+            access_status,
+        ) = cast(
+            tuple[
+                list[TimePlanActivity],
+                Note,
+                list[Tag],
+                list[Chapter],
+                list[Aspect],
+                list[Goal],
+                InboxTaskCollection,
+                BigPlanCollection | None,
+                list[TimePlan] | None,
+                TimePlan | None,
+                TimePlan | None,
+                PublishEntity | None,
+                UserLight,
+                AccessStatus | None,
+            ],
+            await asyncio.gather(
+                load_activities(),
+                load_note(),
+                load_tags(),
+                load_chapters(),
+                load_aspects(),
+                load_goals(),
+                uow.get_for(InboxTaskCollection).load_by_parent(workspace.ref_id),
+                load_big_plan_collection(),
+                load_sub_period_time_plans(),
+                load_higher_time_plan(),
+                load_previous_time_plan(),
+                load_publish_entity(),
+                LoadUserThatOwnsEntityService().do_it(uow, time_plan_link),
+                load_access_status(),
+            ),
         )
-        activity_time_event_blocks: list[TimeEventInDayBlock] = []
-        if activities and workspace.is_feature_available(WorkspaceFeature.SCHEDULE):
-            activity_time_event_blocks = await uow.get(
-                TimeEventInDayBlockRepository
-            ).find_for_owner(
+
+        async def load_activity_time_event_blocks() -> list[TimeEventInDayBlock]:
+            if not activities or not workspace.is_feature_available(
+                WorkspaceFeature.SCHEDULE
+            ):
+                return []
+            return await uow.get(TimeEventInDayBlockRepository).find_for_owner(
                 owner=[
                     EntityLink.std(
                         NamedEntityTag.TIME_PLAN_ACTIVITY.value, activity.ref_id
@@ -137,182 +345,200 @@ class TimePlanLoadService:
                 ],
                 allow_archived=False,
             )
-        notes = await uow.get_for(Note).find_all_generic(
-            parent_ref_id=None,
-            allow_archived=allow_archived,
-            owner=EntityLink.std(NamedEntityTag.TIME_PLAN.value, time_plan.ref_id),
-        )
-        if not notes:
-            raise EntityNotFoundError(
-                f"Could not find note for time plan {time_plan.ref_id}"
-            )
-        note = notes[0]
 
-        tag_link = await uow.get(TagLinkRepository).load_optional_for_owner(
-            owner=EntityLink.std(NamedEntityTag.TIME_PLAN.value, time_plan.ref_id),
-        )
-        if tag_link is not None:
-            tags = await uow.get(TagRepository).find_all_generic(
-                allow_archived=False,
-                ref_id=tag_link.ref_ids,
-            )
-        else:
-            tags = []
-
-        schedule = schedules.get_schedule(
-            period=time_plan.period,
-            name=time_plan.name,
-            right_now=time_plan.right_now.to_timestamp_at_end_of_day(),
-        )
-
-        chapters: list[Chapter] = []
-        aspects: list[Aspect] = []
-        goals: list[Goal] = []
-        if workspace.is_feature_available(WorkspaceFeature.LIFE_PLAN):
-            chapter_links = await uow.get_for_record(TimePlanChapterLink).find_all(
-                time_plan.ref_id
-            )
-            aspect_links = await uow.get_for_record(TimePlanAspectLink).find_all(
-                time_plan.ref_id
-            )
-            goal_links = await uow.get_for_record(TimePlanGoalLink).find_all(
-                time_plan.ref_id
-            )
-
-            chapter_ref_ids = list({link.chapter_ref_id for link in chapter_links})
-            aspect_ref_ids = list({link.aspect_ref_id for link in aspect_links})
-            goal_ref_ids = list({link.goal_ref_id for link in goal_links})
-
-            if chapter_ref_ids:
-                chapters = await uow.get_for(Chapter).find_all_generic(
-                    allow_archived=True,
-                    ref_id=chapter_ref_ids,
-                )
-            if aspect_ref_ids:
-                aspects = await uow.get_for(Aspect).find_all_generic(
-                    allow_archived=True,
-                    ref_id=aspect_ref_ids,
-                )
-            if goal_ref_ids:
-                goals = await uow.get_for(Goal).find_all_generic(
-                    allow_archived=True,
-                    ref_id=goal_ref_ids,
-                )
-
-        target_inbox_tasks = None
-        target_todo_tasks = None
-        target_habits = None
-        target_habit_stacks = None
-        target_chores = None
-        target_chore_stacks = None
-        inbox_task_collection = await uow.get_for(InboxTaskCollection).load_by_parent(
-            workspace.ref_id
-        )
-        if include_targets:
+        async def load_target_inbox_tasks() -> list[InboxTask] | None:
+            if not include_targets:
+                return None
             target_inbox_task_ref_ids = list(
                 {a.target.ref_id for a in activities if a.is_target_inbox_task}
             )
-            target_inbox_tasks = await uow.get_for(InboxTask).find_all_generic(
-                allow_archived=True,
-                ref_id=target_inbox_task_ref_ids,
+            return list(
+                await uow.get_for(InboxTask).find_all_generic(
+                    allow_archived=True,
+                    ref_id=target_inbox_task_ref_ids,
+                )
             )
 
-            if workspace.is_feature_available(WorkspaceFeature.TODO_TASK):
-                target_todo_task_ref_ids = list(
-                    {a.target.ref_id for a in activities if a.is_target_todo_task}
+        async def load_target_todo_tasks() -> list[TodoTask] | None:
+            if not include_targets or not workspace.is_feature_available(
+                WorkspaceFeature.TODO_TASK
+            ):
+                return None
+            target_ref_ids = list(
+                {a.target.ref_id for a in activities if a.is_target_todo_task}
+            )
+            if len(target_ref_ids) == 0:
+                return []
+            return list(
+                await uow.get_for(TodoTask).find_all_generic(
+                    parent_ref_id=None,
+                    allow_archived=True,
+                    ref_id=target_ref_ids,
                 )
-                if len(target_todo_task_ref_ids) > 0:
-                    target_todo_tasks = await uow.get_for(TodoTask).find_all_generic(
-                        parent_ref_id=None,
-                        allow_archived=True,
-                        ref_id=target_todo_task_ref_ids,
-                    )
-                    todo_owned_inbox_tasks = await uow.get_for(
-                        InboxTask
-                    ).find_all_generic(
-                        parent_ref_id=None,
-                        allow_archived=True,
-                        owner=[
-                            EntityLink.std(NamedEntityTag.TODO_TASK.value, todo.ref_id)
-                            for todo in target_todo_tasks
-                        ],
-                    )
-                    merged_target_inbox_tasks = list(target_inbox_tasks or [])
-                    seen_inbox_task_ref_ids = {
-                        it.ref_id for it in merged_target_inbox_tasks
-                    }
-                    for inbox_task in todo_owned_inbox_tasks:
-                        if inbox_task.ref_id in seen_inbox_task_ref_ids:
-                            continue
-                        seen_inbox_task_ref_ids.add(inbox_task.ref_id)
-                        merged_target_inbox_tasks.append(inbox_task)
-                    target_inbox_tasks = merged_target_inbox_tasks
-                else:
-                    target_todo_tasks = []
+            )
 
-            # Don't load every historical inbox task for habit/chore owners —
-            # only tasks that are themselves activities belong in the result.
-            if workspace.is_feature_available(WorkspaceFeature.HABITS):
-                target_habit_ref_ids = list(
-                    {a.target.ref_id for a in activities if a.is_target_habit}
+        async def load_target_habits() -> list[Habit] | None:
+            if not include_targets or not workspace.is_feature_available(
+                WorkspaceFeature.HABITS
+            ):
+                return None
+            target_ref_ids = list(
+                {a.target.ref_id for a in activities if a.is_target_habit}
+            )
+            if len(target_ref_ids) == 0:
+                return []
+            return list(
+                await uow.get_for(Habit).find_all_generic(
+                    parent_ref_id=None,
+                    allow_archived=True,
+                    ref_id=target_ref_ids,
                 )
-                if len(target_habit_ref_ids) > 0:
-                    target_habits = await uow.get_for(Habit).find_all_generic(
-                        parent_ref_id=None,
-                        allow_archived=True,
-                        ref_id=target_habit_ref_ids,
-                    )
-                else:
-                    target_habits = []
+            )
 
-            if workspace.is_feature_available(WorkspaceFeature.HABITS):
-                target_habit_stack_ref_ids = list(
-                    {a.target.ref_id for a in activities if a.is_target_habit_stack}
+        async def load_target_habit_stacks() -> list[HabitStack] | None:
+            if not include_targets or not workspace.is_feature_available(
+                WorkspaceFeature.HABITS
+            ):
+                return None
+            target_ref_ids = list(
+                {a.target.ref_id for a in activities if a.is_target_habit_stack}
+            )
+            if len(target_ref_ids) == 0:
+                return []
+            return list(
+                await uow.get_for(HabitStack).find_all_generic(
+                    parent_ref_id=None,
+                    allow_archived=True,
+                    ref_id=target_ref_ids,
                 )
-                if len(target_habit_stack_ref_ids) > 0:
-                    target_habit_stacks = await uow.get_for(
-                        HabitStack
-                    ).find_all_generic(
-                        parent_ref_id=None,
-                        allow_archived=True,
-                        ref_id=target_habit_stack_ref_ids,
-                    )
-                else:
-                    target_habit_stacks = []
+            )
 
-            if workspace.is_feature_available(WorkspaceFeature.CHORES):
-                target_chore_ref_ids = list(
-                    {a.target.ref_id for a in activities if a.is_target_chore}
+        async def load_target_chores() -> list[Chore] | None:
+            if not include_targets or not workspace.is_feature_available(
+                WorkspaceFeature.CHORES
+            ):
+                return None
+            target_ref_ids = list(
+                {a.target.ref_id for a in activities if a.is_target_chore}
+            )
+            if len(target_ref_ids) == 0:
+                return []
+            return list(
+                await uow.get_for(Chore).find_all_generic(
+                    parent_ref_id=None,
+                    allow_archived=True,
+                    ref_id=target_ref_ids,
                 )
-                if len(target_chore_ref_ids) > 0:
-                    target_chores = await uow.get_for(Chore).find_all_generic(
-                        parent_ref_id=None,
-                        allow_archived=True,
-                        ref_id=target_chore_ref_ids,
-                    )
-                else:
-                    target_chores = []
+            )
 
-            if workspace.is_feature_available(WorkspaceFeature.CHORES):
-                target_chore_stack_ref_ids = list(
-                    {a.target.ref_id for a in activities if a.is_target_chore_stack}
+        async def load_target_chore_stacks() -> list[ChoreStack] | None:
+            if not include_targets or not workspace.is_feature_available(
+                WorkspaceFeature.CHORES
+            ):
+                return None
+            target_ref_ids = list(
+                {a.target.ref_id for a in activities if a.is_target_chore_stack}
+            )
+            if len(target_ref_ids) == 0:
+                return []
+            return list(
+                await uow.get_for(ChoreStack).find_all_generic(
+                    parent_ref_id=None,
+                    allow_archived=True,
+                    ref_id=target_ref_ids,
                 )
-                if len(target_chore_stack_ref_ids) > 0:
-                    target_chore_stacks = await uow.get_for(
-                        ChoreStack
-                    ).find_all_generic(
-                        parent_ref_id=None,
-                        allow_archived=True,
-                        ref_id=target_chore_stack_ref_ids,
-                    )
-                else:
-                    target_chore_stacks = []
+            )
 
-        completed_nontarget_inbox_tasks = None
-        if include_completed_nontarget and target_inbox_tasks is not None:
-            completed_nontarget_inbox_tasks = await uow.get(
-                InboxTaskRepository
-            ).find_completed_in_range(
+        # Don't load every historical inbox task for habit/chore owners —
+        # only tasks that are themselves activities belong in the result.
+        (
+            activity_time_event_blocks,
+            target_inbox_tasks,
+            target_todo_tasks,
+            target_habits,
+            target_habit_stacks,
+            target_chores,
+            target_chore_stacks,
+        ) = cast(
+            tuple[
+                list[TimeEventInDayBlock],
+                list[InboxTask] | None,
+                list[TodoTask] | None,
+                list[Habit] | None,
+                list[HabitStack] | None,
+                list[Chore] | None,
+                list[ChoreStack] | None,
+            ],
+            await asyncio.gather(
+                load_activity_time_event_blocks(),
+                load_target_inbox_tasks(),
+                load_target_todo_tasks(),
+                load_target_habits(),
+                load_target_habit_stacks(),
+                load_target_chores(),
+                load_target_chore_stacks(),
+            ),
+        )
+
+        async def load_todo_owned_inbox_tasks() -> list[InboxTask]:
+            if not target_todo_tasks:
+                return []
+            return list(
+                await uow.get_for(InboxTask).find_all_generic(
+                    parent_ref_id=None,
+                    allow_archived=True,
+                    owner=[
+                        EntityLink.std(NamedEntityTag.TODO_TASK.value, todo.ref_id)
+                        for todo in target_todo_tasks
+                    ],
+                )
+            )
+
+        async def load_target_big_plans() -> list[BigPlan] | None:
+            if not include_targets or not workspace.is_feature_available(
+                WorkspaceFeature.BIG_PLANS
+            ):
+                return None
+            target_big_plan_ref_ids = {
+                a.target.ref_id for a in activities if a.is_target_big_plan
+            }
+            # Also load parent big plans of target inbox tasks — the UI
+            # inherits feasability from those parents.
+            if target_inbox_tasks is not None:
+                target_big_plan_ref_ids.update(
+                    it.owner.ref_id
+                    for it in target_inbox_tasks
+                    if it.owner.the_type == NamedEntityTag.BIG_PLAN.value
+                )
+            return list(
+                await uow.get_for(BigPlan).find_all_generic(
+                    parent_ref_id=None,
+                    allow_archived=True,
+                    ref_id=list(target_big_plan_ref_ids),
+                )
+            )
+
+        todo_owned_inbox_tasks, target_big_plans = cast(
+            tuple[list[InboxTask], list[BigPlan] | None],
+            await asyncio.gather(
+                load_todo_owned_inbox_tasks(),
+                load_target_big_plans(),
+            ),
+        )
+        if target_inbox_tasks is not None and todo_owned_inbox_tasks:
+            merged_target_inbox_tasks = list(target_inbox_tasks)
+            seen_inbox_task_ref_ids = {it.ref_id for it in merged_target_inbox_tasks}
+            for inbox_task in todo_owned_inbox_tasks:
+                if inbox_task.ref_id in seen_inbox_task_ref_ids:
+                    continue
+                seen_inbox_task_ref_ids.add(inbox_task.ref_id)
+                merged_target_inbox_tasks.append(inbox_task)
+            target_inbox_tasks = merged_target_inbox_tasks
+
+        async def load_completed_nontarget_inbox_tasks() -> list[InboxTask] | None:
+            if not include_completed_nontarget or target_inbox_tasks is None:
+                return None
+            return await uow.get(InboxTaskRepository).find_completed_in_range(
                 parent_ref_id=inbox_task_collection.ref_id,
                 allow_archived=True,
                 filter_start_completed_date=schedule.first_day,
@@ -324,66 +550,49 @@ class TimePlanLoadService:
                 filter_exclude_ref_ids=[it.ref_id for it in target_inbox_tasks],
             )
 
-        target_big_plans = None
-        completed_nontarget_big_plans = None
-        big_plan_stats = None
-        if workspace.is_feature_available(WorkspaceFeature.BIG_PLANS):
-            big_plan_collection = await uow.get_for(BigPlanCollection).load_by_parent(
-                workspace.ref_id
+        async def load_completed_nontarget_big_plans() -> list[BigPlan] | None:
+            if (
+                not include_completed_nontarget
+                or target_big_plans is None
+                or big_plan_collection is None
+            ):
+                return None
+            return await crown_entity_reader.retain_accessible_entities(
+                BigPlan,
+                await uow.get(BigPlanRepository).find_completed_in_range(
+                    parent_ref_id=big_plan_collection.ref_id,
+                    allow_archived=True,
+                    filter_start_completed_date=schedule.first_day,
+                    filter_end_completed_date=schedule.end_day,
+                    filter_exclude_ref_ids=[bp.ref_id for bp in target_big_plans],
+                ),
+                allow_archived=True,
             )
 
-            if include_targets:
-                target_big_plan_ref_ids = list(
-                    {a.target.ref_id for a in activities if a.is_target_big_plan}
-                )
-                # Also load parent big plans of target inbox tasks — the UI
-                # inherits feasability from those parents.
-                if target_inbox_tasks is not None:
-                    target_big_plan_ref_ids = list(
-                        {
-                            *target_big_plan_ref_ids,
-                            *(
-                                it.owner.ref_id
-                                for it in target_inbox_tasks
-                                if it.owner.the_type == NamedEntityTag.BIG_PLAN.value
-                            ),
-                        }
-                    )
-                target_big_plans = await uow.get_for(BigPlan).find_all_generic(
-                    parent_ref_id=None,
-                    allow_archived=True,
-                    ref_id=target_big_plan_ref_ids,
-                )
+        (
+            completed_nontarget_inbox_tasks,
+            completed_nontarget_big_plans,
+        ) = cast(
+            tuple[list[InboxTask] | None, list[BigPlan] | None],
+            await asyncio.gather(
+                load_completed_nontarget_inbox_tasks(),
+                load_completed_nontarget_big_plans(),
+            ),
+        )
 
-            if include_completed_nontarget and target_big_plans is not None:
-                completed_nontarget_big_plans = (
-                    await crown_entity_reader.retain_accessible_entities(
-                        BigPlan,
-                        await uow.get(BigPlanRepository).find_completed_in_range(
-                            parent_ref_id=big_plan_collection.ref_id,
-                            allow_archived=True,
-                            filter_start_completed_date=schedule.first_day,
-                            filter_end_completed_date=schedule.end_day,
-                            filter_exclude_ref_ids=[
-                                bp.ref_id for bp in target_big_plans
-                            ],
-                        ),
-                        allow_archived=True,
-                    )
+        big_plan_stats = None
+        if include_targets and workspace.is_feature_available(
+            WorkspaceFeature.BIG_PLANS
+        ):
+            stats_ref_ids = [bp.ref_id for bp in target_big_plans or []]
+            if completed_nontarget_big_plans:
+                stats_ref_ids.extend(bp.ref_id for bp in completed_nontarget_big_plans)
+            if stats_ref_ids:
+                big_plan_stats = await uow.get(BigPlanStatsRepository).find_all(
+                    stats_ref_ids
                 )
-
-            if include_targets:
-                stats_ref_ids = [bp.ref_id for bp in target_big_plans or []]
-                if completed_nontarget_big_plans:
-                    stats_ref_ids.extend(
-                        bp.ref_id for bp in completed_nontarget_big_plans
-                    )
-                if stats_ref_ids:
-                    big_plan_stats = await uow.get(BigPlanStatsRepository).find_all(
-                        stats_ref_ids
-                    )
-                else:
-                    big_plan_stats = []
+            else:
+                big_plan_stats = []
 
         activity_doneness = None
         if include_targets:
@@ -867,87 +1076,6 @@ class TimePlanLoadService:
                         activity_doneness[activity.ref_id] = (
                             TimePlanActivityDoneness.NOT_DONE
                         )
-
-        sub_period_time_plans = None
-        higher_time_plan = None
-        previous_time_plan = None
-        if include_other_time_plans:
-            sub_period_time_plans = (
-                await crown_entity_reader.retain_accessible_entities(
-                    TimePlan,
-                    await uow.get(TimePlanRepository).find_all_in_range(
-                        parent_ref_id=time_plan.time_plan_domain.ref_id,
-                        allow_archived=False,
-                        filter_periods=time_plan.period.all_smaller_periods,
-                        filter_start_date=schedule.first_day,
-                        filter_end_date=schedule.end_day,
-                    ),
-                    allow_archived=False,
-                )
-            )
-
-            candidate_higher_time_plan = await uow.get(TimePlanRepository).find_higher(
-                parent_ref_id=time_plan.time_plan_domain.ref_id,
-                allow_archived=False,
-                period=time_plan.period,
-                right_now=time_plan.right_now,
-            )
-            if candidate_higher_time_plan is not None:
-                accessible_higher_time_plans = (
-                    await crown_entity_reader.load_all_entities(
-                        TimePlan,
-                        [candidate_higher_time_plan.ref_id],
-                        allow_archived=False,
-                    )
-                )
-                higher_time_plan = (
-                    accessible_higher_time_plans[0]
-                    if len(accessible_higher_time_plans) > 0
-                    else None
-                )
-
-            candidate_previous_time_plan = await uow.get(
-                TimePlanRepository
-            ).find_previous(
-                parent_ref_id=time_plan.time_plan_domain.ref_id,
-                allow_archived=False,
-                period=time_plan.period,
-                right_now=time_plan.right_now,
-            )
-            if candidate_previous_time_plan is not None:
-                accessible_previous_time_plans = (
-                    await crown_entity_reader.load_all_entities(
-                        TimePlan,
-                        [candidate_previous_time_plan.ref_id],
-                        allow_archived=False,
-                    )
-                )
-                previous_time_plan = (
-                    accessible_previous_time_plans[0]
-                    if len(accessible_previous_time_plans) > 0
-                    else None
-                )
-
-        publish_entity = None
-        if include_publish_entity:
-            publish_entity = await uow.get(
-                PublishEntityRepository
-            ).load_optional_for_owner(
-                EntityLink.std(NamedEntityTag.TIME_PLAN.value, time_plan.ref_id),
-                allow_archived=allow_archived,
-            )
-
-        time_plan_entity_link = EntityLink.std(
-            NamedEntityTag.TIME_PLAN.value, time_plan.ref_id
-        )
-        owner = await LoadUserThatOwnsEntityService().do_it(uow, time_plan_entity_link)
-        access_status = (
-            await GetAccessLevelForEntityService().do_it(
-                uow, time_plan_entity_link, user_ref_id
-            )
-            if user_ref_id is not None
-            else None
-        )
 
         return TimePlanLoadResult(
             time_plan=time_plan,
