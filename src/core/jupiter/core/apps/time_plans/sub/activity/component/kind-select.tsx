@@ -8,6 +8,7 @@ interface TimePlanActivityKindSelectProps {
   name: string;
   defaultValue: TimePlanActivityKind;
   inputsEnabled: boolean;
+  onChange?: (kind: TimePlanActivityKind) => void;
 }
 
 export function TimePlanActivitKindSelect(
@@ -26,7 +27,13 @@ export function TimePlanActivitKindSelect(
         fullWidth
         value={kind}
         exclusive
-        onChange={(_, newKind) => newKind !== null && setKind(newKind)}
+        onChange={(_, newKind) => {
+          if (newKind === null) {
+            return;
+          }
+          setKind(newKind);
+          props.onChange?.(newKind);
+        }}
         sx={{ height: "100%" }}
       >
         <ToggleButton

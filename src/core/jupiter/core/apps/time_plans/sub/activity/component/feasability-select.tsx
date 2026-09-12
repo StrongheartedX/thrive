@@ -8,6 +8,7 @@ interface TimePlanActivityFeasabilitySelectProps {
   name: string;
   defaultValue: TimePlanActivityFeasability;
   inputsEnabled: boolean;
+  onChange?: (feasability: TimePlanActivityFeasability) => void;
 }
 
 export function TimePlanActivityFeasabilitySelect(
@@ -28,9 +29,13 @@ export function TimePlanActivityFeasabilitySelect(
         fullWidth
         value={feasability}
         exclusive
-        onChange={(_, newFeasability) =>
-          newFeasability !== null && setFeasability(newFeasability)
-        }
+        onChange={(_, newFeasability) => {
+          if (newFeasability === null) {
+            return;
+          }
+          setFeasability(newFeasability);
+          props.onChange?.(newFeasability);
+        }}
         sx={{ height: "100%" }}
       >
         <ToggleButton

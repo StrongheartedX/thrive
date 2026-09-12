@@ -103,7 +103,9 @@ export async function action({ request }: ActionFunctionArgs) {
           feasability: form.feasability,
         });
 
-        return redirect(`/app/workspace/apps/chores/chores/${query.choreRefId}`);
+        return redirect(
+          `/app/workspace/apps/chores/chores/${query.choreRefId}`,
+        );
       }
 
       default:

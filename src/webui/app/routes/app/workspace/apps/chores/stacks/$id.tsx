@@ -341,7 +341,9 @@ export default function ChoreStackView() {
               key={`chore-${chore.ref_id}`}
               entityId={`chore-${chore.ref_id}`}
             >
-              <EntityLink to={`/app/workspace/apps/chores/chores/${chore.ref_id}`}>
+              <EntityLink
+                to={`/app/workspace/apps/chores/chores/${chore.ref_id}`}
+              >
                 <EntityNameComponent name={chore.name} />
                 <PeriodTag period={chore.gen_params.period} />
               </EntityLink>

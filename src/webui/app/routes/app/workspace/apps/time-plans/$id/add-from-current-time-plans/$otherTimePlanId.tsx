@@ -36,7 +36,7 @@ import { parseForm, parseParams } from "zodix";
 import { isWorkspaceFeatureAvailable } from "@jupiter/core/workspaces/root";
 import {
   filterActivitiesByTargetStatus,
-  sortTimePlanActivitiesNaturally,
+  sortTimePlanActivitiesBySelectedAttributes,
 } from "@jupiter/core/apps/time_plans/sub/activity/root";
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { withTimePlanView } from "@jupiter/core/apps/time_plans/view-mode";
@@ -258,6 +258,10 @@ export default function TimePlanAddFromCurrentTimePlans() {
   );
   const [filterFeasability, setFilterFeasability] =
     useState<TimePlanActivityFeasability | null>(null);
+  const [selectedKind, setSelectedKind] = useState(TimePlanActivityKind.FINISH);
+  const [selectedFeasability, setSelectedFeasability] = useState(
+    TimePlanActivityFeasability.NICE_TO_HAVE,
+  );
 
   const otherTargetInboxTasksByRefId = new Map<string, InboxTask>(
     loaderData.otherTargetInboxTasks.map((it) => [it.ref_id, it]),
@@ -330,9 +334,11 @@ export default function TimePlanAddFromCurrentTimePlans() {
           activity.feasability === filterFeasability),
     )
     .filter((activity) => !alreadyIncludedActivities.has(activity.ref_id));
-  const sortedOtherActivities = sortTimePlanActivitiesNaturally(
+  const sortedOtherActivities = sortTimePlanActivitiesBySelectedAttributes(
     filteredOtherActivities,
     otherTargetInboxTasksByRefId,
+    selectedKind,
+    selectedFeasability,
   );
 
   return (
@@ -427,6 +433,7 @@ export default function TimePlanAddFromCurrentTimePlans() {
               name="kind"
               defaultValue={TimePlanActivityKind.FINISH}
               inputsEnabled={inputsEnabled}
+              onChange={setSelectedKind}
             />
             <FieldError actionResult={actionData} fieldName="/kind" />
           </FormControl>
@@ -437,6 +444,7 @@ export default function TimePlanAddFromCurrentTimePlans() {
               name="feasability"
               defaultValue={TimePlanActivityFeasability.NICE_TO_HAVE}
               inputsEnabled={inputsEnabled}
+              onChange={setSelectedFeasability}
             />
             <FieldError actionResult={actionData} fieldName="/feasability" />
           </FormControl>

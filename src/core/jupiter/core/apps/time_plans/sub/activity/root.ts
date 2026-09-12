@@ -12,6 +12,7 @@ import {
   TimePlanActivityDoneness,
   TimePlanActivityEntry,
   TimePlanActivityFeasability,
+  TimePlanActivityKind,
   TodoTask,
 } from "@jupiter/webapi-client";
 
@@ -332,6 +333,40 @@ export function sortTimePlanActivitiesNaturally(
       compareTimePlanActivityKind(j1.kind, j2.kind)
     );
   });
+}
+
+export function sortTimePlanActivitiesBySelectedAttributes(
+  timePlanActivities: TimePlanActivity[],
+  targetInboxTasks: Map<string, InboxTask>,
+  selectedKind: TimePlanActivityKind,
+  selectedFeasability: TimePlanActivityFeasability,
+): TimePlanActivity[] {
+  const naturallySorted = sortTimePlanActivitiesNaturally(
+    timePlanActivities,
+    targetInboxTasks,
+  );
+
+  return [...naturallySorted].sort((left, right) => {
+    return (
+      selectedAttributeMatchScore(right, selectedKind, selectedFeasability) -
+      selectedAttributeMatchScore(left, selectedKind, selectedFeasability)
+    );
+  });
+}
+
+function selectedAttributeMatchScore(
+  activity: TimePlanActivity,
+  selectedKind: TimePlanActivityKind,
+  selectedFeasability: TimePlanActivityFeasability,
+): number {
+  let score = 0;
+  if (activity.kind === selectedKind) {
+    score += 1;
+  }
+  if (activity.feasability === selectedFeasability) {
+    score += 1;
+  }
+  return score;
 }
 
 function ownedInboxTaskForTarget(
