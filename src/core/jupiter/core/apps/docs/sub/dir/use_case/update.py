@@ -24,7 +24,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -36,8 +40,15 @@ class DirUpdateArgs(JupiterUpdateCrownEntityArgs):
     parent_dir_ref_id: UpdateAction[EntityId]
 
 
+@use_case_result
+class DirUpdateResult(UseCaseResultBase):
+    """DirUpdate result."""
+
+    updated_dir: Dir
+
+
 @mutation_use_case(WorkspaceFeature.DOCS, exclude_component=[AppCore.CLI])
-class DirUpdateUseCase(JupiterUpdateCrownEntityUseCase[DirUpdateArgs, None]):
+class DirUpdateUseCase(JupiterUpdateCrownEntityUseCase[DirUpdateArgs, DirUpdateResult]):
     """Use case for updating a directory."""
 
     async def _perform_transactional_mutation(
@@ -46,7 +57,7 @@ class DirUpdateUseCase(JupiterUpdateCrownEntityUseCase[DirUpdateArgs, None]):
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: DirUpdateArgs,
-    ) -> None:
+    ) -> DirUpdateResult:
         """Execute the command's action."""
         dir_entity = await self.load_entity(uow, context.user.ref_id, Dir, args.ref_id)
         if dir_entity.is_root:
@@ -89,3 +100,5 @@ class DirUpdateUseCase(JupiterUpdateCrownEntityUseCase[DirUpdateArgs, None]):
             await ReplicateDirHierarchyRightsService().refresh_for_dir_and_descendants(
                 context.domain_context, uow, dir_entity
             )
+
+        return DirUpdateResult(updated_dir=dir_entity)

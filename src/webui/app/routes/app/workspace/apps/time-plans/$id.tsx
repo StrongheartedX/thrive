@@ -1,6 +1,7 @@
 import type {
   BigPlan,
   BigPlanStats,
+  Contact,
   Habit,
   HabitStack,
   Chore,
@@ -15,7 +16,6 @@ import type {
 } from "@jupiter/webapi-client";
 import {
   Eisen,
-  InboxTaskStatus,
   NamedEntityTag,
   RecurringTaskPeriod,
   TimePlanActivityFeasability,
@@ -25,6 +25,24 @@ import {
 } from "@jupiter/webapi-client";
 import type { DragStart, DropResult } from "@hello-pangea/dnd";
 import { DragDropContext } from "@hello-pangea/dnd";
+import {
+  UPDATE_INBOX_TASK_STATUS,
+  inboxTaskKanbanMoveArgs,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-inbox-task-status";
+import { RESCHEDULE_CALENDAR_EVENT } from "@jupiter/core/apps/time_plans/store/mutations/reschedule-calendar-event";
+import {
+  PLACE_TIME_EVENTS,
+  placeTimeEventsArgsFromCalendar,
+} from "@jupiter/core/apps/time_plans/store/mutations/place-time-events";
+import type {
+  CalendarPlaceFields,
+  CalendarRescheduleFields,
+} from "@jupiter/core/calendar/component/event-drag";
+import {
+  selectCalendarEntries,
+  snapshotFromCalendarEntries,
+} from "@jupiter/core/apps/time_plans/store/calendar";
+import { useTimePlanMutation } from "@jupiter/core/apps/time_plans/store/mutation";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import DateRangeIcon from "@mui/icons-material/DateRange";
 import FlareIcon from "@mui/icons-material/Flare";
@@ -32,17 +50,29 @@ import FlagIcon from "@mui/icons-material/Flag";
 import ViewKanbanIcon from "@mui/icons-material/ViewKanban";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  SerializeFrom,
+} from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
+import { useRevalidateOnReturn } from "@jupiter/core/apps/time_plans/store/revalidate-on-return";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 import {
   useActionData,
-  useFetcher,
   useLocation,
+  useMatches,
   useNavigation,
   useSearchParams,
 } from "@remix-run/react";
-import { Fragment, useContext, useEffect, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { z } from "zod";
 import { parseForm, parseParams } from "zodix";
 import { sortJournalsNaturally } from "@jupiter/core/apps/journals/root";
@@ -84,16 +114,9 @@ import {
 } from "@jupiter/core/common/sub/inbox_tasks/component/small-screen-kanban";
 import { StandardDivider } from "@jupiter/core/infra/component/standard-divider";
 import { ActionableTime } from "@jupiter/core/infra/actionable-time";
-import {
-  isInboxTaskCoreFieldEditable,
-  type InboxTaskOptimisticState,
-} from "@jupiter/core/common/sub/inbox_tasks/root";
-import {
-  entityLinkRefIdFromWire,
-  parentLinkNamespaceFromEntityLinkWire,
-} from "@jupiter/core/common/sub/inbox_tasks/parent-link-namespace";
+import { type InboxTaskOptimisticState } from "@jupiter/core/common/sub/inbox_tasks/root";
+import { entityLinkRefIdFromWire } from "@jupiter/core/common/sub/inbox_tasks/parent-link-namespace";
 import { parseEntityLinkStd } from "@jupiter/core/common/entity-link";
-import type { SomeErrorNoData } from "@jupiter/core/infra/action-result";
 import {
   computeAspectHierarchicalNameFromRoot,
   sortAspectsByTreeOrder,
@@ -141,6 +164,18 @@ import { TimePlanTimelineByAspectAndGoalActivities } from "@jupiter/core/apps/ti
 import { TimePlanCalendarActivities } from "@jupiter/core/apps/time_plans/component/calendar-activities";
 import { TimePlanStack } from "@jupiter/core/apps/time_plans/component/stack";
 import {
+  TimePlanStoreProvider,
+  useTimePlanStore,
+} from "@jupiter/core/apps/time_plans/store/context";
+import {
+  snapshotFromTimePlanActivityLoad,
+  snapshotFromTimePlanLoad,
+} from "@jupiter/core/apps/time_plans/store/snapshots";
+import {
+  latestEntities,
+  selectTimePlanView,
+} from "@jupiter/core/apps/time_plans/store/view";
+import {
   fixSelectOutputEntityId,
   selectZod,
 } from "@jupiter/core/common/select-form";
@@ -150,6 +185,7 @@ import {
 } from "@jupiter/core/infra/errors.server";
 
 import { getLoggedInApiClient } from "~/api-clients.server";
+import type { loader as timePlanActivityLoader } from "~/routes/app/workspace/apps/time-plans/$id/$activityId";
 import { newURLParams } from "~/logic/navigation";
 import {
   basicShouldRevalidate,
@@ -236,6 +272,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         include_chapters: true,
         include_goals: true,
         include_milestones: true,
+        include_big_plans: true,
       }),
       apiClient.timePlans.timePlanLoad({
         ref_id: id,
@@ -251,9 +288,29 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
     const workspace = summaryResponse.workspace!;
 
+    const habitsAvailable = isWorkspaceFeatureAvailable(
+      workspace,
+      WorkspaceFeature.HABITS,
+    );
+    const choresAvailable = isWorkspaceFeatureAvailable(
+      workspace,
+      WorkspaceFeature.CHORES,
+    );
+    const emptyFind = { entries: [] };
+
     // Journal and calendar need the time plan's dates and workspace features,
-    // but not each other.
-    const [journalResult, timeEventResult] = await Promise.all([
+    // but not each other. The lists the activity panels pick from are
+    // workspace-wide and don't change while a plan is being looked at, so they
+    // are loaded here once rather than with every panel.
+    const [
+      journalResult,
+      timeEventResult,
+      allContacts,
+      stacksResponse,
+      choreStacksResponse,
+      habitsResponse,
+      choresResponse,
+    ] = await Promise.all([
       isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.JOURNALS)
         ? apiClient.journals.journalLoadForDateAndPeriod({
             right_now: result.time_plan.right_now,
@@ -267,6 +324,45 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
             period: result.time_plan.period,
           })
         : Promise.resolve(undefined),
+      apiClient.contacts.contactFind({
+        allow_archived: false,
+      }),
+      habitsAvailable
+        ? apiClient.habits.habitStackFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_habits: false,
+          })
+        : Promise.resolve(emptyFind),
+      choresAvailable
+        ? apiClient.chores.choreStackFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_chores: false,
+          })
+        : Promise.resolve(emptyFind),
+      habitsAvailable
+        ? apiClient.habits.habitFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_inbox_tasks: false,
+          })
+        : Promise.resolve(emptyFind),
+      choresAvailable
+        ? apiClient.chores.choreFind({
+            allow_archived: false,
+            include_tags: false,
+            include_notes: false,
+            include_life_plan: false,
+            include_inbox_tasks: false,
+          })
+        : Promise.resolve(emptyFind),
     ]);
 
     return json({
@@ -275,6 +371,19 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       allChapters: summaryResponse.chapters,
       allGoals: summaryResponse.goals,
       allMilestones: summaryResponse.milestones,
+      allBigPlans: summaryResponse.big_plans,
+      // What the activity panels' editors pick from.
+      allContacts: allContacts.contacts as Array<Contact>,
+      allStacks: stacksResponse.entries.map((entry) => entry.habit_stack),
+      allChoreStacks: choreStacksResponse.entries.map(
+        (entry) => entry.chore_stack,
+      ) as Array<ChoreStack>,
+      allHabits: habitsResponse.entries.map(
+        (entry) => entry.habit,
+      ) as Array<Habit>,
+      allChores: choresResponse.entries.map(
+        (entry) => entry.chore,
+      ) as Array<Chore>,
       timePlan: result.time_plan,
       tags: result.tags as Array<Tag>,
       allTags: allTags.tags as Array<Tag>,
@@ -448,11 +557,92 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 }
 
+// The kanban boards take overrides for tasks being moved; here the store
+// already holds the moved tasks.
+const NO_OPTIMISTIC_UPDATES: { [key: string]: InboxTaskOptimisticState } = {};
+
 export const shouldRevalidate: ShouldRevalidateFunction =
   ignoringTimePlanViewChanges(basicShouldRevalidate);
 
+const TIME_PLAN_ACTIVITY_ROUTE_ID =
+  "routes/app/workspace/apps/time-plans/$id/$activityId";
+
 export default function TimePlanView() {
   const loaderData = useLoaderDataSafeForAnimation<typeof loader>();
+  const activityLoaderData = useMatches().find(
+    (match) => match.id === TIME_PLAN_ACTIVITY_ROUTE_ID,
+  )?.data as SerializeFrom<typeof timePlanActivityLoader> | undefined;
+
+  // The entities of the plan live in a store that both this route's loader and
+  // the activity panel's seed, so local edits can show up without reloading
+  // everything.
+  const planSnapshot = useMemo(
+    () => snapshotFromTimePlanLoad(loaderData),
+    [loaderData],
+  );
+  const activitySnapshot = useMemo(
+    () =>
+      activityLoaderData === undefined
+        ? undefined
+        : snapshotFromTimePlanActivityLoad(activityLoaderData),
+    [activityLoaderData],
+  );
+  const calendarSnapshot = useMemo(
+    () => snapshotFromCalendarEntries(loaderData.calendarEntries),
+    [loaderData.calendarEntries],
+  );
+  const storeSources = useMemo(
+    () => ({
+      plan: planSnapshot,
+      activity: activitySnapshot,
+      calendar: calendarSnapshot,
+    }),
+    [planSnapshot, activitySnapshot, calendarSnapshot],
+  );
+
+  return (
+    <TimePlanStoreProvider sources={storeSources}>
+      <TimePlanViewContent />
+    </TimePlanStoreProvider>
+  );
+}
+
+function TimePlanViewContent() {
+  const rawLoaderData = useLoaderDataSafeForAnimation<typeof loader>();
+  const { entities, pendingMutations } = useTimePlanStore();
+  // Local edits keep the view current while it's the only thing changing the
+  // plan; coming back after a while picks up what changed elsewhere.
+  useRevalidateOnReturn(pendingMutations);
+  const view = useMemo(
+    () => selectTimePlanView(entities, rawLoaderData.timePlan),
+    [entities, rawLoaderData.timePlan],
+  );
+  const calendarEntries = useMemo(
+    () =>
+      selectCalendarEntries(
+        rawLoaderData.calendarEntries,
+        entities,
+        rawLoaderData.timePlan.ref_id,
+      ),
+    [rawLoaderData.calendarEntries, entities, rawLoaderData.timePlan.ref_id],
+  );
+  // The entities come from the store, so they reflect local edits; the rest
+  // is straight from the loader.
+  const loaderData = {
+    ...rawLoaderData,
+    ...view,
+    calendarEntries,
+    completedNontargetInboxTasks: latestEntities(
+      entities.inboxTasks,
+      rawLoaderData.completedNontargetInboxTasks,
+    ),
+    completedNontargetBigPlans:
+      rawLoaderData.completedNontargetBigPlans &&
+      latestEntities(
+        entities.bigPlans,
+        rawLoaderData.completedNontargetBigPlans,
+      ),
+  };
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isBigScreen = useBigScreen();
@@ -484,14 +674,40 @@ export default function TimePlanView() {
       .map((a) => [entityLinkRefIdFromWire(a.target), a]),
   );
 
-  const [optimisticUpdates, setOptimisticUpdates] = useState<{
-    [key: string]: InboxTaskOptimisticState;
-  }>({});
   const [draggedInboxTaskId, setDraggedInboxTaskId] = useState<
     string | undefined
   >(undefined);
 
-  const kanbanMoveFetcher = useFetcher<SomeErrorNoData>();
+  // Moving a card is a local edit: it lands in its new column right away, and
+  // saving it doesn't reload the plan. Concurrent moves don't cancel each other.
+  const { run: runUpdateInboxTaskStatus } = useTimePlanMutation(
+    UPDATE_INBOX_TASK_STATUS,
+  );
+
+  // Moving or stretching an event on the calendar is a local edit too.
+  const { run: runRescheduleCalendarEvent } = useTimePlanMutation(
+    RESCHEDULE_CALENDAR_EVENT,
+  );
+  const handleCalendarReschedule = useCallback(
+    (fields: CalendarRescheduleFields) =>
+      runRescheduleCalendarEvent({
+        ...fields,
+        modifiedTime: new Date().toISOString(),
+      }),
+    [runRescheduleCalendarEvent],
+  );
+  const { run: runPlaceTimeEvents } = useTimePlanMutation(PLACE_TIME_EVENTS);
+  const handleCalendarPlace = useCallback(
+    (fields: CalendarPlaceFields) =>
+      runPlaceTimeEvents(
+        placeTimeEventsArgsFromCalendar(
+          fields,
+          crypto.randomUUID(),
+          new Date().toISOString(),
+        ),
+      ),
+    [runPlaceTimeEvents],
+  );
 
   function onDragStart(start: DragStart) {
     setDraggedInboxTaskId(start.draggableId);
@@ -501,62 +717,24 @@ export default function TimePlanView() {
     setDraggedInboxTaskId(undefined);
 
     if (!result.destination) {
-      return null;
+      return;
     }
-
-    const destination = result.destination.droppableId.split(":");
-
-    const eisenSchema = z
-      .nativeEnum(Eisen)
-      .or(z.literal("undefined").transform((_) => undefined));
-    const statusSchema = z.nativeEnum(InboxTaskStatus);
-
-    const eisen = eisenSchema.parse(destination[1]);
-    const status = statusSchema.parse(destination[2]);
 
     const inboxTask = inboxTasksByRefId[result.draggableId];
-
-    if (
-      !isInboxTaskCoreFieldEditable(
-        parentLinkNamespaceFromEntityLinkWire(inboxTask.owner),
-      )
-    ) {
-      if (eisen && inboxTask.eisen !== eisen) {
-        return null;
-      }
+    if (inboxTask === undefined) {
+      return;
     }
 
-    setOptimisticUpdates((prev) => ({
-      ...prev,
-      [result.draggableId]: { status, eisen },
-    }));
-
-    if (
-      isInboxTaskCoreFieldEditable(
-        parentLinkNamespaceFromEntityLinkWire(inboxTask.owner),
-      )
-    ) {
-      kanbanMoveFetcher.submit(
-        {
-          id: result.draggableId,
-          eisen: eisen?.toString() || "no-go",
-          status,
-        },
-        {
-          method: "post",
-          action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-        },
-      );
-    } else {
-      kanbanMoveFetcher.submit(
-        { id: result.draggableId, eisen: "no-go", status },
-        {
-          method: "post",
-          action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-        },
-      );
+    const args = inboxTaskKanbanMoveArgs(
+      inboxTask,
+      result.destination.droppableId,
+      new Date().toISOString(),
+    );
+    if (args !== null) {
+      runUpdateInboxTaskStatus(args);
     }
   }
+
   const parentActivitiesByRefId = parentActivitiesByTargetRefId(
     loaderData.activities,
   );
@@ -921,7 +1099,7 @@ export default function TimePlanView() {
                           NavSingle({
                             text: "New Todo",
                             link: withTimePlanDisplay(
-                              `/app/workspace/apps/todos/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
+                              `/app/workspace/apps/time-plans/${loaderData.timePlan.ref_id}/new-todo-task`,
                               query,
                             ),
                             gatedOn: WorkspaceFeature.TODO_TASK,
@@ -938,7 +1116,7 @@ export default function TimePlanView() {
                           NavSingle({
                             text: "New Habit",
                             link: withTimePlanDisplay(
-                              `/app/workspace/apps/habits/habits/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
+                              `/app/workspace/apps/time-plans/${loaderData.timePlan.ref_id}/new-habit`,
                               query,
                             ),
                             gatedOn: WorkspaceFeature.HABITS,
@@ -963,7 +1141,7 @@ export default function TimePlanView() {
                           NavSingle({
                             text: "New Chore",
                             link: withTimePlanDisplay(
-                              `/app/workspace/apps/chores/chores/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
+                              `/app/workspace/apps/time-plans/${loaderData.timePlan.ref_id}/new-chore`,
                               query,
                             ),
                             gatedOn: WorkspaceFeature.CHORES,
@@ -990,7 +1168,7 @@ export default function TimePlanView() {
                     NavSingle({
                       text: "New Big Plan",
                       link: withTimePlanDisplay(
-                        `/app/workspace/apps/big-plans/new?timePlanReason=for-time-plan&timePlanRefId=${loaderData.timePlan.ref_id}`,
+                        `/app/workspace/apps/time-plans/${loaderData.timePlan.ref_id}/new-big-plan`,
                         query,
                       ),
                       gatedOn: WorkspaceFeature.BIG_PLANS,
@@ -1253,7 +1431,7 @@ export default function TimePlanView() {
                           <InboxTaskKanbanBoard
                             topLevelInfo={topLevelInfo}
                             inboxTasks={loaderData.targetInboxTasks}
-                            optimisticUpdates={optimisticUpdates}
+                            optimisticUpdates={NO_OPTIMISTIC_UPDATES}
                             inboxTasksByRefId={inboxTasksByRefId}
                             moreInfoByRefId={{}}
                             actionableTime={ActionableTime.NOW}
@@ -1275,7 +1453,7 @@ export default function TimePlanView() {
                   <SmallScreenKanbanByEisen
                     topLevelInfo={topLevelInfo}
                     inboxTasks={loaderData.targetInboxTasks}
-                    optimisticUpdates={optimisticUpdates}
+                    optimisticUpdates={NO_OPTIMISTIC_UPDATES}
                     moreInfoByRefId={{}}
                     actionableTime={ActionableTime.NOW}
                     emptyParent="inbox task"
@@ -1301,7 +1479,7 @@ export default function TimePlanView() {
                     <InboxTaskKanbanBoard
                       topLevelInfo={topLevelInfo}
                       inboxTasks={loaderData.targetInboxTasks}
-                      optimisticUpdates={optimisticUpdates}
+                      optimisticUpdates={NO_OPTIMISTIC_UPDATES}
                       inboxTasksByRefId={inboxTasksByRefId}
                       moreInfoByRefId={{}}
                       actionableTime={ActionableTime.NOW}
@@ -1319,7 +1497,7 @@ export default function TimePlanView() {
                   <SmallScreenKanban
                     topLevelInfo={topLevelInfo}
                     inboxTasks={loaderData.targetInboxTasks}
-                    optimisticUpdates={optimisticUpdates}
+                    optimisticUpdates={NO_OPTIMISTIC_UPDATES}
                     moreInfoByRefId={{}}
                     actionableTime={ActionableTime.NOW}
                     emptyParent="inbox task"
@@ -1355,6 +1533,8 @@ export default function TimePlanView() {
                 isAdding={isAddingTimeEvent}
                 viewMode={selectedView}
                 additionalTimezones={loaderData.calendarAdditionalTimezones}
+                onReschedule={handleCalendarReschedule}
+                onPlace={handleCalendarPlace}
               />
             )}
 

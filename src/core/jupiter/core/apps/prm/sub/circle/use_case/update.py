@@ -15,7 +15,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -26,8 +30,17 @@ class CircleUpdateArgs(JupiterUpdateCrownEntityArgs):
     name: UpdateAction[CircleName]
 
 
+@use_case_result
+class CircleUpdateResult(UseCaseResultBase):
+    """CircleUpdate result."""
+
+    updated_circle: Circle
+
+
 @mutation_use_case(WorkspaceFeature.PRM)
-class CircleUpdateUseCase(JupiterUpdateCrownEntityUseCase[CircleUpdateArgs, None]):
+class CircleUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[CircleUpdateArgs, CircleUpdateResult]
+):
     """The command for updating a circle."""
 
     async def _perform_transactional_mutation(
@@ -36,9 +49,11 @@ class CircleUpdateUseCase(JupiterUpdateCrownEntityUseCase[CircleUpdateArgs, None
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: CircleUpdateArgs,
-    ) -> None:
+    ) -> CircleUpdateResult:
         """Execute the command's action."""
         circle = await self.load_entity(uow, context.user.ref_id, Circle, args.ref_id)
         circle = circle.update(ctx=context.domain_context, name=args.name)
-        await uow.get_for(Circle).save(circle)
+        circle = await uow.get_for(Circle).save(circle)
         await progress_reporter.mark_updated(circle)
+
+        return CircleUpdateResult(updated_circle=circle)

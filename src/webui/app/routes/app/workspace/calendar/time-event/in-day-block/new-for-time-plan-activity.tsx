@@ -72,10 +72,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const apiClient = await getLoggedInApiClient(request);
   const query = parseQuery(request, QuerySchema);
 
-  const activityResponse = await apiClient.timePlans.timePlanActivityLoad({
-    ref_id: query.timePlanActivityRefId,
-    allow_archived: true,
-  });
+  const activityResponse = await apiClient.timePlans.timePlanActivityLoadTarget(
+    {
+      ref_id: query.timePlanActivityRefId,
+      allow_archived: true,
+    },
+  );
 
   return json({
     date: query.date,
@@ -85,7 +87,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     targetTodoTask: activityResponse.target_todo_task,
     targetHabit: activityResponse.target_habit,
     targetHabitStack: activityResponse.target_habit_stack,
-    targetHabitStackInfo: activityResponse.target_habit_stack_info,
     targetChore: activityResponse.target_chore,
   });
 }
@@ -96,16 +97,17 @@ export async function action({ request }: ActionFunctionArgs) {
   const form = await parseForm(request, CreateFormSchema);
 
   try {
-    const activityResponse = await apiClient.timePlans.timePlanActivityLoad({
-      ref_id: query.timePlanActivityRefId,
-      allow_archived: true,
-    });
+    const activityResponse =
+      await apiClient.timePlans.timePlanActivityLoadTarget({
+        ref_id: query.timePlanActivityRefId,
+        allow_archived: true,
+      });
 
     if (
       isTimePlanActivityHabitStackTarget(
         activityResponse.time_plan_activity.target,
       ) &&
-      activityResponse.target_habit_stack_info
+      activityResponse.target_habit_stack
     ) {
       const timePlanResult = await apiClient.timePlans.timePlanLoad({
         ref_id: query.timePlanRefId,
@@ -116,7 +118,7 @@ export async function action({ request }: ActionFunctionArgs) {
       });
       const memberActivities = habitActivitiesForStackMembers(
         timePlanResult.activities,
-        activityResponse.target_habit_stack_info.habits,
+        activityResponse.habit_stack_members,
       );
       const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
         form,

@@ -248,7 +248,6 @@ def test_api_chore_update(api_url: str, api_key: str, create_chore) -> None:
         json={
             "ref_id": created.ref_id,
             "name": {"should_change": True, "value": "New Chore"},
-            "period": {"should_change": True, "value": "daily"},
             "is_key": {"should_change": False},
             "eisen": {"should_change": False},
             "difficulty": {"should_change": False},
@@ -268,6 +267,10 @@ def test_api_chore_update(api_url: str, api_key: str, create_chore) -> None:
         timeout=10,
     )
     assert response.status_code == 200
+
+    updated = response.json()["updated_chore"]
+    assert updated["name"] == "New Chore"
+    assert updated["must_do"] is True
 
     response2 = requests.get(
         f"{api_url}/v1/chores/{created.ref_id}?allow_archived=false",
@@ -422,7 +425,6 @@ def _update_payload(ref_id: str, *, name: str | None = None) -> dict[str, object
             if name is not None
             else {"should_change": False}
         ),
-        "period": {"should_change": False},
         "is_key": {"should_change": False},
         "eisen": {"should_change": False},
         "difficulty": {"should_change": False},
@@ -778,13 +780,15 @@ def test_api_chore_stack_remove_clears_membership(
     assert chore_load.json()["chore"]["stack_ref_id"] is None
 
 
-def test_api_chore_period_change_clears_stack(
+def test_api_chore_update_cannot_change_period(
     api_url: str, api_key: str, create_chore, create_chore_stack
 ) -> None:
     chore = create_chore("Period Member", RecurringTaskPeriod.WEEKLY)
-    create_chore_stack("Period Stack", [chore.ref_id])
+    stack = create_chore_stack("Period Stack", [chore.ref_id])
 
-    response = requests.put(
+    # Update doesn't take a period, so whether this is rejected or ignored,
+    # the chore keeps the one it was created with.
+    requests.put(
         f"{api_url}/v1/chores/{chore.ref_id}",
         headers=_headers(api_key),
         json={
@@ -793,14 +797,14 @@ def test_api_chore_period_change_clears_stack(
         },
         timeout=10,
     )
-    assert response.status_code == 200
 
     chore_load = requests.get(
         f"{api_url}/v1/chores/{chore.ref_id}?allow_archived=false",
         headers=_headers(api_key),
         timeout=10,
     )
-    assert chore_load.json()["chore"]["stack_ref_id"] is None
+    assert chore_load.json()["chore"]["gen_params"]["period"] == "weekly"
+    assert chore_load.json()["chore"]["stack_ref_id"] == stack.ref_id
 
 
 def test_api_chore_inbox_task_includes_stack(

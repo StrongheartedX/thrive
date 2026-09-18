@@ -21,7 +21,11 @@ from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 from jupiter.framework.utils.generic_crown_archiver import generic_crown_archiver
 
 
@@ -32,9 +36,18 @@ class TimeEventInDayBlockArchiveArgs(JupiterArchiveLeafSupportEntityArgs):
     ref_id: EntityId
 
 
+@use_case_result
+class TimeEventInDayBlockArchiveResult(UseCaseResultBase):
+    """Result."""
+
+    archived_time_event_in_day_block: TimeEventInDayBlock
+
+
 @mutation_use_case()
 class TimeEventInDayBlockArchiveUseCase(
-    JupiterArchiveLeafSupportEntityUseCase[TimeEventInDayBlockArchiveArgs, None]
+    JupiterArchiveLeafSupportEntityUseCase[
+        TimeEventInDayBlockArchiveArgs, TimeEventInDayBlockArchiveResult
+    ]
 ):
     """Use case for archiving the in day event."""
 
@@ -44,7 +57,7 @@ class TimeEventInDayBlockArchiveUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TimeEventInDayBlockArchiveArgs,
-    ) -> None:
+    ) -> TimeEventInDayBlockArchiveResult:
         """Execute the command's action."""
         _, time_event_block = await self.load_for_owner(
             uow,
@@ -65,4 +78,9 @@ class TimeEventInDayBlockArchiveUseCase(
             TimeEventInDayBlock,
             args.ref_id,
             JupiterArchivalReason.USER,
+        )
+        return TimeEventInDayBlockArchiveResult(
+            archived_time_event_in_day_block=await uow.get_for(
+                TimeEventInDayBlock
+            ).load_by_id(args.ref_id, allow_archived=True)
         )

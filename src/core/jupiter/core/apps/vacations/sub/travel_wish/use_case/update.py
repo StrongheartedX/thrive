@@ -17,7 +17,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -28,9 +32,16 @@ class TravelWishUpdateArgs(JupiterUpdateCrownEntityArgs):
     name: UpdateAction[TravelWishName]
 
 
+@use_case_result
+class TravelWishUpdateResult(UseCaseResultBase):
+    """TravelWishUpdate result."""
+
+    updated_travel_wish: TravelWish
+
+
 @mutation_use_case(WorkspaceFeature.VACATIONS)
 class TravelWishUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[TravelWishUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[TravelWishUpdateArgs, TravelWishUpdateResult]
 ):
     """The command for updating a travel wish's properties."""
 
@@ -40,7 +51,7 @@ class TravelWishUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TravelWishUpdateArgs,
-    ) -> None:
+    ) -> TravelWishUpdateResult:
         """Execute the command's action."""
         travel_wish = await self.load_entity(
             uow, context.user.ref_id, TravelWish, args.ref_id
@@ -53,3 +64,5 @@ class TravelWishUpdateUseCase(
 
         travel_wish = await uow.get_for(TravelWish).save(travel_wish)
         await progress_reporter.mark_updated(travel_wish)
+
+        return TravelWishUpdateResult(updated_travel_wish=travel_wish)

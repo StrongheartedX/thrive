@@ -622,11 +622,25 @@ function useCompactMenuSurface(
       return;
     }
 
+    // Showing the menu can make a scroll container fire a scroll event without
+    // anything moving (e.g. the panel adjusting to the menu), so only a scroll
+    // that moves the button the menu hangs off closes it.
+    const openedAnchorTop = anchorRef.current?.getBoundingClientRect().top;
+
     function handleScroll(event: Event) {
       if (
         paperRef.current &&
         event.target instanceof Node &&
         paperRef.current.contains(event.target)
+      ) {
+        return;
+      }
+
+      const anchorTop = anchorRef.current?.getBoundingClientRect().top;
+      if (
+        openedAnchorTop !== undefined &&
+        anchorTop !== undefined &&
+        Math.abs(anchorTop - openedAnchorTop) < 1
       ) {
         return;
       }
@@ -638,7 +652,33 @@ function useCompactMenuSurface(
     return () => {
       document.removeEventListener("scroll", handleScroll, true);
     };
-  }, [open, setOpen]);
+  }, [open, setOpen, anchorRef]);
+
+  // Focus the selected (or first) item once the menu shows, as MenuList's
+  // autoFocusItem would, but without scrolling the page to it: a menu opening
+  // below the fold would otherwise scroll, and the scroll would close it.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const paper = paperRef.current;
+      if (!paper) {
+        return;
+      }
+
+      const item =
+        paper.querySelector<HTMLElement>('[role="menuitem"].Mui-selected') ??
+        paper.querySelector<HTMLElement>(
+          '[role="menuitem"]:not(.Mui-disabled)',
+        );
+      item?.focus({ preventScroll: true });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [open]);
 
   return { paperRef, maxHeight, placement };
 }
@@ -736,7 +776,7 @@ function NavMultipleCompactView(props: NavMultipleViewProps) {
       >
         <Paper ref={paperRef} sx={compactMenuPaperSx(maxHeight)}>
           <ClickAwayListener onClickAway={handleClose}>
-            <MenuList id="split-button-menu" autoFocusItem>
+            <MenuList id="split-button-menu">
               {visibleNavs.map((option, index) => {
                 if (option.kind === "nav-separator") {
                   return <Divider key={`nav-separator-${index}`} />;
@@ -942,7 +982,7 @@ function ActionMultipleCompactView(props: ActionMultipleViewProps) {
           >
             <Paper ref={paperRef} sx={compactMenuPaperSx(maxHeight)}>
               <ClickAwayListener onClickAway={handleClose}>
-                <MenuList id="split-button-menu" autoFocusItem>
+                <MenuList id="split-button-menu">
                   {realActions.map((option, index) => (
                     <MenuItem
                       id={option.id}

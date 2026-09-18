@@ -59,6 +59,22 @@ _FILL_SETTLE_POLL_MS = 100
 _FILL_SETTLE_STABLE_POLLS = 3
 
 
+def wait_for_hydration(
+    page: Page, *, timeout_ms: int = DEFAULT_FILL_SETTLE_TIMEOUT_MS
+) -> None:
+    """Wait until the server-rendered page has hydrated.
+
+    Panels are server-rendered before Remix hydrates, and a click or fill that
+    lands before hydration finishes can be lost. The webui root marks
+    ``<html data-hydrated>`` from an effect, which only runs once hydration has
+    committed; React merely having attached to the document is too early.
+    """
+    page.wait_for_function(
+        "() => document.documentElement.dataset.hydrated === 'true'",
+        timeout=timeout_ms,
+    )
+
+
 def fill_after_hydration(
     locator: Locator,
     value: str,
@@ -72,10 +88,7 @@ def fill_after_hydration(
     ``defaultValue``, so the form silently submits the stale value.
     """
     page = locator.page
-    page.wait_for_function(
-        "() => Object.keys(document).some((k) => k.startsWith('__reactContainer$'))",
-        timeout=timeout_ms,
-    )
+    wait_for_hydration(page, timeout_ms=timeout_ms)
 
     locator.fill(value)
 

@@ -39,7 +39,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -60,9 +64,17 @@ class EmailTaskUpdateArgs(JupiterUpdateCrownEntityArgs):
     generation_due_date: UpdateAction[ADate | None]
 
 
+@use_case_result
+class EmailTaskUpdateResult(UseCaseResultBase):
+    """EmailTaskUpdate result."""
+
+    updated_email_task: EmailTask
+    updated_inbox_task: InboxTask
+
+
 @mutation_use_case(WorkspaceFeature.EMAIL_TASKS)
 class EmailTaskUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[EmailTaskUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[EmailTaskUpdateArgs, EmailTaskUpdateResult]
 ):
     """The command for updating a email task."""
 
@@ -72,7 +84,7 @@ class EmailTaskUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: EmailTaskUpdateArgs,
-    ) -> None:
+    ) -> EmailTaskUpdateResult:
         """Execute the command's action."""
         user = context.user
         workspace = context.workspace
@@ -136,7 +148,7 @@ class EmailTaskUpdateUseCase(
             generation_extra_info=email_task.generation_extra_info,
         )
 
-        await uow.get_for(InboxTask).save(generated_inbox_task)
+        generated_inbox_task = await uow.get_for(InboxTask).save(generated_inbox_task)
 
         email_task = email_task.update(
             ctx=context.domain_context,
@@ -148,15 +160,20 @@ class EmailTaskUpdateUseCase(
             generation_extra_info=generation_extra_info,
         )
 
-        await uow.get_for(EmailTask).save(email_task)
+        email_task = await uow.get_for(EmailTask).save(email_task)
         await progress_reporter.mark_updated(email_task)
+
+        return EmailTaskUpdateResult(
+            updated_email_task=email_task,
+            updated_inbox_task=generated_inbox_task,
+        )
 
     async def _perform_post_transactional_mutation_work(
         self,
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: EmailTaskUpdateArgs,
-        result: None,
+        result: EmailTaskUpdateResult,
     ) -> None:
         """Execute the command's post-mutation work."""
         await GenService(

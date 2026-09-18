@@ -1,14 +1,11 @@
 """The command for updating a chore."""
 
-from typing import cast
-
 from jupiter.core.apps.chores.name import ChoreName
 from jupiter.core.apps.chores.root import Chore
 from jupiter.core.apps.chores.sub.stack.root import ChoreStack
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
 from jupiter.core.apps.life_plan.sub.goals.root import Goal
-from jupiter.core.common import schedules
 from jupiter.core.common.difficulty import Difficulty
 from jupiter.core.common.eisen import Eisen
 from jupiter.core.common.recurring_task_due_at_day import RecurringTaskDueAtDay
@@ -16,15 +13,7 @@ from jupiter.core.common.recurring_task_due_at_month import (
     RecurringTaskDueAtMonth,
 )
 from jupiter.core.common.recurring_task_gen_params import RecurringTaskGenParams
-from jupiter.core.common.recurring_task_period import RecurringTaskPeriod
 from jupiter.core.common.recurring_task_skip_rule import RecurringTaskSkipRule
-from jupiter.core.common.sub.inbox_tasks.collection import (
-    InboxTaskCollection,
-)
-from jupiter.core.common.sub.inbox_tasks.root import (
-    InboxTask,
-    InboxTaskRepository,
-)
 from jupiter.core.config import (
     JupiterLoggedInMutationContext,
 )
@@ -33,11 +22,8 @@ from jupiter.core.crown_entity_support import (
     JupiterUpdateCrownEntityUseCase,
 )
 from jupiter.core.features import WorkspaceFeature
-from jupiter.core.named_entity_tag import NamedEntityTag
 from jupiter.framework.base.adate import ADate
 from jupiter.framework.base.entity_id import EntityId
-from jupiter.framework.base.entity_link import EntityLink
-from jupiter.framework.base.timestamp import Timestamp
 from jupiter.framework.errors import InputValidationError
 from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
@@ -46,7 +32,11 @@ from jupiter.framework.use_case import (
     UnavailableForContextError,
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -60,7 +50,6 @@ class ChoreUpdateArgs(JupiterUpdateCrownEntityArgs):
     goal_ref_id: UpdateAction[EntityId | None]
     stack_ref_id: UpdateAction[EntityId | None]
     is_key: UpdateAction[bool]
-    period: UpdateAction[RecurringTaskPeriod]
     eisen: UpdateAction[Eisen]
     difficulty: UpdateAction[Difficulty]
     actionable_from_day: UpdateAction[RecurringTaskDueAtDay | None]
@@ -73,9 +62,22 @@ class ChoreUpdateArgs(JupiterUpdateCrownEntityArgs):
     end_at_date: UpdateAction[ADate | None]
 
 
+@use_case_result
+class ChoreUpdateResult(UseCaseResultBase):
+    """ChoreUpdate result."""
+
+    updated_chore: Chore
+
+
 @mutation_use_case(WorkspaceFeature.CHORES)
-class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None]):
-    """The command for updating a chore."""
+class ChoreUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, ChoreUpdateResult]
+):
+    """The command for updating a chore.
+
+    Only the chore itself changes. Its inbox tasks catch up the next time they are
+    generated - via a regen, or the periodic gen run.
+    """
 
     async def _perform_transactional_mutation(
         self,
@@ -83,7 +85,7 @@ class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None])
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ChoreUpdateArgs,
-    ) -> None:
+    ) -> ChoreUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
@@ -106,23 +108,8 @@ class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None])
             ):
                 raise UnavailableForContextError(WorkspaceFeature.LIFE_PLAN)
 
-        need_to_change_inbox_tasks = (
-            args.name.should_change
-            or args.period.should_change
-            or args.eisen.should_change
-            or args.difficulty.should_change
-            or args.actionable_from_day.should_change
-            or args.actionable_from_month.should_change
-            or args.due_at_day.should_change
-            or args.due_at_month.should_change
-            or args.must_do.should_change
-            or args.start_at_date.should_change
-            or args.end_at_date.should_change
-        )
-
         if (
-            args.period.should_change
-            or args.eisen.should_change
+            args.eisen.should_change
             or args.difficulty.should_change
             or args.actionable_from_day.should_change
             or args.actionable_from_month.should_change
@@ -130,10 +117,9 @@ class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None])
             or args.due_at_month.should_change
             or args.skip_rule.should_change
         ):
-            need_to_change_inbox_tasks = True
             chore_gen_params = UpdateAction.change_to(
                 RecurringTaskGenParams(
-                    args.period.or_else(chore.gen_params.period),
+                    chore.gen_params.period,
                     args.eisen.or_else(chore.gen_params.eisen),
                     args.difficulty.or_else(chore.gen_params.difficulty),
                     args.actionable_from_day.or_else(
@@ -194,23 +180,15 @@ class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None])
                             f"Goal does not belong to aspect '{aspect.name}'"
                         )
 
-        new_period = args.period.or_else(chore.gen_params.period)
-        period_changing = (
-            args.period.should_change and new_period != chore.gen_params.period
-        )
-        stack_ref_id_action = args.stack_ref_id
-        if period_changing and not args.stack_ref_id.should_change:
-            stack_ref_id_action = UpdateAction.change_to(None)
-
-        new_stack_ref_id = stack_ref_id_action.or_else(chore.stack_ref_id)
+        new_stack_ref_id = args.stack_ref_id.or_else(chore.stack_ref_id)
         stack_changing = (
-            stack_ref_id_action.should_change and new_stack_ref_id != chore.stack_ref_id
+            args.stack_ref_id.should_change and new_stack_ref_id != chore.stack_ref_id
         )
         if stack_changing and new_stack_ref_id is not None:
             stack = await self.load_entity(
                 uow, context.user.ref_id, ChoreStack, new_stack_ref_id
             )
-            if stack.period != new_period:
+            if stack.period != chore.gen_params.period:
                 raise InputValidationError("Chore period must match the stack period")
 
         chore = chore.update(
@@ -218,7 +196,7 @@ class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None])
             aspect_ref_id=args.aspect_ref_id,
             chapter_ref_id=args.chapter_ref_id,
             goal_ref_id=args.goal_ref_id,
-            stack_ref_id=stack_ref_id_action,
+            stack_ref_id=args.stack_ref_id,
             name=args.name,
             is_key=args.is_key,
             gen_params=chore_gen_params,
@@ -227,41 +205,7 @@ class ChoreUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChoreUpdateArgs, None])
             end_at_date=args.end_at_date,
         )
 
-        await uow.get_for(Chore).save(chore)
+        chore = await uow.get_for(Chore).save(chore)
         await progress_reporter.mark_updated(chore)
 
-        if need_to_change_inbox_tasks:
-            await uow.get_for(InboxTaskCollection).load_by_parent(
-                workspace.ref_id,
-            )
-            all_inbox_tasks = await uow.get(
-                InboxTaskRepository
-            ).find_all_for_owner_created_desc(
-                allow_archived=True,
-                owner=EntityLink.std(NamedEntityTag.CHORE.value, chore.ref_id),
-            )
-
-            for inbox_task in all_inbox_tasks:
-                schedule = schedules.get_schedule(
-                    chore.gen_params.period,
-                    chore.name,
-                    cast(Timestamp, inbox_task.recurring_gen_right_now),
-                    chore.gen_params.skip_rule,
-                    chore.gen_params.actionable_from_day,
-                    chore.gen_params.actionable_from_month,
-                    chore.gen_params.due_at_day,
-                    chore.gen_params.due_at_month,
-                )
-
-                inbox_task = inbox_task.update_link_to_chore(
-                    ctx=context.domain_context,
-                    name=schedule.full_name,
-                    timeline=schedule.timeline,
-                    is_key=chore.is_key,
-                    actionable_date=schedule.actionable_date,
-                    due_date=schedule.due_date,
-                    eisen=chore.gen_params.eisen,
-                    difficulty=chore.gen_params.difficulty,
-                )
-
-                await uow.get_for(InboxTask).save(inbox_task)
+        return ChoreUpdateResult(updated_chore=chore)

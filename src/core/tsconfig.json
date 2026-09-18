@@ -1,5 +1,10 @@
 {
-  "include": ["editorjs.d.ts", "jupiter/core/**/*.ts", "jupiter/core/**/*.tsx"],
+  "include": [
+    "editorjs.d.ts",
+    "jupiter/core/**/*.ts",
+    "jupiter/core/**/*.tsx",
+    "vitest.config.ts"
+  ],
   "exclude": ["**/*.py", "**/__pycache__", ".mypy_cache"],
   "compilerOptions": {
     "skipLibCheck": true,

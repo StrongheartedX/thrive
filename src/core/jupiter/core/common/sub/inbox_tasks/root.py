@@ -1292,6 +1292,8 @@ class InboxTaskRepository(LeafEntityRepository[InboxTask], abc.ABC):
         ) = False,
         retrieve_offset: int | None = None,
         retrieve_limit: int | None = None,
+        filter_status: Iterable[InboxTaskStatus] | NoFilter = NO_FILTER,
+        filter_completed_after: Timestamp | NoFilter = NO_FILTER,
     ) -> list[InboxTask]:
         """Find all inbox tasks for an owner link (or set of links)."""
 

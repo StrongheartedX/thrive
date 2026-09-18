@@ -15,6 +15,7 @@ from jupiter.core.common.sub.inbox_tasks.status import InboxTaskStatus
 from jupiter.framework.base.adate import ADate
 from jupiter.framework.base.entity_id import EntityId
 from jupiter.framework.base.entity_link import EntityLink
+from jupiter.framework.base.timestamp import Timestamp
 from jupiter.framework.entity import NO_FILTER, NoFilter
 from jupiter.framework.storage.postgres.repository import (
     PostgresLeafEntityRepository,
@@ -68,6 +69,8 @@ class PostgresInboxTaskRepository(
         ) = False,
         retrieve_offset: int | None = None,
         retrieve_limit: int | None = None,
+        filter_status: Iterable[InboxTaskStatus] | NoFilter = NO_FILTER,
+        filter_completed_after: Timestamp | NoFilter = NO_FILTER,
     ) -> list[InboxTask]:
         """Find all the inbox task for an owner link."""
         if retrieve_offset is None and retrieve_limit is not None:
@@ -84,6 +87,14 @@ class PostgresInboxTaskRepository(
         query_stmt = select(self._table).where(
             self._table.c.owner.in_(encoded_owners),
         )
+        if not isinstance(filter_status, NoFilter):
+            query_stmt = query_stmt.where(
+                self._table.c.status.in_(s.value for s in filter_status),
+            )
+        if not isinstance(filter_completed_after, NoFilter):
+            query_stmt = query_stmt.where(
+                self._table.c.completed_time.is_not(None)
+            ).where(self._table.c.completed_time >= filter_completed_after.the_ts)
         if isinstance(allow_archived, bool):
             if not allow_archived:
                 query_stmt = query_stmt.where(self._table.c.archived.is_(False))

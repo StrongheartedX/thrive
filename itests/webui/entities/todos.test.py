@@ -422,3 +422,33 @@ def test_webui_todo_acl_z_denied_without_grant(
 
     _login_as_other_user(page, another_user_with_todos_enabled)
     _assert_other_user_cannot_access_todo_webui(page, todo=todo)
+
+
+def test_webui_todo_note_saves_when_the_panel_closes_mid_save(
+    page: Page, create_todo
+) -> None:
+    """Fetchers persist past unmount, so a save in flight still lands."""
+    todo = create_todo("Todo Closed Mid Save")
+    page.goto(f"/app/workspace/apps/todos/{todo.ref_id}")
+    page.wait_for_selector("#leaf-panel")
+
+    page.locator("button[id='todo-create-note']").click()
+    page.wait_for_url(re.compile(rf"/app/workspace/apps/todos/{todo.ref_id}"))
+    page.reload()
+    page.wait_for_selector("#entity-block-editor")
+
+    editor = page.locator('#entity-block-editor [contenteditable="true"]').first
+    editor.click()
+    page.keyboard.type("Saved even though the panel went away.")
+
+    # Close the panel right away, without waiting for the save to come back.
+    page.locator(
+        "#leaf-panel-controls button:has(svg[data-testid='KeyboardDoubleArrowRightIcon'])"
+    ).click()
+    page.wait_for_url(re.compile(r"/app/workspace/apps/todos$"))
+
+    page.goto(f"/app/workspace/apps/todos/{todo.ref_id}")
+    page.wait_for_selector("#entity-block-editor")
+    expect(
+        page.locator('#entity-block-editor [contenteditable="true"]').first
+    ).to_contain_text("Saved even though the panel went away.")

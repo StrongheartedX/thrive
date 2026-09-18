@@ -26,9 +26,11 @@ import type { ChoreStackLoadPublicArgs } from '../models/ChoreStackLoadPublicArg
 import type { ChoreStackLoadResult } from '../models/ChoreStackLoadResult';
 import type { ChoreStackRemoveArgs } from '../models/ChoreStackRemoveArgs';
 import type { ChoreStackUpdateArgs } from '../models/ChoreStackUpdateArgs';
+import type { ChoreStackUpdateResult } from '../models/ChoreStackUpdateResult';
 import type { ChoreSuspendArgs } from '../models/ChoreSuspendArgs';
 import type { ChoreUnsuspendArgs } from '../models/ChoreUnsuspendArgs';
 import type { ChoreUpdateArgs } from '../models/ChoreUpdateArgs';
+import type { ChoreUpdateResult } from '../models/ChoreUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class ChoresService {
@@ -232,12 +234,12 @@ export class ChoresService {
     /**
      * The command for updating a chore stack.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ChoreStackUpdateResult Successful response
      * @throws ApiError
      */
     public choreStackUpdate(
         requestBody?: ChoreStackUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ChoreStackUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/chore-stack-update',
@@ -539,13 +541,17 @@ export class ChoresService {
     }
     /**
      * The command for updating a chore.
+     *
+     * Only the chore itself changes. Its inbox tasks catch up the next time they are
+     * generated - via a regen, or the periodic gen run.
+     *
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ChoreUpdateResult Successful response
      * @throws ApiError
      */
     public choreUpdate(
         requestBody?: ChoreUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ChoreUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/chore-update',

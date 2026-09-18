@@ -23,7 +23,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -38,9 +42,18 @@ class TimeEventInDayBlockUpdateArgs(JupiterUpdateLeafSupportEntityArgs):
     buffer_after_mins: UpdateAction[int | None]
 
 
+@use_case_result
+class TimeEventInDayBlockUpdateResult(UseCaseResultBase):
+    """TimeEventInDayBlockUpdate result."""
+
+    updated_time_event_in_day_block: TimeEventInDayBlock
+
+
 @mutation_use_case()
 class TimeEventInDayBlockUpdateUseCase(
-    JupiterUpdateLeafSupportEntityUseCase[TimeEventInDayBlockUpdateArgs, None]
+    JupiterUpdateLeafSupportEntityUseCase[
+        TimeEventInDayBlockUpdateArgs, TimeEventInDayBlockUpdateResult
+    ]
 ):
     """Use case for updating a time event in day."""
 
@@ -50,7 +63,7 @@ class TimeEventInDayBlockUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TimeEventInDayBlockUpdateArgs,
-    ) -> None:
+    ) -> TimeEventInDayBlockUpdateResult:
         """Execute the command's action."""
         _, time_event_block = await self.load_for_owner(
             uow,
@@ -73,3 +86,7 @@ class TimeEventInDayBlockUpdateUseCase(
             buffer_after_mins=args.buffer_after_mins,
         )
         time_event_block = await uow.get_for(TimeEventInDayBlock).save(time_event_block)
+
+        return TimeEventInDayBlockUpdateResult(
+            updated_time_event_in_day_block=time_event_block
+        )

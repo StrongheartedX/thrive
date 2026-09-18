@@ -15,7 +15,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const { id } = parseParams(params, ParamsSchema);
 
   try {
-    const result = await apiClient.timePlans.timePlanActivityLoad({
+    const result = await apiClient.timePlans.timePlanActivityLoadTarget({
       ref_id: id,
       allow_archived: true,
     });

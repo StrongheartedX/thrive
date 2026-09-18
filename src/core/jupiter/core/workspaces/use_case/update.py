@@ -12,7 +12,12 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import UseCaseArgsBase, use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseArgsBase,
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -22,9 +27,18 @@ class WorkspaceUpdateArgs(UseCaseArgsBase):
     name: UpdateAction[WorkspaceName]
 
 
+@use_case_result
+class WorkspaceUpdateResult(UseCaseResultBase):
+    """WorkspaceUpdate result."""
+
+    updated_workspace: Workspace
+
+
 @mutation_use_case()
 class WorkspaceUpdateUseCase(
-    JupiterTransactionalLoggedInMutationUseCase[WorkspaceUpdateArgs, None]
+    JupiterTransactionalLoggedInMutationUseCase[
+        WorkspaceUpdateArgs, WorkspaceUpdateResult
+    ]
 ):
     """UseCase for updating a workspace."""
 
@@ -34,7 +48,7 @@ class WorkspaceUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: WorkspaceUpdateArgs,
-    ) -> None:
+    ) -> WorkspaceUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
@@ -43,4 +57,6 @@ class WorkspaceUpdateUseCase(
             name=args.name,
         )
 
-        await uow.get_for(Workspace).save(workspace)
+        workspace = await uow.get_for(Workspace).save(workspace)
+
+        return WorkspaceUpdateResult(updated_workspace=workspace)

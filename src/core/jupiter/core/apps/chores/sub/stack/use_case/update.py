@@ -26,7 +26,11 @@ from jupiter.framework.use_case import (
     UnavailableForContextError,
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -41,9 +45,18 @@ class ChoreStackUpdateArgs(JupiterUpdateCrownEntityArgs):
     goal_ref_id: UpdateAction[EntityId | None]
 
 
+@use_case_result
+class ChoreStackUpdateResult(UseCaseResultBase):
+    """ChoreStackUpdate result."""
+
+    updated_chore_stack: ChoreStack
+    # The chores that joined or left the stack.
+    updated_chores: list[Chore]
+
+
 @mutation_use_case(WorkspaceFeature.CHORES)
 class ChoreStackUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[ChoreStackUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[ChoreStackUpdateArgs, ChoreStackUpdateResult]
 ):
     """The command for updating a chore stack."""
 
@@ -53,7 +66,7 @@ class ChoreStackUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ChoreStackUpdateArgs,
-    ) -> None:
+    ) -> ChoreStackUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
@@ -128,9 +141,10 @@ class ChoreStackUpdateUseCase(
             chapter_ref_id=args.chapter_ref_id,
             goal_ref_id=args.goal_ref_id,
         )
-        await uow.get_for(ChoreStack).save(chore_stack)
+        chore_stack = await uow.get_for(ChoreStack).save(chore_stack)
         await progress_reporter.mark_updated(chore_stack)
 
+        updated_chores: list[Chore] = []
         if args.chore_ref_ids.should_change:
             chore_ref_ids = args.chore_ref_ids.just_the_value
             if len(chore_ref_ids) != len(set(chore_ref_ids)):
@@ -152,10 +166,14 @@ class ChoreStackUpdateUseCase(
                             f"Chore '{chore.name}' does not match the stack period"
                         )
 
-            await ChoreStackAssignChoresService().do_it(
+            updated_chores = await ChoreStackAssignChoresService().do_it(
                 context.domain_context,
                 uow,
                 progress_reporter,
                 chore_stack,
                 chores,
             )
+
+        return ChoreStackUpdateResult(
+            updated_chore_stack=chore_stack, updated_chores=updated_chores
+        )

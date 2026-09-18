@@ -375,8 +375,73 @@ function rootFontSizePx(): number {
   return parseFloat(fontSize) || 16;
 }
 
+/** What a reschedule posts to ``CALENDAR_RESCHEDULE_ACTION``. */
+export interface CalendarRescheduleFields {
+  kind: CalendarEventDragKind;
+  refId: EntityId;
+  blockRefId: EntityId;
+  // In the user's timezone.
+  startDate: string;
+  startTimeInDay: string;
+  // Only when the event was stretched.
+  durationMins?: string;
+  userTimezone: Timezone;
+}
+
+export type CalendarRescheduleHandler = (
+  fields: CalendarRescheduleFields,
+) => void;
+
+/** What placing an activity posts to ``CALENDAR_PLACE_ACTIVITY_ACTION``. */
+export interface CalendarPlaceFields {
+  timePlanActivityRefId: EntityId;
+  // In the user's timezone.
+  startDate: string;
+  startTimeInDay: string;
+  durationMins: string;
+  // JSON of a stack's member placements, or empty.
+  extraPlacements: string;
+  userTimezone: Timezone;
+}
+
+export type CalendarPlaceHandler = (fields: CalendarPlaceFields) => void;
+
+function placeOrSubmit(
+  fields: CalendarPlaceFields,
+  onPlace: CalendarPlaceHandler | undefined,
+  submit: ReturnType<typeof useFetcher>["submit"],
+) {
+  if (onPlace !== undefined) {
+    onPlace(fields);
+    return;
+  }
+  submit(fields as unknown as Record<string, string>, {
+    method: "post",
+    action: CALENDAR_PLACE_ACTIVITY_ACTION,
+  });
+}
+
+// Views that keep their own copy of the events save a reschedule themselves;
+// the rest post it, and Remix reloads what they show.
+function rescheduleOrSubmit(
+  fields: CalendarRescheduleFields,
+  onReschedule: CalendarRescheduleHandler | undefined,
+  submit: ReturnType<typeof useFetcher>["submit"],
+) {
+  if (onReschedule !== undefined) {
+    onReschedule(fields);
+    return;
+  }
+  submit(fields as unknown as Record<string, string>, {
+    method: "post",
+    action: CALENDAR_RESCHEDULE_ACTION,
+  });
+}
+
 interface CalendarEventDragProviderProps {
   timezone: Timezone;
+  onReschedule?: CalendarRescheduleHandler;
+  onPlace?: CalendarPlaceHandler;
 }
 
 // Makes the events below draggable. Without it - the published calendar, say -
@@ -394,10 +459,14 @@ export function CalendarEventDragProvider(
 
   const timezoneRef = useRef(props.timezone);
   const submitRef = useRef(fetcher.submit);
+  const rescheduleRef = useRef(props.onReschedule);
+  const placeRef = useRef(props.onPlace);
   useEffect(() => {
     timezoneRef.current = props.timezone;
     submitRef.current = fetcher.submit;
-  }, [props.timezone, fetcher.submit]);
+    rescheduleRef.current = props.onReschedule;
+    placeRef.current = props.onPlace;
+  }, [props.timezone, fetcher.submit, props.onReschedule, props.onPlace]);
 
   const columnsRef = useRef(new Map<ADate, HTMLElement>());
   const listenersRef = useRef(new Set<() => void>());
@@ -824,7 +893,7 @@ export function CalendarEventDragProvider(
           return;
         }
 
-        submitRef.current(
+        placeOrSubmit(
           {
             timePlanActivityRefId: place.activityRefId,
             startDate: snapshot.newStartTime.toFormat("yyyy-MM-dd"),
@@ -836,7 +905,8 @@ export function CalendarEventDragProvider(
                 : "",
             userTimezone: timezoneRef.current,
           },
-          { method: "post", action: CALENDAR_PLACE_ACTIVITY_ACTION },
+          placeRef.current,
+          submitRef.current,
         );
         return;
       }
@@ -863,7 +933,7 @@ export function CalendarEventDragProvider(
           return;
         }
 
-        submitRef.current(
+        rescheduleOrSubmit(
           {
             kind: target.kind,
             refId: target.refId,
@@ -873,7 +943,8 @@ export function CalendarEventDragProvider(
             durationMins: String(snapshot.durationMins),
             userTimezone: timezoneRef.current,
           },
-          { method: "post", action: CALENDAR_RESCHEDULE_ACTION },
+          rescheduleRef.current,
+          submitRef.current,
         );
         return;
       }
@@ -882,7 +953,7 @@ export function CalendarEventDragProvider(
         return;
       }
 
-      submitRef.current(
+      rescheduleOrSubmit(
         {
           kind: target.kind,
           refId: target.refId,
@@ -891,7 +962,8 @@ export function CalendarEventDragProvider(
           startTimeInDay: snapshot.newStartTime.toFormat("HH:mm"),
           userTimezone: timezoneRef.current,
         },
-        { method: "post", action: CALENDAR_RESCHEDULE_ACTION },
+        rescheduleRef.current,
+        submitRef.current,
       );
     }
 

@@ -50,7 +50,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -69,8 +73,19 @@ class PersonUpdateArgs(JupiterUpdateCrownEntityArgs):
     circle_ref_ids: UpdateAction[list[EntityId]] = UpdateAction.do_nothing()
 
 
+@use_case_result
+class PersonUpdateResult(UseCaseResultBase):
+    """PersonUpdate result."""
+
+    updated_person: Person
+    updated_contact: Contact
+    updated_inbox_tasks: list[InboxTask]
+
+
 @mutation_use_case(WorkspaceFeature.PRM)
-class PersonUpdateUseCase(JupiterUpdateCrownEntityUseCase[PersonUpdateArgs, None]):
+class PersonUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[PersonUpdateArgs, PersonUpdateResult]
+):
     """The command for updating a person."""
 
     async def _perform_transactional_mutation(
@@ -79,7 +94,7 @@ class PersonUpdateUseCase(JupiterUpdateCrownEntityUseCase[PersonUpdateArgs, None
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: PersonUpdateArgs,
-    ) -> None:
+    ) -> PersonUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
@@ -250,11 +265,12 @@ class PersonUpdateUseCase(JupiterUpdateCrownEntityUseCase[PersonUpdateArgs, None
 
         if args.name.should_change:
             contact = contact.update(ctx=context.domain_context, name=args.name)
-            await uow.get_for(Contact).save(contact)
+            contact = await uow.get_for(Contact).save(contact)
 
-        await uow.get_for(Person).save(person)
+        person = await uow.get_for(Person).save(person)
         await progress_reporter.mark_updated(person)
 
+        updated_inbox_tasks: list[InboxTask] = []
         # TODO(horia141): also create tasks here!
         # TODO(horia141): what if we change other person properties not just catch up params?
         # Change the catch up inbox tasks
@@ -292,14 +308,21 @@ class PersonUpdateUseCase(JupiterUpdateCrownEntityUseCase[PersonUpdateArgs, None
                     due_time=schedule.due_date,
                 )
                 # Situation 2a: we're handling the same aspect.
-                await uow.get_for(InboxTask).save(inbox_task)
+                inbox_task = await uow.get_for(InboxTask).save(inbox_task)
+                updated_inbox_tasks.append(inbox_task)
+
+        return PersonUpdateResult(
+            updated_person=person,
+            updated_contact=contact,
+            updated_inbox_tasks=updated_inbox_tasks,
+        )
 
     async def _perform_post_transactional_mutation_work(
         self,
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: PersonUpdateArgs,
-        result: None,
+        result: PersonUpdateResult,
     ) -> None:
         """Execute the command's post-mutation work."""
         await GenService(

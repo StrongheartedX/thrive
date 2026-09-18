@@ -22,6 +22,7 @@ from jupiter.core.common.sub.inbox_tasks.root import (
     InboxTask,
     InboxTaskRepository,
 )
+from jupiter.core.common.sub.inbox_tasks.status import InboxTaskStatus
 from jupiter.core.common.sub.locations.sub.link.root import LocationLinkRepository
 from jupiter.core.common.sub.locations.sub.link.service.load import (
     LoadLocationForLinkService,
@@ -88,6 +89,7 @@ class HabitLoadService:
         user_ref_id: EntityId | None = None,
         allow_archived: bool = False,
         inbox_task_retrieve_offset: int = 0,
+        only_active_inbox_tasks: bool = False,
         include_streak_marks_earliest_date: ADate | None = None,
         include_streak_marks_latest_date: ADate | None = None,
         include_publish_entity: bool = True,
@@ -121,18 +123,33 @@ class HabitLoadService:
             if habit.stack_ref_id
             else None
         )
-        inbox_tasks_total_cnt = await uow.get(InboxTaskRepository).count_all_for_owner(
-            allow_archived=allow_archived,
-            owner=EntityLink.std(NamedEntityTag.HABIT.value, habit.ref_id),
-        )
-        inbox_tasks = await uow.get(
-            InboxTaskRepository
-        ).find_all_for_owner_created_desc(
-            allow_archived=True,
-            owner=EntityLink.std(NamedEntityTag.HABIT.value, habit.ref_id),
-            retrieve_offset=inbox_task_retrieve_offset,
-            retrieve_limit=InboxTaskRepository.PAGE_SIZE,
-        )
+        owner_link = EntityLink.std(NamedEntityTag.HABIT.value, habit.ref_id)
+        if only_active_inbox_tasks:
+            # For callers that show what's still to do, like the time plan's
+            # activity panel: every active task, and no paging.
+            inbox_tasks = await uow.get(
+                InboxTaskRepository
+            ).find_all_for_owner_created_desc(
+                allow_archived=False,
+                owner=owner_link,
+                filter_status=InboxTaskStatus.all_workable_statuses(),
+            )
+            inbox_tasks_total_cnt = len(inbox_tasks)
+        else:
+            inbox_tasks_total_cnt = await uow.get(
+                InboxTaskRepository
+            ).count_all_for_owner(
+                allow_archived=allow_archived,
+                owner=owner_link,
+            )
+            inbox_tasks = await uow.get(
+                InboxTaskRepository
+            ).find_all_for_owner_created_desc(
+                allow_archived=True,
+                owner=owner_link,
+                retrieve_offset=inbox_task_retrieve_offset,
+                retrieve_limit=InboxTaskRepository.PAGE_SIZE,
+            )
 
         streak_mark_earliest_date = (
             include_streak_marks_earliest_date

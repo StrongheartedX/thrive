@@ -21,7 +21,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -33,8 +37,15 @@ class DocUpdateArgs(JupiterUpdateCrownEntityArgs):
     parent_dir_ref_id: UpdateAction[EntityId]
 
 
+@use_case_result
+class DocUpdateResult(UseCaseResultBase):
+    """DocUpdate result."""
+
+    updated_doc: Doc
+
+
 @mutation_use_case(WorkspaceFeature.DOCS, exclude_component=[AppCore.CLI])
-class DocUpdateUseCase(JupiterUpdateCrownEntityUseCase[DocUpdateArgs, None]):
+class DocUpdateUseCase(JupiterUpdateCrownEntityUseCase[DocUpdateArgs, DocUpdateResult]):
     """Update a doc use case."""
 
     async def _perform_transactional_mutation(
@@ -43,7 +54,7 @@ class DocUpdateUseCase(JupiterUpdateCrownEntityUseCase[DocUpdateArgs, None]):
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: DocUpdateArgs,
-    ) -> None:
+    ) -> DocUpdateResult:
         """Execute the command's action."""
         doc = await self.load_entity(uow, context.user.ref_id, Doc, args.ref_id)
 
@@ -78,3 +89,5 @@ class DocUpdateUseCase(JupiterUpdateCrownEntityUseCase[DocUpdateArgs, None]):
             await ReplicateDirHierarchyRightsService().refresh_for_entity(
                 context.domain_context, uow, doc
             )
+
+        return DocUpdateResult(updated_doc=doc)

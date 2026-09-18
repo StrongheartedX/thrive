@@ -21,6 +21,9 @@ from jupiter_webapi_client.api.chores.chore_create import (
 from jupiter_webapi_client.api.chores.chore_stack_create import (
     sync_detailed as chore_stack_create_sync,
 )
+from jupiter_webapi_client.api.chores.chore_stack_find_suitable_for_time_plan import (
+    sync_detailed as chore_stack_find_suitable_for_time_plan_sync,
+)
 from jupiter_webapi_client.api.gen.gen_do import (
     sync_detailed as gen_do_sync,
 )
@@ -29,6 +32,9 @@ from jupiter_webapi_client.api.habits.habit_create import (
 )
 from jupiter_webapi_client.api.habits.habit_stack_create import (
     sync_detailed as habit_stack_create_sync,
+)
+from jupiter_webapi_client.api.habits.habit_stack_find_suitable_for_time_plan import (
+    sync_detailed as habit_stack_find_suitable_for_time_plan_sync,
 )
 from jupiter_webapi_client.api.life_plan.aspect_create import (
     sync_detailed as aspect_create_sync,
@@ -44,6 +50,9 @@ from jupiter_webapi_client.api.time_plans.time_plan_associate_big_plan_with_plan
 )
 from jupiter_webapi_client.api.time_plans.time_plan_associate_inbox_task_with_plan import (
     sync_detailed as time_plan_associate_inbox_task_with_plan_sync,
+)
+from jupiter_webapi_client.api.time_plans.time_plan_associate_with_chore_stacks import (
+    sync_detailed as time_plan_associate_with_chore_stacks_sync,
 )
 from jupiter_webapi_client.api.time_plans.time_plan_create import (
     sync_detailed as time_plan_create_sync,
@@ -94,6 +103,12 @@ from jupiter_webapi_client.models.chore_stack_create_args import ChoreStackCreat
 from jupiter_webapi_client.models.chore_stack_create_result import (
     ChoreStackCreateResult,
 )
+from jupiter_webapi_client.models.chore_stack_find_suitable_for_time_plan_args import (
+    ChoreStackFindSuitableForTimePlanArgs,
+)
+from jupiter_webapi_client.models.chore_stack_find_suitable_for_time_plan_result import (
+    ChoreStackFindSuitableForTimePlanResult,
+)
 from jupiter_webapi_client.models.difficulty import Difficulty
 from jupiter_webapi_client.models.eisen import Eisen
 from jupiter_webapi_client.models.gen_do_args import GenDoArgs
@@ -109,6 +124,12 @@ from jupiter_webapi_client.models.habit_stack import HabitStack
 from jupiter_webapi_client.models.habit_stack_create_args import HabitStackCreateArgs
 from jupiter_webapi_client.models.habit_stack_create_result import (
     HabitStackCreateResult,
+)
+from jupiter_webapi_client.models.habit_stack_find_suitable_for_time_plan_args import (
+    HabitStackFindSuitableForTimePlanArgs,
+)
+from jupiter_webapi_client.models.habit_stack_find_suitable_for_time_plan_result import (
+    HabitStackFindSuitableForTimePlanResult,
 )
 from jupiter_webapi_client.models.heading_block import HeadingBlock
 from jupiter_webapi_client.models.inbox_task import InboxTask
@@ -137,6 +158,12 @@ from jupiter_webapi_client.models.time_plan_associate_inbox_task_with_plan_args 
 from jupiter_webapi_client.models.time_plan_associate_inbox_task_with_plan_result import (
     TimePlanAssociateInboxTaskWithPlanResult,
 )
+from jupiter_webapi_client.models.time_plan_associate_with_chore_stacks_args import (
+    TimePlanAssociateWithChoreStacksArgs,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_chore_stacks_result import (
+    TimePlanAssociateWithChoreStacksResult,
+)
 from jupiter_webapi_client.models.time_plan_create_args import TimePlanCreateArgs
 from jupiter_webapi_client.models.time_plan_create_result import TimePlanCreateResult
 from jupiter_webapi_client.models.time_plan_load_args import TimePlanLoadArgs
@@ -147,6 +174,9 @@ from jupiter_webapi_client.models.time_plan_load_for_date_and_period_result impo
     TimePlanLoadForDateAndPeriodResult,
 )
 from jupiter_webapi_client.models.time_plan_load_result import TimePlanLoadResult
+from jupiter_webapi_client.models.time_plan_load_result_activity_doneness_type_0 import (
+    TimePlanLoadResultActivityDonenessType0,
+)
 from jupiter_webapi_client.models.time_plan_question import TimePlanQuestion
 from jupiter_webapi_client.models.time_plan_question_archive_args import (
     TimePlanQuestionArchiveArgs,
@@ -968,6 +998,11 @@ def test_api_time_plan_activity_update(
     )
     assert response.status_code == 200
 
+    updated = response.json()["updated_time_plan_activity"]
+    assert updated["ref_id"] == activity.ref_id
+    assert updated["kind"] == "make-progress"
+    assert updated["feasability"] == "nice-to-have"
+
     response2 = requests.get(
         f"{api_url}/v1/time-plans/{tp.ref_id}/activities/{activity.ref_id}?allow_archived=false",
         headers=_headers(api_key),
@@ -995,6 +1030,10 @@ def test_api_time_plan_activity_archive(
         timeout=10,
     )
     assert response.status_code == 200
+
+    archived = response.json()["archived_time_plan_activities"]
+    assert [it["ref_id"] for it in archived] == [activity.ref_id]
+    assert archived[0]["archived"] is True
 
     response2 = requests.get(
         f"{api_url}/v1/time-plans/{tp.ref_id}/activities/{activity.ref_id}?allow_archived=true",
@@ -1030,6 +1069,8 @@ def test_api_time_plan_activity_remove(
         timeout=10,
     )
     assert response.status_code == 200
+
+    assert response.json()["removed_time_plan_activity_ref_ids"] == [activity.ref_id]
 
     response2 = requests.get(
         f"{api_url}/v1/time-plans/{tp.ref_id}/activities/{activity.ref_id}?allow_archived=true",
@@ -1831,14 +1872,14 @@ def test_api_time_plan_associate_with_habit_stacks(
     create_habit,
     create_habit_stack,
 ) -> None:
-    tp = create_time_plan("2024-12-02")
+    tp = create_time_plan("2024-12-30")
     habit1 = create_habit("Stacked Habit One")
     habit2 = create_habit("Stacked Habit Two")
     unstacked = create_habit("Unstacked Habit")
     stack = create_habit_stack("Morning Stack", [habit1.ref_id, habit2.ref_id])
 
     response = requests.post(
-        f"{api_url}/v1/time-plan-associate-with-habit-stacks",
+        f"{api_url}/v1/time-plans/{tp.ref_id}/associate-with-habit-stacks",
         headers=_headers(api_key),
         json={
             "ref_id": tp.ref_id,
@@ -1860,31 +1901,28 @@ def test_api_time_plan_associate_with_habit_stacks(
 
 @pytest.mark.usefixtures("_with_habits_enabled")
 def test_api_habit_stack_find_suitable_for_time_plan(
-    api_url: str,
-    api_key: str,
+    logged_in_client: AuthenticatedClient,
     create_time_plan,
     create_habit,
     create_habit_stack,
 ) -> None:
-    tp = create_time_plan("2024-12-09")
+    # Like finding suitable habits, this isn't part of the public API, so it
+    # goes to the WebAPI directly.
+    tp = create_time_plan("2025-01-27")
     habit = create_habit("Suitable Stack Habit")
     stack = create_habit_stack("Suitable Stack", [habit.ref_id])
 
-    response = requests.post(
-        f"{api_url}/v1/habit-stack-find-suitable-for-time-plan",
-        headers=_headers(api_key),
-        json={"time_plan_ref_id": tp.ref_id},
-        timeout=10,
-    )
-    assert response.status_code == 200
-    entries = response.json()["entries"]
-    matching = [
-        entry for entry in entries if entry["habit_stack"]["ref_id"] == stack.ref_id
-    ]
+    entries = get_parsed_from_response(
+        HabitStackFindSuitableForTimePlanResult,
+        habit_stack_find_suitable_for_time_plan_sync(
+            client=logged_in_client,
+            body=HabitStackFindSuitableForTimePlanArgs(time_plan_ref_id=tp.ref_id),
+        ),
+    ).entries
+    matching = [entry for entry in entries if entry.habit_stack.ref_id == stack.ref_id]
     assert len(matching) == 1
-    assert matching[0]["habit_stack"]["name"] == "Suitable Stack"
-    member_ids = {habit["ref_id"] for habit in matching[0]["habits"]}
-    assert habit.ref_id in member_ids
+    assert matching[0].habit_stack.name == "Suitable Stack"
+    assert habit.ref_id in {member.ref_id for member in matching[0].habits}
 
 
 @pytest.mark.usefixtures("_with_habits_enabled")
@@ -1899,7 +1937,7 @@ def test_api_time_event_create_for_habit_stack(
     stack = create_habit_stack("Event Stack", [habit1.ref_id, habit2.ref_id])
 
     response = requests.post(
-        f"{api_url}/v1/time-event-in-day-block-create-for-habit-stack",
+        f"{api_url}/v1/common/time-events/in-day-blocks/for-habit-stack",
         headers=_headers(api_key),
         json={
             "habit_stack_ref_id": stack.ref_id,
@@ -1927,14 +1965,14 @@ def test_api_time_plan_associate_with_chore_stacks(
     create_chore,
     create_chore_stack,
 ) -> None:
-    tp = create_time_plan("2024-12-02")
+    tp = create_time_plan("2025-02-24")
     chore1 = create_chore("Stacked Chore One")
     chore2 = create_chore("Stacked Chore Two")
     unstacked = create_chore("Unstacked Chore")
     stack = create_chore_stack("Morning Stack", [chore1.ref_id, chore2.ref_id])
 
     response = requests.post(
-        f"{api_url}/v1/time-plan-associate-with-chore-stacks",
+        f"{api_url}/v1/time-plans/{tp.ref_id}/associate-with-chore-stacks",
         headers=_headers(api_key),
         json={
             "ref_id": tp.ref_id,
@@ -1955,32 +1993,71 @@ def test_api_time_plan_associate_with_chore_stacks(
 
 
 @pytest.mark.usefixtures("_with_chores_enabled")
-def test_api_chore_stack_find_suitable_for_time_plan(
-    api_url: str,
-    api_key: str,
+def test_api_time_plan_load_with_chore_stack_activity(
+    logged_in_client: AuthenticatedClient,
     create_time_plan,
     create_chore,
     create_chore_stack,
 ) -> None:
-    tp = create_time_plan("2024-12-09")
+    tp = create_time_plan("2025-03-03")
+    chore1 = create_chore("Loaded Chore One")
+    chore2 = create_chore("Loaded Chore Two")
+    stack = create_chore_stack("Loaded Stack", [chore1.ref_id, chore2.ref_id])
+
+    activities = get_parsed_from_response(
+        TimePlanAssociateWithChoreStacksResult,
+        time_plan_associate_with_chore_stacks_sync(
+            client=logged_in_client,
+            body=TimePlanAssociateWithChoreStacksArgs(
+                ref_id=tp.ref_id,
+                chore_stack_ref_ids=[stack.ref_id],
+                kind=TimePlanActivityKind.FINISH,
+                feasability=TimePlanActivityFeasability.MUST_DO,
+            ),
+        ),
+    ).new_time_plan_activities
+
+    # Doneness is only worked out when targets are loaded, and a chore stack's
+    # rolls up from its member chores' activities.
+    loaded = get_parsed_from_response(
+        TimePlanLoadResult,
+        time_plan_load_sync(
+            client=logged_in_client,
+            body=TimePlanLoadArgs(
+                ref_id=tp.ref_id, allow_archived=False, include_targets=True
+            ),
+        ),
+    )
+
+    assert isinstance(loaded.activity_doneness, TimePlanLoadResultActivityDonenessType0)
+    doneness_ref_ids = set(loaded.activity_doneness.additional_properties)
+    assert {activity.ref_id for activity in activities} <= doneness_ref_ids
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_api_chore_stack_find_suitable_for_time_plan(
+    logged_in_client: AuthenticatedClient,
+    create_time_plan,
+    create_chore,
+    create_chore_stack,
+) -> None:
+    # Like finding suitable chores, this isn't part of the public API, so it
+    # goes to the WebAPI directly.
+    tp = create_time_plan("2025-03-10")
     chore = create_chore("Suitable Stack Chore")
     stack = create_chore_stack("Suitable Stack", [chore.ref_id])
 
-    response = requests.post(
-        f"{api_url}/v1/chore-stack-find-suitable-for-time-plan",
-        headers=_headers(api_key),
-        json={"time_plan_ref_id": tp.ref_id},
-        timeout=10,
-    )
-    assert response.status_code == 200
-    entries = response.json()["entries"]
-    matching = [
-        entry for entry in entries if entry["chore_stack"]["ref_id"] == stack.ref_id
-    ]
+    entries = get_parsed_from_response(
+        ChoreStackFindSuitableForTimePlanResult,
+        chore_stack_find_suitable_for_time_plan_sync(
+            client=logged_in_client,
+            body=ChoreStackFindSuitableForTimePlanArgs(time_plan_ref_id=tp.ref_id),
+        ),
+    ).entries
+    matching = [entry for entry in entries if entry.chore_stack.ref_id == stack.ref_id]
     assert len(matching) == 1
-    assert matching[0]["chore_stack"]["name"] == "Suitable Stack"
-    member_ids = {chore["ref_id"] for chore in matching[0]["chores"]}
-    assert chore.ref_id in member_ids
+    assert matching[0].chore_stack.name == "Suitable Stack"
+    assert chore.ref_id in {member.ref_id for member in matching[0].chores}
 
 
 @pytest.mark.usefixtures("_with_chores_enabled")
@@ -1995,7 +2072,7 @@ def test_api_time_event_create_for_chore_stack(
     stack = create_chore_stack("Event Stack", [chore1.ref_id, chore2.ref_id])
 
     response = requests.post(
-        f"{api_url}/v1/time-event-in-day-block-create-for-chore-stack",
+        f"{api_url}/v1/common/time-events/in-day-blocks/for-chore-stack",
         headers=_headers(api_key),
         json={
             "chore_stack_ref_id": stack.ref_id,

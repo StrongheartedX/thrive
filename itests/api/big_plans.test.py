@@ -192,6 +192,10 @@ def test_api_big_plan_update(api_url: str, api_key: str, create_big_plan) -> Non
     )
     assert response.status_code == 200
 
+    updated = response.json()["updated_big_plan"]
+    assert updated["ref_id"] == created.ref_id
+    assert updated["name"] == "New Plan"
+
     response2 = requests.get(
         f"{api_url}/v1/big-plans/{created.ref_id}?allow_archived=false",
         headers=_headers(api_key),

@@ -25,6 +25,7 @@ import type { JournalQuestionLoadResult } from '../models/JournalQuestionLoadRes
 import type { JournalQuestionRemoveArgs } from '../models/JournalQuestionRemoveArgs';
 import type { JournalQuestionReorderArgs } from '../models/JournalQuestionReorderArgs';
 import type { JournalQuestionUpdateArgs } from '../models/JournalQuestionUpdateArgs';
+import type { JournalQuestionUpdateResult } from '../models/JournalQuestionUpdateResult';
 import type { JournalRefreshStatsArgs } from '../models/JournalRefreshStatsArgs';
 import type { JournalRegenArgs } from '../models/JournalRegenArgs';
 import type { JournalRemoveArgs } from '../models/JournalRemoveArgs';
@@ -204,12 +205,12 @@ export class JournalsService {
     /**
      * Use case for updating a journal question.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns JournalQuestionUpdateResult Successful response
      * @throws ApiError
      */
     public journalQuestionUpdate(
         requestBody?: JournalQuestionUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<JournalQuestionUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/journal-question-update',

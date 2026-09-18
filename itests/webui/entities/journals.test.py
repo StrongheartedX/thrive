@@ -40,6 +40,7 @@ from jupiter_webapi_client.models.workspace_set_feature_args import (
     WorkspaceSetFeatureArgs,
 )
 from playwright.sync_api import Page, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from itests.helpers import (
     fill_after_hydration,
@@ -141,11 +142,21 @@ def _set_new_journal_question_selected(
 ) -> None:
     assert entity_id is not None
     card = page.locator(f"#{entity_id}")
+    is_selected = "el => getComputedStyle(el).boxShadow.includes('inset')"
     for _ in range(4):
-        box_shadow = card.evaluate("el => getComputedStyle(el).boxShadow") or ""
-        if ("inset" in box_shadow) == selected:
+        if card.evaluate(is_selected) == selected:
             return
         card.click()
+        # The card animates its shadow, and mid-animation it still reads as
+        # selected; wait for the click to show before looking again.
+        try:
+            page.wait_for_function(
+                "([el, want]) => getComputedStyle(el).boxShadow.includes('inset') === want",
+                arg=[card.element_handle(), selected],
+                timeout=2000,
+            )
+        except PlaywrightTimeoutError:
+            continue
     raise AssertionError(f"Could not set {entity_id} selected={selected}")
 
 

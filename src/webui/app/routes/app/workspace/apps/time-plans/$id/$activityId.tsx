@@ -1,62 +1,55 @@
 import type {
   AccessStatus,
+  AspectSummary,
+  BigPlanSummary,
+  ChapterSummary,
   Chore,
   ChoreStack,
+  Contact,
   Habit,
+  HabitStack,
+  GoalSummary,
   InboxTask,
   LifePlan,
-  AspectSummary,
+  MilestoneSummary,
+  Tag,
   TimeEventInDayBlock,
   TimePlan,
   TimePlanActivity,
+  Note,
 } from "@jupiter/webapi-client";
 import {
   NamedEntityTag,
-  BigPlanStatus,
-  Difficulty,
-  Eisen,
-  HabitRepeatsStrategy,
   InboxTaskStatus,
   RecurringTaskPeriod,
-  TimePlanActivityFeasability,
-  TimePlanActivityKind,
   WorkspaceFeature,
 } from "@jupiter/webapi-client";
-import { DateTime } from "luxon";
 import { FormControl, FormLabel, Stack } from "@mui/material";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 import {
-  useActionData,
-  useFetcher,
+  useNavigate,
   useNavigation,
   useParams,
   useRouteLoaderData,
   useSearchParams,
 } from "@remix-run/react";
-import { useContext } from "react";
+import { useContext, useMemo, useState } from "react";
 import { z } from "zod";
-import { CheckboxAsString, parseForm, parseParams } from "zodix";
+import { parseParams } from "zodix";
 import { TodoTaskPropertiesEditor } from "@jupiter/core/apps/todo/components/properties-editor";
 import { isWorkspaceFeatureAvailable } from "@jupiter/core/workspaces/root";
 import {
-  parseTimeEventBufferMins,
   sortInboxTaskTimeEventsNaturally,
-  timeEventInDayBlockParamsToUtc,
   timeEventInDayBlockToTimezone,
 } from "@jupiter/core/common/sub/time_events/time-event";
 import { TIME_PLAN_ACTIVITY_TIME_EVENT_PARAM } from "@jupiter/core/calendar/component/calendar-navigation";
 import {
-  isInboxTaskCoreFieldEditable,
   sortInboxTasksNaturally,
   type InboxTaskParent,
 } from "#/core/common/sub/inbox_tasks/root";
 import { BigPlanPropertiesEditor } from "@jupiter/core/apps/big_plans/component/properties-editor";
-import {
-  fixSelectOutputEntityId,
-  selectZod,
-} from "@jupiter/core/common/select-form";
 import { HabitPropertiesEditor } from "@jupiter/core/apps/habits/component/properties-editor";
 import { HabitStackPropertiesEditor } from "@jupiter/core/apps/habits/component/stack-properties-editor";
 import { sortHabitsNaturally } from "@jupiter/core/apps/habits/root";
@@ -70,11 +63,7 @@ import {
 } from "@jupiter/core/infra/component/entity-card";
 import { EntityStack } from "@jupiter/core/infra/component/entity-stack";
 import { parseEntityLinkStd } from "@jupiter/core/common/entity-link";
-import {
-  CHORE,
-  HABIT,
-  entityLinkRefIdFromWire,
-} from "@jupiter/core/common/sub/inbox_tasks/parent-link-namespace";
+import { entityLinkRefIdFromWire } from "@jupiter/core/common/sub/inbox_tasks/parent-link-namespace";
 import {
   choreActivitiesForStackMembers,
   habitActivitiesForStackMembers,
@@ -100,17 +89,78 @@ import { timePlanActivityTargetNameForEvent } from "@jupiter/core/apps/time_plan
 import { timePlanAllowsInboxTasks } from "@jupiter/core/apps/time_plans/root";
 import { TimePlanActivityFeasabilitySelect } from "@jupiter/core/apps/time_plans/sub/activity/component/feasability-select";
 import { TimePlanActivitKindSelect } from "@jupiter/core/apps/time_plans/sub/activity/component/kind-select";
-import { saveScoreAction } from "@jupiter/core/gamification/scores.server";
+import { useTimePlanStore } from "@jupiter/core/apps/time_plans/store/context";
+import { useTimePlanMutation } from "@jupiter/core/apps/time_plans/store/mutation";
+import {
+  UPDATE_TIME_PLAN_ACTIVITY,
+  updateTimePlanActivityArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-activity";
+import {
+  UPDATE_INBOX_TASK,
+  updateInboxTaskArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-inbox-task";
+import {
+  UPDATE_TODO_TASK,
+  updateTodoTaskArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-todo-task";
+import {
+  UPDATE_BIG_PLAN,
+  updateBigPlanArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-big-plan";
+import {
+  UPDATE_HABIT,
+  updateHabitArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-habit";
+import {
+  UPDATE_HABIT_STACK,
+  updateHabitStackArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-habit-stack";
+import {
+  UPDATE_CHORE,
+  updateChoreArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-chore";
+import {
+  UPDATE_CHORE_STACK,
+  updateChoreStackArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/update-chore-stack";
+import {
+  ARCHIVE_TIME_PLAN_ACTIVITY,
+  REMOVE_TIME_PLAN_ACTIVITY,
+} from "@jupiter/core/apps/time_plans/store/mutations/archive-activity";
+import {
+  CREATE_NOTE,
+  createdNoteKey,
+} from "@jupiter/core/apps/time_plans/store/mutations/create-note";
+import {
+  ARCHIVE_TIME_EVENT,
+  UPDATE_TIME_EVENT,
+  archiveTimeEventArgsFromForm,
+  updateTimeEventArgsFromForm,
+} from "@jupiter/core/apps/time_plans/store/mutations/time-event";
+import { UPDATE_INBOX_TASK_STATUS } from "@jupiter/core/apps/time_plans/store/mutations/update-inbox-task-status";
+import {
+  choreEditChangesGeneration,
+  habitEditChangesGeneration,
+} from "@jupiter/core/apps/time_plans/store/regen";
+import { useRegen } from "@jupiter/core/apps/time_plans/store/regen-offer";
+import { BIG_PLAN_STATUS_INTENTS } from "@jupiter/core/apps/big_plans/intents";
+import {
+  INBOX_TASK_DELAY_INTENTS,
+  INBOX_TASK_STATUS_INTENTS,
+} from "@jupiter/core/common/sub/inbox_tasks/intents";
+import type { IntentHandler } from "@jupiter/core/infra/component/intent-interceptor";
+import {
+  latestEntities,
+  latestEntity,
+  latestEntityOrNull,
+  selectTimePlanView,
+} from "@jupiter/core/apps/time_plans/store/view";
 import { LeafPanelExpansionState } from "@jupiter/core/infra/leaf-panel-expansion";
 import { useBigScreen } from "@jupiter/core/infra/component/use-big-screen";
 import { DisplayType } from "@jupiter/core/infra/component/use-nested-entities";
 import { TopLevelInfoContext } from "@jupiter/core/infra/top-level-context";
-import { noteStdOwner } from "#/core/common/sub/notes/note-std-owner";
 import { accessStatusAllowsWriterOrAbove } from "#/core/common/sub/access/access-level";
-import {
-  handleActionApiError,
-  handleLoaderApiError,
-} from "@jupiter/core/infra/errors.server";
+import { handleLoaderApiError } from "@jupiter/core/infra/errors.server";
 
 import { useLoaderDataSafeForAnimation } from "~/rendering/use-loader-data-for-animation";
 import { standardShouldRevalidate } from "~/rendering/standard-should-revalidate";
@@ -121,298 +171,6 @@ const ParamsSchema = z.object({
   activityId: z.string(),
 });
 
-const UpdateFormTargetInboxTaskSchema = {
-  targetInboxTaskRefId: z.string(),
-  targetInboxTaskNamespace: z.string(),
-  targetInboxTaskName: z.string(),
-  targetInboxTaskBigPlan: z.string().optional(),
-  targetInboxTaskIsKey: CheckboxAsString,
-  targetInboxTaskStatus: z.nativeEnum(InboxTaskStatus),
-  targetInboxTaskEisen: z.nativeEnum(Eisen),
-  targetInboxTaskDifficulty: z.nativeEnum(Difficulty),
-  targetInboxTaskActionableDate: z.string().optional(),
-  targetInboxTaskDueDate: z.string().optional(),
-};
-
-const UpdateFormTargetBigPlanSchema = {
-  targetBigPlanRefId: z.string(),
-  targetBigPlanName: z.string(),
-  targetBigPlanStatus: z.nativeEnum(BigPlanStatus),
-  targetBigPlanAspect: z.string().optional(),
-  targetBigPlanChapter: z.string().optional(),
-  targetBigPlanGoal: z.string().optional(),
-  targetBigPlanIsKey: CheckboxAsString,
-  targetBigPlanEisen: z.nativeEnum(Eisen),
-  targetBigPlanDifficulty: z.nativeEnum(Difficulty),
-  targetBigPlanActionableDate: z.string().optional(),
-  targetBigPlanDueDate: z.string().optional(),
-  targetBigPlanDependencyRefIds: selectZod(z.string()),
-};
-
-const UpdateFormTargetTodoTaskSchema = {
-  targetTodoTaskRefId: z.string(),
-  targetTodoTaskName: z.string(),
-  targetTodoTaskStatus: z.nativeEnum(InboxTaskStatus),
-  targetTodoTaskAspect: z.string().optional(),
-  targetTodoTaskChapter: z.string().optional(),
-  targetTodoTaskGoal: z.string().optional(),
-  targetTodoTaskIsKey: CheckboxAsString,
-  targetTodoTaskEisen: z.nativeEnum(Eisen),
-  targetTodoTaskDifficulty: z.nativeEnum(Difficulty),
-  targetTodoTaskActionableDate: z.string().optional(),
-  targetTodoTaskDueDate: z.string().optional(),
-};
-
-const UpdateFormTargetHabitSchema = {
-  targetHabitRefId: z.string(),
-  targetHabitName: z.string(),
-  targetHabitAspect: z.string().optional(),
-  targetHabitChapter: z.string().optional(),
-  targetHabitGoal: z.string().optional(),
-  targetHabitStack: z.string().optional(),
-  targetHabitPeriod: z.nativeEnum(RecurringTaskPeriod),
-  targetHabitIsKey: CheckboxAsString,
-  targetHabitEisen: z.nativeEnum(Eisen),
-  targetHabitDifficulty: z.nativeEnum(Difficulty),
-  targetHabitActionableFromDay: z.string().optional(),
-  targetHabitActionableFromMonth: z.string().optional(),
-  targetHabitDueAtDay: z.string().optional(),
-  targetHabitDueAtMonth: z.string().optional(),
-  targetHabitSkipRule: z.string().optional(),
-  targetHabitRepeatsStrategy: z
-    .nativeEnum(HabitRepeatsStrategy)
-    .or(z.literal("none"))
-    .optional(),
-  targetHabitRepeatsInPeriodCount: z.string().optional(),
-};
-
-const UpdateFormTargetHabitStackSchema = {
-  targetHabitStackRefId: z.string(),
-  targetHabitStackName: z.string(),
-  targetHabitStackHabitRefIds: z.string().optional(),
-  targetHabitStackAspect: z.string().optional(),
-  targetHabitStackChapter: z.string().optional(),
-  targetHabitStackGoal: z.string().optional(),
-};
-
-const UpdateFormTargetChoreStackSchema = {
-  targetChoreStackRefId: z.string(),
-  targetChoreStackName: z.string(),
-  targetChoreStackChoreRefIds: z.string().optional(),
-  targetChoreStackAspect: z.string().optional(),
-  targetChoreStackChapter: z.string().optional(),
-  targetChoreStackGoal: z.string().optional(),
-};
-
-const UpdateFormTargetChoreSchema = {
-  targetChoreRefId: z.string(),
-  targetChoreName: z.string(),
-  targetChoreAspect: z.string().optional(),
-  targetChoreChapter: z.string().optional(),
-  targetChoreGoal: z.string().optional(),
-  targetChoreStack: z.string().optional(),
-  targetChoreIsKey: CheckboxAsString,
-  targetChorePeriod: z.nativeEnum(RecurringTaskPeriod),
-  targetChoreEisen: z.nativeEnum(Eisen),
-  targetChoreDifficulty: z.nativeEnum(Difficulty),
-  targetChoreActionableFromDay: z.string().optional(),
-  targetChoreActionableFromMonth: z.string().optional(),
-  targetChoreDueAtDay: z.string().optional(),
-  targetChoreDueAtMonth: z.string().optional(),
-  targetChoreMustDo: CheckboxAsString,
-  targetChoreSkipRule: z.string().optional(),
-  targetChoreStartAtDate: z.string().optional(),
-  targetChoreEndAtDate: z.string().optional(),
-};
-
-const UpdateFormSchema = z.discriminatedUnion("intent", [
-  z.object({
-    intent: z.literal("update"),
-    kind: z.nativeEnum(TimePlanActivityKind),
-    feasability: z.nativeEnum(TimePlanActivityFeasability),
-  }),
-  z.object({
-    intent: z.literal("archive"),
-  }),
-  z.object({
-    intent: z.literal("remove"),
-  }),
-  z.object({
-    intent: z.literal("update-time-event"),
-    timeEventRefId: z.string(),
-    userTimezone: z.string(),
-    startDate: z.string(),
-    startTimeInDay: z.string().optional(),
-    durationMins: z.string().transform((v) => parseInt(v, 10)),
-    bufferBeforeMins: z.string().optional(),
-    bufferAfterMins: z.string().optional(),
-  }),
-  z.object({
-    intent: z.literal("remove-time-event"),
-    timeEventRefId: z.string(),
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-mark-done"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-mark-not-done"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-start"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-restart"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-block"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-stop"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-reactivate"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-update"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-delay-1-day"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-delay-1-week"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-inbox-task-delay-1-month"),
-    ...UpdateFormTargetInboxTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-mark-done"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-mark-not-done"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-start"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-restart"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-block"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-stop"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-reactivate"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-update"),
-    ...UpdateFormTargetBigPlanSchema,
-  }),
-  z.object({
-    intent: z.literal("target-big-plan-create-note"),
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-mark-done"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-mark-not-done"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-start"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-restart"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-block"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-stop"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-reactivate"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-update"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-delay-1-day"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-delay-1-week"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-delay-1-month"),
-    ...UpdateFormTargetTodoTaskSchema,
-  }),
-  z.object({
-    intent: z.literal("target-todo-task-create-note"),
-  }),
-  z.object({
-    intent: z.literal("target-habit-update"),
-    ...UpdateFormTargetHabitSchema,
-  }),
-  z.object({
-    intent: z.literal("target-habit-create-note"),
-  }),
-  z.object({
-    intent: z.literal("target-habit-gen"),
-  }),
-  z.object({
-    intent: z.literal("target-habit-stack-update"),
-    ...UpdateFormTargetHabitStackSchema,
-  }),
-  z.object({
-    intent: z.literal("target-habit-stack-create-note"),
-  }),
-  z.object({
-    intent: z.literal("target-chore-stack-update"),
-    ...UpdateFormTargetChoreStackSchema,
-  }),
-  z.object({
-    intent: z.literal("target-chore-stack-create-note"),
-  }),
-  z.object({
-    intent: z.literal("target-chore-update"),
-    ...UpdateFormTargetChoreSchema,
-  }),
-  z.object({
-    intent: z.literal("target-chore-create-note"),
-  }),
-  z.object({
-    intent: z.literal("target-chore-gen"),
-  }),
-]);
-
 export const handle = {
   displayType: DisplayType.LEAF,
 };
@@ -422,130 +180,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const { activityId } = parseParams(params, ParamsSchema);
 
   try {
-    const summaryPromise = apiClient.application.getSummaries({
-      allow_archived: false,
-      include_workspace: true,
-      include_life_plan: true,
-      include_aspects: true,
-      include_chapters: true,
-      include_goals: true,
-      include_milestones: true,
-      include_big_plans: true,
-    });
-    const resultPromise = apiClient.timePlans.timePlanActivityLoad({
+    // The time plan's own loader already has the summaries, tags, contacts and
+    // the lists the editors pick from, plus the activity with its target; this
+    // only gets what the panel adds on top.
+    const result = await apiClient.timePlans.timePlanActivityLoadForPanel({
       ref_id: activityId,
       allow_archived: true,
     });
-    const tagsPromise = apiClient.tags.tagFind({
-      allow_archived: false,
-    });
-    const contactsPromise = apiClient.contacts.contactFind({
-      allow_archived: false,
-    });
-
-    const summaryResponse = await summaryPromise;
-    const workspace = summaryResponse.workspace;
-    const habitsAvailable =
-      workspace !== undefined &&
-      isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.HABITS);
-    const choresAvailable =
-      workspace !== undefined &&
-      isWorkspaceFeatureAvailable(workspace, WorkspaceFeature.CHORES);
-    const emptyFind = { entries: [] };
-
-    const [
-      result,
-      allTags,
-      allContacts,
-      stacksResponse,
-      choreStacksResponse,
-      habitsResponse,
-      choresResponse,
-    ] = await Promise.all([
-      resultPromise,
-      tagsPromise,
-      contactsPromise,
-      habitsAvailable
-        ? apiClient.habits.habitStackFind({
-            allow_archived: false,
-            include_tags: false,
-            include_notes: false,
-            include_life_plan: false,
-            include_habits: false,
-          })
-        : Promise.resolve(emptyFind),
-      choresAvailable
-        ? apiClient.chores.choreStackFind({
-            allow_archived: false,
-            include_tags: false,
-            include_notes: false,
-            include_life_plan: false,
-            include_chores: false,
-          })
-        : Promise.resolve(emptyFind),
-      habitsAvailable
-        ? apiClient.habits.habitFind({
-            allow_archived: false,
-            include_tags: false,
-            include_notes: false,
-            include_life_plan: false,
-            include_inbox_tasks: false,
-          })
-        : Promise.resolve(emptyFind),
-      choresAvailable
-        ? apiClient.chores.choreFind({
-            allow_archived: false,
-            include_tags: false,
-            include_notes: false,
-            include_life_plan: false,
-            include_inbox_tasks: false,
-          })
-        : Promise.resolve(emptyFind),
-    ]);
-
-    const stackMemberHabitRefIds =
-      result.target_habit_stack_info?.habits.map((habit) => habit.ref_id) ?? [];
-    const stackMemberChoreRefIds =
-      result.target_chore_stack_info?.chores.map((chore) => chore.ref_id) ?? [];
-
-    const [stackInboxTasksResult, choreStackInboxTasksResult] =
-      await Promise.all([
-        stackMemberHabitRefIds.length > 0
-          ? apiClient.inboxTasks.inboxTaskFind({
-              allow_archived: false,
-              filter_namespace: [HABIT],
-              filter_source_entity_ref_ids: stackMemberHabitRefIds,
-            })
-          : Promise.resolve(emptyFind),
-        stackMemberChoreRefIds.length > 0
-          ? apiClient.inboxTasks.inboxTaskFind({
-              allow_archived: false,
-              filter_namespace: [CHORE],
-              filter_source_entity_ref_ids: stackMemberChoreRefIds,
-            })
-          : Promise.resolve(emptyFind),
-      ]);
 
     return json({
-      rootAspect: summaryResponse.root_aspect as AspectSummary,
-      lifePlan: summaryResponse.life_plan as LifePlan,
-      allAspects: summaryResponse.aspects,
-      allChapters: summaryResponse.chapters,
-      allGoals: summaryResponse.goals,
-      allMilestones: summaryResponse.milestones,
-      allBigPlans: summaryResponse.big_plans,
-      allTags: allTags.tags,
-      allContacts: allContacts.contacts,
-      allStacks: stacksResponse.entries.map((entry) => entry.habit_stack),
-      allChoreStacks: choreStacksResponse.entries.map(
-        (entry) => entry.chore_stack,
-      ) as Array<ChoreStack>,
-      allHabits: habitsResponse.entries.map(
-        (entry) => entry.habit,
-      ) as Array<Habit>,
-      allChores: choresResponse.entries.map(
-        (entry) => entry.chore,
-      ) as Array<Chore>,
       timePlanActivity: result.time_plan_activity,
       targetInboxTask: result.target_inbox_task,
       targetInboxTaskInfo: result.target_inbox_task_info,
@@ -561,12 +204,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       targetChoreInfo: result.target_chore_info,
       targetChoreStack: result.target_chore_stack,
       targetChoreStackInfo: result.target_chore_stack_info,
-      stackInboxTasks: stackInboxTasksResult.entries.map(
-        (entry) => entry.inbox_task,
-      ),
-      choreStackInboxTasks: choreStackInboxTasksResult.entries.map(
-        (entry) => entry.inbox_task,
-      ),
+      stackInboxTasks: result.target_habit_stack
+        ? result.stack_inbox_tasks
+        : [],
+      choreStackInboxTasks: result.target_chore_stack
+        ? result.stack_inbox_tasks
+        : [],
       activityTimeEventBlocks: result.time_event_blocks,
     });
   } catch (error) {
@@ -577,1037 +220,455 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 export const shouldRevalidate: ShouldRevalidateFunction =
   standardShouldRevalidate;
 
-export async function action({ request, params }: ActionFunctionArgs) {
-  const apiClient = await getLoggedInApiClient(request);
-  const { id, activityId } = parseParams(params, ParamsSchema);
-  const form = await parseForm(request, UpdateFormSchema);
-  // The panel was opened from a time plan being looked at one way or another
-  // - whatever it does, it hands that back on the way out.
-  const timePlanView = new URL(request.url).searchParams;
-  const timePlanLocation = withTimePlanView(
-    `/app/workspace/apps/time-plans/${id}`,
-    timePlanView,
-  );
-
-  try {
-    switch (form.intent) {
-      case "update": {
-        await apiClient.timePlans.timePlanActivityUpdate({
-          ref_id: activityId,
-          kind: {
-            should_change: true,
-            value: form.kind,
-          },
-          feasability: {
-            should_change: true,
-            value: form.feasability,
-          },
-        });
-
-        return redirect(timePlanLocation);
-      }
-
-      case "archive": {
-        await apiClient.timePlans.timePlanActivityArchive({
-          ref_id: activityId,
-        });
-
-        return redirect(timePlanLocation);
-      }
-
-      case "remove": {
-        await apiClient.timePlans.timePlanActivityRemove({
-          ref_id: activityId,
-        });
-
-        return redirect(timePlanLocation);
-      }
-
-      case "update-time-event": {
-        const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
-          form,
-          form.userTimezone,
-        );
-        await apiClient.timeEvents.timeEventInDayBlockUpdate({
-          ref_id: form.timeEventRefId,
-          start_date: {
-            should_change: true,
-            value: startDate,
-          },
-          start_time_in_day: {
-            should_change: true,
-            value: startTimeInDay ?? "",
-          },
-          duration_mins: {
-            should_change: true,
-            value: form.durationMins,
-          },
-          buffer_before_mins: {
-            should_change: true,
-            value: parseTimeEventBufferMins(form.bufferBeforeMins),
-          },
-          buffer_after_mins: {
-            should_change: true,
-            value: parseTimeEventBufferMins(form.bufferAfterMins),
-          },
-        });
-
-        const activityLocation = withTimePlanView(
-          `/app/workspace/apps/time-plans/${id}/${activityId}`,
-          timePlanView,
-        );
-        const separator = activityLocation.includes("?") ? "&" : "?";
-        return redirect(
-          `${activityLocation}${separator}${TIME_PLAN_ACTIVITY_TIME_EVENT_PARAM}=${encodeURIComponent(form.timeEventRefId)}`,
-        );
-      }
-
-      case "remove-time-event": {
-        await apiClient.timeEvents.timeEventInDayBlockArchive({
-          ref_id: form.timeEventRefId,
-        });
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-inbox-task-mark-done":
-      case "target-inbox-task-mark-not-done":
-      case "target-inbox-task-start":
-      case "target-inbox-task-restart":
-      case "target-inbox-task-block":
-      case "target-inbox-task-stop":
-      case "target-inbox-task-reactivate":
-      case "target-inbox-task-update": {
-        const corePropertyEditable = isInboxTaskCoreFieldEditable(
-          form.targetInboxTaskNamespace,
-        );
-
-        let status = form.targetInboxTaskStatus;
-        if (form.intent === "target-inbox-task-mark-done") {
-          status = InboxTaskStatus.DONE;
-        } else if (form.intent === "target-inbox-task-mark-not-done") {
-          status = InboxTaskStatus.NOT_DONE;
-        } else if (form.intent === "target-inbox-task-start") {
-          status = InboxTaskStatus.IN_PROGRESS;
-        } else if (form.intent === "target-inbox-task-restart") {
-          status = InboxTaskStatus.IN_PROGRESS;
-        } else if (form.intent === "target-inbox-task-block") {
-          status = InboxTaskStatus.BLOCKED;
-        } else if (form.intent === "target-inbox-task-stop") {
-          status = InboxTaskStatus.NOT_STARTED;
-        } else if (form.intent === "target-inbox-task-reactivate") {
-          status = InboxTaskStatus.NOT_STARTED;
-        }
-
-        const result = await apiClient.inboxTasks.inboxTaskUpdate({
-          ref_id: form.targetInboxTaskRefId,
-          name: corePropertyEditable
-            ? {
-                should_change: true,
-                value: form.targetInboxTaskName,
-              }
-            : { should_change: false },
-          status: {
-            should_change: true,
-            value: status,
-          },
-          is_key: corePropertyEditable
-            ? {
-                should_change: true,
-                value: form.targetInboxTaskIsKey,
-              }
-            : { should_change: false },
-          eisen: corePropertyEditable
-            ? {
-                should_change: true,
-                value: form.targetInboxTaskEisen,
-              }
-            : { should_change: false },
-          difficulty: corePropertyEditable
-            ? {
-                should_change: true,
-                value: form.targetInboxTaskDifficulty,
-              }
-            : { should_change: false },
-          actionable_date: {
-            should_change: true,
-            value:
-              form.targetInboxTaskActionableDate !== undefined &&
-              form.targetInboxTaskActionableDate !== ""
-                ? form.targetInboxTaskActionableDate
-                : undefined,
-          },
-          due_date: {
-            should_change: true,
-            value:
-              form.targetInboxTaskDueDate !== undefined &&
-              form.targetInboxTaskDueDate !== ""
-                ? form.targetInboxTaskDueDate
-                : undefined,
-          },
-        });
-
-        if (result.record_score_result) {
-          return redirect(timePlanLocation, {
-            headers: {
-              "Set-Cookie": await saveScoreAction(result.record_score_result),
-            },
-          });
-        }
-
-        return redirect(timePlanLocation);
-      }
-
-      case "target-inbox-task-delay-1-day":
-      case "target-inbox-task-delay-1-week":
-      case "target-inbox-task-delay-1-month": {
-        const today = DateTime.now().startOf("day");
-        const delay =
-          form.intent === "target-inbox-task-delay-1-day"
-            ? { days: 1 }
-            : form.intent === "target-inbox-task-delay-1-week"
-              ? { weeks: 1 }
-              : { months: 1 };
-        const newActionableDate = today.plus(delay);
-
-        let newDueDate: DateTime | undefined;
-        if (
-          form.targetInboxTaskDueDate !== undefined &&
-          form.targetInboxTaskDueDate !== ""
-        ) {
-          const oldDueDate = DateTime.fromISO(form.targetInboxTaskDueDate);
-          if (
-            form.targetInboxTaskActionableDate !== undefined &&
-            form.targetInboxTaskActionableDate !== ""
-          ) {
-            const oldActionableDate = DateTime.fromISO(
-              form.targetInboxTaskActionableDate,
-            );
-            const gapDays = oldDueDate.diff(oldActionableDate, "days").days;
-            newDueDate = newActionableDate.plus({ days: gapDays });
-          } else {
-            newDueDate = newActionableDate;
-          }
-        }
-
-        await apiClient.inboxTasks.inboxTaskUpdate({
-          ref_id: form.targetInboxTaskRefId,
-          name: { should_change: false },
-          status: { should_change: false },
-          is_key: { should_change: false },
-          eisen: { should_change: false },
-          difficulty: { should_change: false },
-          actionable_date: {
-            should_change: true,
-            value: newActionableDate.toISODate() ?? undefined,
-          },
-          due_date: {
-            should_change: true,
-            value: newDueDate
-              ? (newDueDate.toISODate() ?? undefined)
-              : undefined,
-          },
-        });
-
-        return redirect(timePlanLocation);
-      }
-
-      case "target-big-plan-mark-done":
-      case "target-big-plan-mark-not-done":
-      case "target-big-plan-start":
-      case "target-big-plan-restart":
-      case "target-big-plan-block":
-      case "target-big-plan-stop":
-      case "target-big-plan-reactivate":
-      case "target-big-plan-update": {
-        let status = form.targetBigPlanStatus;
-        if (form.intent === "target-big-plan-mark-done") {
-          status = BigPlanStatus.DONE;
-        } else if (form.intent === "target-big-plan-mark-not-done") {
-          status = BigPlanStatus.NOT_DONE;
-        } else if (form.intent === "target-big-plan-start") {
-          status = BigPlanStatus.IN_PROGRESS;
-        } else if (form.intent === "target-big-plan-restart") {
-          status = BigPlanStatus.IN_PROGRESS;
-        } else if (form.intent === "target-big-plan-block") {
-          status = BigPlanStatus.BLOCKED;
-        } else if (form.intent === "target-big-plan-stop") {
-          status = BigPlanStatus.NOT_STARTED;
-        } else if (form.intent === "target-big-plan-reactivate") {
-          status = BigPlanStatus.NOT_STARTED;
-        }
-
-        const result = await apiClient.bigPlans.bigPlanUpdate({
-          ref_id: form.targetBigPlanRefId,
-          name: {
-            should_change: true,
-            value: form.targetBigPlanName,
-          },
-          status: {
-            should_change: true,
-            value: status,
-          },
-          aspect_ref_id: {
-            should_change: true,
-            value: form.targetBigPlanAspect,
-          },
-          chapter_ref_id: {
-            should_change: true,
-            value:
-              form.targetBigPlanChapter !== undefined &&
-              form.targetBigPlanChapter !== ""
-                ? form.targetBigPlanChapter
-                : undefined,
-          },
-          goal_ref_id: {
-            should_change: true,
-            value:
-              form.targetBigPlanGoal !== undefined &&
-              form.targetBigPlanGoal !== ""
-                ? form.targetBigPlanGoal
-                : undefined,
-          },
-          is_key: {
-            should_change: true,
-            value: form.targetBigPlanIsKey,
-          },
-          eisen: {
-            should_change: true,
-            value: form.targetBigPlanEisen,
-          },
-          difficulty: {
-            should_change: true,
-            value: form.targetBigPlanDifficulty,
-          },
-          actionable_date: {
-            should_change: true,
-            value:
-              form.targetBigPlanActionableDate !== undefined &&
-              form.targetBigPlanActionableDate !== ""
-                ? form.targetBigPlanActionableDate
-                : undefined,
-          },
-          due_date: {
-            should_change: true,
-            value:
-              form.targetBigPlanDueDate !== undefined &&
-              form.targetBigPlanDueDate !== ""
-                ? form.targetBigPlanDueDate
-                : undefined,
-          },
-          dependency_ref_ids: {
-            should_change: true,
-            value:
-              fixSelectOutputEntityId(form.targetBigPlanDependencyRefIds) || [],
-          },
-        });
-
-        if (result.record_score_result) {
-          return redirect(timePlanLocation, {
-            headers: {
-              "Set-Cookie": await saveScoreAction(result.record_score_result),
-            },
-          });
-        }
-
-        return redirect(timePlanLocation);
-      }
-
-      case "target-big-plan-create-note": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_big_plan) {
-          await apiClient.notes.noteCreate({
-            owner: noteStdOwner(
-              NamedEntityTag.BIG_PLAN,
-              activityResult.target_big_plan.ref_id,
-            ),
-            content: [],
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-todo-task-mark-done":
-      case "target-todo-task-mark-not-done":
-      case "target-todo-task-start":
-      case "target-todo-task-restart":
-      case "target-todo-task-block":
-      case "target-todo-task-stop":
-      case "target-todo-task-reactivate":
-      case "target-todo-task-update":
-      case "target-todo-task-delay-1-day":
-      case "target-todo-task-delay-1-week":
-      case "target-todo-task-delay-1-month": {
-        let status = form.targetTodoTaskStatus;
-        if (form.intent === "target-todo-task-mark-done") {
-          status = InboxTaskStatus.DONE;
-        } else if (form.intent === "target-todo-task-mark-not-done") {
-          status = InboxTaskStatus.NOT_DONE;
-        } else if (
-          form.intent === "target-todo-task-start" ||
-          form.intent === "target-todo-task-restart"
-        ) {
-          status = InboxTaskStatus.IN_PROGRESS;
-        } else if (form.intent === "target-todo-task-block") {
-          status = InboxTaskStatus.BLOCKED;
-        } else if (
-          form.intent === "target-todo-task-stop" ||
-          form.intent === "target-todo-task-reactivate"
-        ) {
-          status = InboxTaskStatus.NOT_STARTED;
-        }
-
-        let actionableDate = form.targetTodoTaskActionableDate;
-        let dueDate = form.targetTodoTaskDueDate;
-        if (
-          form.intent === "target-todo-task-delay-1-day" ||
-          form.intent === "target-todo-task-delay-1-week" ||
-          form.intent === "target-todo-task-delay-1-month"
-        ) {
-          const today = DateTime.now().startOf("day");
-          const delay =
-            form.intent === "target-todo-task-delay-1-day"
-              ? { days: 1 }
-              : form.intent === "target-todo-task-delay-1-week"
-                ? { weeks: 1 }
-                : { months: 1 };
-          const newActionableDate = today.plus(delay);
-          actionableDate = newActionableDate.toISODate() ?? undefined;
-          if (dueDate !== undefined && dueDate !== "") {
-            const oldDueDate = DateTime.fromISO(dueDate);
-            if (actionableDate !== undefined && actionableDate !== "") {
-              const oldActionableDate = DateTime.fromISO(
-                form.targetTodoTaskActionableDate ?? actionableDate,
-              );
-              const gapDays = oldDueDate.diff(oldActionableDate, "days").days;
-              dueDate =
-                newActionableDate.plus({ days: gapDays }).toISODate() ??
-                undefined;
-            } else {
-              dueDate = actionableDate;
-            }
-          }
-        }
-
-        await apiClient.todo.todoTaskUpdate({
-          ref_id: form.targetTodoTaskRefId,
-          name: {
-            should_change: true,
-            value: form.targetTodoTaskName,
-          },
-          status: {
-            should_change: true,
-            value: status,
-          },
-          aspect_ref_id:
-            form.targetTodoTaskAspect !== undefined
-              ? { should_change: true, value: form.targetTodoTaskAspect }
-              : { should_change: false },
-          chapter_ref_id:
-            form.targetTodoTaskAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetTodoTaskChapter !== undefined &&
-                    form.targetTodoTaskChapter !== ""
-                      ? form.targetTodoTaskChapter
-                      : undefined,
-                }
-              : { should_change: false },
-          goal_ref_id:
-            form.targetTodoTaskAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetTodoTaskGoal !== undefined &&
-                    form.targetTodoTaskGoal !== ""
-                      ? form.targetTodoTaskGoal
-                      : undefined,
-                }
-              : { should_change: false },
-          is_key: {
-            should_change: true,
-            value: form.targetTodoTaskIsKey,
-          },
-          eisen: {
-            should_change: true,
-            value: form.targetTodoTaskEisen,
-          },
-          difficulty: {
-            should_change: true,
-            value: form.targetTodoTaskDifficulty,
-          },
-          actionable_date: {
-            should_change: true,
-            value:
-              actionableDate !== undefined && actionableDate !== ""
-                ? actionableDate
-                : null,
-          },
-          due_date: {
-            should_change: true,
-            value: dueDate !== undefined && dueDate !== "" ? dueDate : null,
-          },
-        });
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-todo-task-create-note": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_todo_task) {
-          await apiClient.notes.noteCreate({
-            owner: noteStdOwner(
-              NamedEntityTag.TODO_TASK,
-              activityResult.target_todo_task.ref_id,
-            ),
-            content: [],
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-habit-update": {
-        await apiClient.habits.habitUpdate({
-          ref_id: form.targetHabitRefId,
-          name: {
-            should_change: true,
-            value: form.targetHabitName,
-          },
-          aspect_ref_id:
-            form.targetHabitAspect !== undefined
-              ? { should_change: true, value: form.targetHabitAspect }
-              : { should_change: false },
-          chapter_ref_id:
-            form.targetHabitAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetHabitChapter !== undefined &&
-                    form.targetHabitChapter !== ""
-                      ? form.targetHabitChapter
-                      : undefined,
-                }
-              : { should_change: false },
-          goal_ref_id:
-            form.targetHabitAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetHabitGoal !== undefined &&
-                    form.targetHabitGoal !== ""
-                      ? form.targetHabitGoal
-                      : undefined,
-                }
-              : { should_change: false },
-          stack_ref_id: {
-            should_change: true,
-            value:
-              form.targetHabitStack !== undefined &&
-              form.targetHabitStack !== ""
-                ? form.targetHabitStack
-                : null,
-          },
-          period: {
-            should_change: true,
-            value: form.targetHabitPeriod,
-          },
-          is_key: {
-            should_change: true,
-            value: form.targetHabitIsKey,
-          },
-          eisen: {
-            should_change: true,
-            value: form.targetHabitEisen,
-          },
-          difficulty: {
-            should_change: true,
-            value: form.targetHabitDifficulty,
-          },
-          actionable_from_day: {
-            should_change: true,
-            value:
-              form.targetHabitActionableFromDay === undefined ||
-              form.targetHabitActionableFromDay === ""
-                ? undefined
-                : parseInt(form.targetHabitActionableFromDay),
-          },
-          actionable_from_month: {
-            should_change: true,
-            value:
-              form.targetHabitActionableFromMonth === undefined ||
-              form.targetHabitActionableFromMonth === ""
-                ? undefined
-                : parseInt(form.targetHabitActionableFromMonth),
-          },
-          due_at_day: {
-            should_change: true,
-            value:
-              form.targetHabitDueAtDay === undefined ||
-              form.targetHabitDueAtDay === ""
-                ? undefined
-                : parseInt(form.targetHabitDueAtDay),
-          },
-          due_at_month: {
-            should_change: true,
-            value:
-              form.targetHabitDueAtMonth === undefined ||
-              form.targetHabitDueAtMonth === ""
-                ? undefined
-                : parseInt(form.targetHabitDueAtMonth),
-          },
-          skip_rule: {
-            should_change: true,
-            value:
-              form.targetHabitSkipRule === undefined ||
-              form.targetHabitSkipRule === ""
-                ? undefined
-                : form.targetHabitSkipRule,
-          },
-          repeats_strategy: {
-            should_change: true,
-            value:
-              form.targetHabitRepeatsStrategy !== undefined &&
-              form.targetHabitRepeatsStrategy !== "none"
-                ? form.targetHabitRepeatsStrategy
-                : undefined,
-          },
-          repeats_in_period_count: {
-            should_change: true,
-            value: form.targetHabitRepeatsInPeriodCount
-              ? parseInt(form.targetHabitRepeatsInPeriodCount)
-              : undefined,
-          },
-        });
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-habit-create-note": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_habit) {
-          await apiClient.notes.noteCreate({
-            owner: noteStdOwner(
-              NamedEntityTag.HABIT,
-              activityResult.target_habit.ref_id,
-            ),
-            content: [],
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-habit-gen": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_habit) {
-          await apiClient.habits.habitRegen({
-            ref_id: activityResult.target_habit.ref_id,
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-habit-stack-update": {
-        const habitRefIds = (form.targetHabitStackHabitRefIds ?? "")
-          .split(",")
-          .map((refId) => refId.trim())
-          .filter((refId) => refId.length > 0);
-
-        await apiClient.habits.habitStackUpdate({
-          ref_id: form.targetHabitStackRefId,
-          name: {
-            should_change: true,
-            value: form.targetHabitStackName,
-          },
-          habit_ref_ids: {
-            should_change: true,
-            value: habitRefIds,
-          },
-          aspect_ref_id:
-            form.targetHabitStackAspect !== undefined
-              ? { should_change: true, value: form.targetHabitStackAspect }
-              : { should_change: false },
-          chapter_ref_id:
-            form.targetHabitStackAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetHabitStackChapter !== undefined &&
-                    form.targetHabitStackChapter !== ""
-                      ? form.targetHabitStackChapter
-                      : undefined,
-                }
-              : { should_change: false },
-          goal_ref_id:
-            form.targetHabitStackAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetHabitStackGoal !== undefined &&
-                    form.targetHabitStackGoal !== ""
-                      ? form.targetHabitStackGoal
-                      : undefined,
-                }
-              : { should_change: false },
-        });
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-habit-stack-create-note": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_habit_stack) {
-          await apiClient.notes.noteCreate({
-            owner: noteStdOwner(
-              NamedEntityTag.HABIT_STACK,
-              activityResult.target_habit_stack.ref_id,
-            ),
-            content: [],
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-chore-stack-update": {
-        const choreRefIds = (form.targetChoreStackChoreRefIds ?? "")
-          .split(",")
-          .map((refId) => refId.trim())
-          .filter((refId) => refId.length > 0);
-
-        await apiClient.chores.choreStackUpdate({
-          ref_id: form.targetChoreStackRefId,
-          name: {
-            should_change: true,
-            value: form.targetChoreStackName,
-          },
-          chore_ref_ids: {
-            should_change: true,
-            value: choreRefIds,
-          },
-          aspect_ref_id:
-            form.targetChoreStackAspect !== undefined
-              ? { should_change: true, value: form.targetChoreStackAspect }
-              : { should_change: false },
-          chapter_ref_id:
-            form.targetChoreStackAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetChoreStackChapter !== undefined &&
-                    form.targetChoreStackChapter !== ""
-                      ? form.targetChoreStackChapter
-                      : undefined,
-                }
-              : { should_change: false },
-          goal_ref_id:
-            form.targetChoreStackAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetChoreStackGoal !== undefined &&
-                    form.targetChoreStackGoal !== ""
-                      ? form.targetChoreStackGoal
-                      : undefined,
-                }
-              : { should_change: false },
-        });
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-chore-stack-create-note": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_chore_stack) {
-          await apiClient.notes.noteCreate({
-            owner: noteStdOwner(
-              NamedEntityTag.CHORE_STACK,
-              activityResult.target_chore_stack.ref_id,
-            ),
-            content: [],
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-chore-update": {
-        await apiClient.chores.choreUpdate({
-          ref_id: form.targetChoreRefId,
-          name: {
-            should_change: true,
-            value: form.targetChoreName,
-          },
-          is_key: {
-            should_change: true,
-            value: form.targetChoreIsKey,
-          },
-          aspect_ref_id:
-            form.targetChoreAspect !== undefined
-              ? { should_change: true, value: form.targetChoreAspect }
-              : { should_change: false },
-          chapter_ref_id:
-            form.targetChoreAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetChoreChapter !== undefined &&
-                    form.targetChoreChapter !== ""
-                      ? form.targetChoreChapter
-                      : undefined,
-                }
-              : { should_change: false },
-          goal_ref_id:
-            form.targetChoreAspect !== undefined
-              ? {
-                  should_change: true,
-                  value:
-                    form.targetChoreGoal !== undefined &&
-                    form.targetChoreGoal !== ""
-                      ? form.targetChoreGoal
-                      : undefined,
-                }
-              : { should_change: false },
-          stack_ref_id: {
-            should_change: true,
-            value:
-              form.targetChoreStack !== undefined &&
-              form.targetChoreStack !== ""
-                ? form.targetChoreStack
-                : null,
-          },
-          period: {
-            should_change: true,
-            value: form.targetChorePeriod,
-          },
-          eisen: {
-            should_change: true,
-            value: form.targetChoreEisen,
-          },
-          difficulty: {
-            should_change: true,
-            value: form.targetChoreDifficulty,
-          },
-          actionable_from_day: {
-            should_change: true,
-            value:
-              form.targetChoreActionableFromDay === undefined ||
-              form.targetChoreActionableFromDay === ""
-                ? undefined
-                : parseInt(form.targetChoreActionableFromDay),
-          },
-          actionable_from_month: {
-            should_change: true,
-            value:
-              form.targetChoreActionableFromMonth === undefined ||
-              form.targetChoreActionableFromMonth === ""
-                ? undefined
-                : parseInt(form.targetChoreActionableFromMonth),
-          },
-          due_at_day: {
-            should_change: true,
-            value:
-              form.targetChoreDueAtDay === undefined ||
-              form.targetChoreDueAtDay === ""
-                ? undefined
-                : parseInt(form.targetChoreDueAtDay),
-          },
-          due_at_month: {
-            should_change: true,
-            value:
-              form.targetChoreDueAtMonth === undefined ||
-              form.targetChoreDueAtMonth === ""
-                ? undefined
-                : parseInt(form.targetChoreDueAtMonth),
-          },
-          must_do: {
-            should_change: true,
-            value: form.targetChoreMustDo,
-          },
-          skip_rule: {
-            should_change: true,
-            value:
-              form.targetChoreSkipRule === undefined ||
-              form.targetChoreSkipRule === ""
-                ? undefined
-                : form.targetChoreSkipRule,
-          },
-          start_at_date: {
-            should_change: true,
-            value:
-              form.targetChoreStartAtDate === undefined ||
-              form.targetChoreStartAtDate === ""
-                ? undefined
-                : form.targetChoreStartAtDate,
-          },
-          end_at_date: {
-            should_change: true,
-            value:
-              form.targetChoreEndAtDate === undefined ||
-              form.targetChoreEndAtDate === ""
-                ? undefined
-                : form.targetChoreEndAtDate,
-          },
-        });
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-chore-create-note": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_chore) {
-          await apiClient.notes.noteCreate({
-            owner: noteStdOwner(
-              NamedEntityTag.CHORE,
-              activityResult.target_chore.ref_id,
-            ),
-            content: [],
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      case "target-chore-gen": {
-        const activityResult = await apiClient.timePlans.timePlanActivityLoad({
-          ref_id: activityId,
-          allow_archived: true,
-        });
-
-        if (activityResult.target_chore) {
-          await apiClient.chores.choreRegen({
-            ref_id: activityResult.target_chore.ref_id,
-          });
-        }
-
-        return redirect(
-          withTimePlanView(
-            `/app/workspace/apps/time-plans/${id}/${activityId}`,
-            timePlanView,
-          ),
-        );
-      }
-
-      default:
-        throw new Response("Bad Intent", { status: 500 });
-    }
-  } catch (error) {
-    return handleActionApiError(error);
-  }
-}
-
 export default function TimePlanActivity() {
   const { id, activityId } = useParams();
   const [query] = useSearchParams();
   const timePlanView = query;
-  const loaderData = useLoaderDataSafeForAnimation<typeof loader>();
-  const parentLoaderData = useRouteLoaderData<{
+  const rawLoaderData = useLoaderDataSafeForAnimation<typeof loader>();
+  const rawParentLoaderData = useRouteLoaderData<{
     timePlan: TimePlan;
     accessStatus: AccessStatus | null;
     activities: TimePlanActivity[];
     activityTimeEventBlocks: TimeEventInDayBlock[];
+    lifePlan: LifePlan;
+    allAspects?: AspectSummary[] | null;
+    allChapters?: ChapterSummary[] | null;
+    allGoals?: GoalSummary[] | null;
+    allMilestones?: MilestoneSummary[] | null;
+    allBigPlans?: BigPlanSummary[] | null;
+    allTags: Tag[];
+    allContacts: Contact[];
+    allStacks: HabitStack[];
+    allChoreStacks: ChoreStack[];
+    allHabits: Habit[];
+    allChores: Chore[];
   }>("routes/app/workspace/apps/time-plans/$id")!;
+  const { entities } = useTimePlanStore();
+  const planView = useMemo(
+    () => selectTimePlanView(entities, rawParentLoaderData.timePlan),
+    [entities, rawParentLoaderData.timePlan],
+  );
+  // The entities come from the time plan store, so they reflect local edits.
+  // The store might not hold them any more while the panel animates away, so
+  // the loader's copies are the fallback.
+  const parentLoaderData = {
+    ...rawParentLoaderData,
+    activities: planView.activities,
+    activityTimeEventBlocks: planView.activityTimeEventBlocks,
+  };
+  const {
+    targetBigPlanInfo,
+    targetTodoTaskInfo,
+    targetHabitInfo,
+    targetHabitStackInfo,
+    targetChoreInfo,
+    targetChoreStackInfo,
+  } = rawLoaderData;
+  const loaderData = {
+    ...rawLoaderData,
+    lifePlan: rawParentLoaderData.lifePlan,
+    allAspects: rawParentLoaderData.allAspects,
+    allChapters: rawParentLoaderData.allChapters,
+    allGoals: rawParentLoaderData.allGoals,
+    allMilestones: rawParentLoaderData.allMilestones,
+    allBigPlans: rawParentLoaderData.allBigPlans,
+    allTags: rawParentLoaderData.allTags,
+    allContacts: rawParentLoaderData.allContacts,
+    allStacks: rawParentLoaderData.allStacks,
+    allChoreStacks: rawParentLoaderData.allChoreStacks,
+    allHabits: rawParentLoaderData.allHabits,
+    allChores: rawParentLoaderData.allChores,
+    timePlanActivity: latestEntity(
+      entities.activities,
+      rawLoaderData.timePlanActivity,
+    ),
+    targetInboxTask: latestEntityOrNull(
+      entities.inboxTasks,
+      rawLoaderData.targetInboxTask,
+    ),
+    targetBigPlan: latestEntityOrNull(
+      entities.bigPlans,
+      rawLoaderData.targetBigPlan,
+    ),
+    targetBigPlanInfo: targetBigPlanInfo && {
+      ...targetBigPlanInfo,
+      inbox_tasks: latestEntities(
+        entities.inboxTasks,
+        targetBigPlanInfo.inbox_tasks,
+      ),
+    },
+    targetTodoTask: latestEntityOrNull(
+      entities.todoTasks,
+      rawLoaderData.targetTodoTask,
+    ),
+    targetTodoTaskInfo: targetTodoTaskInfo && {
+      ...targetTodoTaskInfo,
+      inbox_task: latestEntity(
+        entities.inboxTasks,
+        targetTodoTaskInfo.inbox_task,
+      ),
+    },
+    targetHabit: latestEntityOrNull(entities.habits, rawLoaderData.targetHabit),
+    targetHabitInfo: targetHabitInfo && {
+      ...targetHabitInfo,
+      stack: latestEntityOrNull(entities.habitStacks, targetHabitInfo.stack),
+      inbox_tasks: latestEntities(
+        entities.inboxTasks,
+        targetHabitInfo.inbox_tasks,
+      ),
+    },
+    targetHabitStack: latestEntityOrNull(
+      entities.habitStacks,
+      rawLoaderData.targetHabitStack,
+    ),
+    targetHabitStackInfo: targetHabitStackInfo && {
+      ...targetHabitStackInfo,
+      habits: latestEntities(entities.habits, targetHabitStackInfo.habits),
+    },
+    targetChore: latestEntityOrNull(entities.chores, rawLoaderData.targetChore),
+    targetChoreInfo: targetChoreInfo && {
+      ...targetChoreInfo,
+      stack: latestEntityOrNull(entities.choreStacks, targetChoreInfo.stack),
+      inbox_tasks: latestEntities(
+        entities.inboxTasks,
+        targetChoreInfo.inbox_tasks,
+      ),
+    },
+    targetChoreStack: latestEntityOrNull(
+      entities.choreStacks,
+      rawLoaderData.targetChoreStack,
+    ),
+    targetChoreStackInfo: targetChoreStackInfo && {
+      ...targetChoreStackInfo,
+      chores: latestEntities(entities.chores, targetChoreStackInfo.chores),
+    },
+    stackInboxTasks: latestEntities(
+      entities.inboxTasks,
+      rawLoaderData.stackInboxTasks,
+    ),
+    choreStackInboxTasks: latestEntities(
+      entities.inboxTasks,
+      rawLoaderData.choreStackInboxTasks,
+    ),
+    activityTimeEventBlocks: latestEntities(
+      entities.timeEventBlocks,
+      rawLoaderData.activityTimeEventBlocks,
+    ),
+  };
   const timePlan = parentLoaderData.timePlan;
-  const actionData = useActionData<typeof action>();
-  const navigation = useNavigation();
+
   const topLevelInfo = useContext(TopLevelInfoContext);
+
+  // Saving the properties of the activity or of what it targets is a local
+  // edit: it shows up in the plan right away, and going back to the plan
+  // doesn't reload it.
+  const navigate = useNavigate();
+  const { run: runUpdateActivity } = useTimePlanMutation(
+    UPDATE_TIME_PLAN_ACTIVITY,
+  );
+  const { run: runUpdateInboxTask } = useTimePlanMutation(UPDATE_INBOX_TASK);
+  const { run: runUpdateTodoTask } = useTimePlanMutation(UPDATE_TODO_TASK);
+  const { run: runUpdateBigPlan } = useTimePlanMutation(UPDATE_BIG_PLAN);
+  const { runForResult: runUpdateHabit } = useTimePlanMutation(UPDATE_HABIT);
+  const { run: runUpdateHabitStack } = useTimePlanMutation(UPDATE_HABIT_STACK);
+  const { runForResult: runUpdateChore } = useTimePlanMutation(UPDATE_CHORE);
+  // Regen reloads the view. Saving a habit or chore in a way that changes what
+  // it generates offers one, since its current tasks keep the old settings.
+  const { regen, offerRegen } = useRegen();
+  const { run: runUpdateChoreStack } = useTimePlanMutation(UPDATE_CHORE_STACK);
+  const { run: runArchiveActivity } = useTimePlanMutation(
+    ARCHIVE_TIME_PLAN_ACTIVITY,
+  );
+  const { run: runRemoveActivity } = useTimePlanMutation(
+    REMOVE_TIME_PLAN_ACTIVITY,
+  );
+  const { run: runUpdateTimeEvent } = useTimePlanMutation(UPDATE_TIME_EVENT);
+  const { run: runArchiveTimeEvent } = useTimePlanMutation(ARCHIVE_TIME_EVENT);
+  // Creating a note shows its editor right away; the notes made here are
+  // kept until the panel loads them itself.
+  const { runForResult: runCreateNote } = useTimePlanMutation(CREATE_NOTE);
+  const [createdNotes, setCreatedNotes] = useState<Record<string, Note>>({});
+  const targetBigPlanNote =
+    loaderData.targetBigPlanInfo?.note ??
+    (loaderData.targetBigPlan
+      ? createdNotes[
+          createdNoteKey(
+            NamedEntityTag.BIG_PLAN,
+            loaderData.targetBigPlan.ref_id,
+          )
+        ]
+      : undefined) ??
+    null;
+  const targetTodoTaskNote =
+    loaderData.targetTodoTaskInfo?.note ??
+    (loaderData.targetTodoTask
+      ? createdNotes[
+          createdNoteKey(
+            NamedEntityTag.TODO_TASK,
+            loaderData.targetTodoTask.ref_id,
+          )
+        ]
+      : undefined) ??
+    null;
+  const targetHabitNote =
+    loaderData.targetHabitInfo?.note ??
+    (loaderData.targetHabit
+      ? createdNotes[
+          createdNoteKey(NamedEntityTag.HABIT, loaderData.targetHabit.ref_id)
+        ]
+      : undefined) ??
+    null;
+  const targetHabitStackNote =
+    loaderData.targetHabitStackInfo?.note ??
+    (loaderData.targetHabitStack
+      ? createdNotes[
+          createdNoteKey(
+            NamedEntityTag.HABIT_STACK,
+            loaderData.targetHabitStack.ref_id,
+          )
+        ]
+      : undefined) ??
+    null;
+  const targetChoreStackNote =
+    loaderData.targetChoreStackInfo?.note ??
+    (loaderData.targetChoreStack
+      ? createdNotes[
+          createdNoteKey(
+            NamedEntityTag.CHORE_STACK,
+            loaderData.targetChoreStack.ref_id,
+          )
+        ]
+      : undefined) ??
+    null;
+  const targetChoreNote =
+    loaderData.targetChoreInfo?.note ??
+    (loaderData.targetChore
+      ? createdNotes[
+          createdNoteKey(NamedEntityTag.CHORE, loaderData.targetChore.ref_id)
+        ]
+      : undefined) ??
+    null;
+  const targetInboxTask = loaderData.targetInboxTask;
+  const targetTodoTask = loaderData.targetTodoTask;
+  const targetTodoInboxTask = loaderData.targetTodoTaskInfo?.inbox_task ?? null;
+  const targetHabit = loaderData.targetHabit;
+  const targetChore = loaderData.targetChore;
+  const hasTargetBigPlan = Boolean(loaderData.targetBigPlan);
+  const activityTarget = loaderData.timePlanActivity.target;
+  const intentHandlers = useMemo(() => {
+    const timePlanLocation = withTimePlanView(
+      `/app/workspace/apps/time-plans/${id}`,
+      timePlanView,
+    );
+    const handlers: Record<string, IntentHandler> = {
+      update: (formData) => {
+        runUpdateActivity(
+          updateTimePlanActivityArgsFromForm(activityId as string, formData),
+        );
+        navigate(timePlanLocation);
+      },
+    };
+    if (targetInboxTask) {
+      for (const intent of [
+        ...INBOX_TASK_STATUS_INTENTS,
+        ...INBOX_TASK_DELAY_INTENTS,
+      ]) {
+        handlers[`target-inbox-task-${intent}`] = (formData) => {
+          runUpdateInboxTask(
+            updateInboxTaskArgsFromForm(
+              intent,
+              formData,
+              targetInboxTask,
+              topLevelInfo.today,
+              new Date().toISOString(),
+              "targetInboxTask",
+            ),
+          );
+          navigate(timePlanLocation);
+        };
+      }
+    }
+    if (targetTodoTask && targetTodoInboxTask) {
+      for (const intent of [
+        ...INBOX_TASK_STATUS_INTENTS,
+        ...INBOX_TASK_DELAY_INTENTS,
+      ]) {
+        handlers[`target-todo-task-${intent}`] = (formData) => {
+          runUpdateTodoTask(
+            updateTodoTaskArgsFromForm(
+              intent,
+              formData,
+              { todoTask: targetTodoTask, inboxTask: targetTodoInboxTask },
+              topLevelInfo.today,
+              new Date().toISOString(),
+              "targetTodoTask",
+            ),
+          );
+          navigate(timePlanLocation);
+        };
+      }
+    }
+    if (hasTargetBigPlan) {
+      for (const intent of BIG_PLAN_STATUS_INTENTS) {
+        handlers[`target-big-plan-${intent}`] = (formData) => {
+          runUpdateBigPlan(
+            updateBigPlanArgsFromForm(
+              intent,
+              formData,
+              new Date().toISOString(),
+              "targetBigPlan",
+            ),
+          );
+          navigate(timePlanLocation);
+        };
+      }
+    }
+    const modifiedTime = () => new Date().toISOString();
+    handlers["target-habit-update"] = (formData) => {
+      const args = updateHabitArgsFromForm(
+        formData,
+        modifiedTime(),
+        "targetHabit",
+      );
+      const changesGeneration =
+        targetHabit !== null &&
+        targetHabit !== undefined &&
+        habitEditChangesGeneration(targetHabit, args);
+      void runUpdateHabit(args).then((result) => {
+        if (result !== null && changesGeneration) {
+          offerRegen("habit", args.refId, args.name);
+        }
+      });
+      navigate(timePlanLocation);
+    };
+    handlers["target-habit-gen"] = () => {
+      if (targetHabit) {
+        void regen("habit", targetHabit.ref_id);
+      }
+    };
+    handlers["target-habit-stack-update"] = (formData) => {
+      runUpdateHabitStack(
+        updateHabitStackArgsFromForm(
+          formData,
+          modifiedTime(),
+          "targetHabitStack",
+        ),
+      );
+      navigate(timePlanLocation);
+    };
+    handlers["target-chore-update"] = (formData) => {
+      const args = updateChoreArgsFromForm(
+        formData,
+        modifiedTime(),
+        "targetChore",
+      );
+      const changesGeneration =
+        targetChore !== null &&
+        targetChore !== undefined &&
+        choreEditChangesGeneration(targetChore, args);
+      void runUpdateChore(args).then((result) => {
+        if (result !== null && changesGeneration) {
+          offerRegen("chore", args.refId, args.name);
+        }
+      });
+      navigate(timePlanLocation);
+    };
+    handlers["target-chore-gen"] = () => {
+      if (targetChore) {
+        void regen("chore", targetChore.ref_id);
+      }
+    };
+    handlers["target-chore-stack-update"] = (formData) => {
+      runUpdateChoreStack(
+        updateChoreStackArgsFromForm(
+          formData,
+          modifiedTime(),
+          "targetChoreStack",
+        ),
+      );
+      navigate(timePlanLocation);
+    };
+    handlers["archive"] = () => {
+      runArchiveActivity({
+        refId: activityId as string,
+        modifiedTime: modifiedTime(),
+      });
+      navigate(timePlanLocation);
+    };
+    handlers["remove"] = () => {
+      runRemoveActivity({ refId: activityId as string });
+      navigate(timePlanLocation);
+    };
+    // Saving a time event leaves its editor open, like the redirect did.
+    handlers["update-time-event"] = (formData) => {
+      runUpdateTimeEvent(updateTimeEventArgsFromForm(formData, modifiedTime()));
+    };
+    handlers["remove-time-event"] = (formData) => {
+      runArchiveTimeEvent(
+        archiveTimeEventArgsFromForm(formData, modifiedTime()),
+      );
+      navigate(
+        withTimePlanView(
+          `/app/workspace/apps/time-plans/${id}/${activityId}`,
+          timePlanView,
+        ),
+      );
+    };
+    const noteOwners: Array<[string, NamedEntityTag]> = [
+      ["target-big-plan-create-note", NamedEntityTag.BIG_PLAN],
+      ["target-todo-task-create-note", NamedEntityTag.TODO_TASK],
+      ["target-habit-create-note", NamedEntityTag.HABIT],
+      ["target-habit-stack-create-note", NamedEntityTag.HABIT_STACK],
+      ["target-chore-stack-create-note", NamedEntityTag.CHORE_STACK],
+      ["target-chore-create-note", NamedEntityTag.CHORE],
+    ];
+    for (const [intent, ownerTag] of noteOwners) {
+      handlers[intent] = () => {
+        const ownerRefId = entityLinkRefIdFromWire(activityTarget);
+        void runCreateNote({ ownerTag, ownerRefId }).then((result) => {
+          if (result !== null) {
+            setCreatedNotes((notes) => ({
+              ...notes,
+              [createdNoteKey(ownerTag, ownerRefId)]: result.new_note,
+            }));
+          }
+        });
+      };
+    }
+    return handlers;
+  }, [
+    runUpdateActivity,
+    runUpdateInboxTask,
+    runUpdateTodoTask,
+    runUpdateBigPlan,
+    runUpdateHabit,
+    runUpdateHabitStack,
+    runUpdateChore,
+    runUpdateChoreStack,
+    runArchiveActivity,
+    runRemoveActivity,
+    runUpdateTimeEvent,
+    runArchiveTimeEvent,
+    runCreateNote,
+    regen,
+    offerRegen,
+    activityTarget,
+    navigate,
+    id,
+    activityId,
+    timePlanView,
+    targetInboxTask,
+    targetTodoTask,
+    targetTodoInboxTask,
+    targetHabit,
+    targetChore,
+    hasTargetBigPlan,
+    topLevelInfo.today,
+  ]);
+  // Every intent is a local edit or a regen, which report their errors in a
+  // snackbar; the panel has no action of its own.
+  const actionData = undefined;
+  const navigation = useNavigation();
   const isBigScreen = useBigScreen();
 
   const inputsEnabled =
@@ -1620,7 +681,11 @@ export default function TimePlanActivity() {
     { dueDateAscending: false },
   );
 
-  const cardActionFetcher = useFetcher();
+  // Marking a card done or not done is a local edit, like the panel's other
+  // edits.
+  const { run: runUpdateInboxTaskStatus } = useTimePlanMutation(
+    UPDATE_INBOX_TASK_STATUS,
+  );
 
   const sortedHabitInboxTasks = sortInboxTasksNaturally(
     loaderData.targetHabitInfo?.inbox_tasks ?? [],
@@ -1700,64 +765,37 @@ export default function TimePlanActivity() {
     }
   }
 
+  function markCard(it: InboxTask, status: InboxTaskStatus) {
+    runUpdateInboxTaskStatus({
+      refId: it.ref_id,
+      status,
+      eisen: null,
+      modifiedTime: new Date().toISOString(),
+    });
+  }
+
   function handleHabitCardMarkDone(it: InboxTask) {
-    cardActionFetcher.submit(
-      { id: it.ref_id, status: InboxTaskStatus.DONE },
-      {
-        method: "post",
-        action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-      },
-    );
+    markCard(it, InboxTaskStatus.DONE);
   }
 
   function handleChoreCardMarkDone(it: InboxTask) {
-    cardActionFetcher.submit(
-      { id: it.ref_id, status: InboxTaskStatus.DONE },
-      {
-        method: "post",
-        action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-      },
-    );
+    markCard(it, InboxTaskStatus.DONE);
   }
 
   function handleBigPlanCardMarkDone(it: InboxTask) {
-    cardActionFetcher.submit(
-      { id: it.ref_id, status: InboxTaskStatus.DONE },
-      {
-        method: "post",
-        action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-      },
-    );
+    markCard(it, InboxTaskStatus.DONE);
   }
 
   function handleBigPlanCardMarkNotDone(it: InboxTask) {
-    cardActionFetcher.submit(
-      { id: it.ref_id, status: InboxTaskStatus.NOT_DONE },
-      {
-        method: "post",
-        action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-      },
-    );
+    markCard(it, InboxTaskStatus.NOT_DONE);
   }
 
   function handleHabitCardMarkNotDone(it: InboxTask) {
-    cardActionFetcher.submit(
-      { id: it.ref_id, status: InboxTaskStatus.NOT_DONE },
-      {
-        method: "post",
-        action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-      },
-    );
+    markCard(it, InboxTaskStatus.NOT_DONE);
   }
 
   function handleChoreCardMarkNotDone(it: InboxTask) {
-    cardActionFetcher.submit(
-      { id: it.ref_id, status: InboxTaskStatus.NOT_DONE },
-      {
-        method: "post",
-        action: "/app/workspace/core/inbox-tasks/update-status-and-eisen",
-      },
-    );
+    markCard(it, InboxTaskStatus.NOT_DONE);
   }
 
   const activityTimeEventBlocks = [
@@ -1857,6 +895,7 @@ export default function TimePlanActivity() {
         timePlanView,
       )}
       initialExpansionState={LeafPanelExpansionState.SMALL}
+      intentHandlers={intentHandlers}
     >
       <GlobalError actionResult={actionData} />
       <SectionCard
@@ -1968,16 +1007,16 @@ export default function TimePlanActivity() {
                       value: "target-big-plan-create-note",
                       highlight: false,
                       disabled:
-                        loaderData.targetBigPlanInfo.note !== null &&
-                        loaderData.targetBigPlanInfo.note !== undefined,
+                        targetBigPlanNote !== null &&
+                        targetBigPlanNote !== undefined,
                     }),
                   ]}
                 />
               }
             >
-              {loaderData.targetBigPlanInfo.note && (
+              {targetBigPlanNote && (
                 <EntityNoteEditor
-                  initialNote={loaderData.targetBigPlanInfo.note}
+                  initialNote={targetBigPlanNote}
                   inputsEnabled={inputsEnabled}
                 />
               )}
@@ -1999,7 +1038,7 @@ export default function TimePlanActivity() {
                               NavSingle({
                                 text: "New Inbox Task",
                                 link: withTimePlanView(
-                                  `/app/workspace/apps/big-plans/${loaderData.targetBigPlan.ref_id}/inbox-tasks/new?timePlanReason=for-time-plan&timePlanRefId=${id}&parentTimePlanActivityRefId=${activityId}`,
+                                  `/app/workspace/apps/time-plans/${id}/new-big-plan-inbox-task?bigPlanRefId=${loaderData.targetBigPlan.ref_id}&parentActivityRefId=${activityId}`,
                                   timePlanView,
                                 ),
                                 highlight: true,
@@ -2088,16 +1127,16 @@ export default function TimePlanActivity() {
                       value: "target-todo-task-create-note",
                       highlight: false,
                       disabled:
-                        loaderData.targetTodoTaskInfo.note !== null &&
-                        loaderData.targetTodoTaskInfo.note !== undefined,
+                        targetTodoTaskNote !== null &&
+                        targetTodoTaskNote !== undefined,
                     }),
                   ]}
                 />
               }
             >
-              {loaderData.targetTodoTaskInfo.note && (
+              {targetTodoTaskNote && (
                 <EntityNoteEditor
-                  initialNote={loaderData.targetTodoTaskInfo.note}
+                  initialNote={targetTodoTaskNote}
                   inputsEnabled={inputsEnabled}
                 />
               )}
@@ -2152,16 +1191,16 @@ export default function TimePlanActivity() {
                       value: "target-habit-create-note",
                       highlight: false,
                       disabled:
-                        loaderData.targetHabitInfo.note !== null &&
-                        loaderData.targetHabitInfo.note !== undefined,
+                        targetHabitNote !== null &&
+                        targetHabitNote !== undefined,
                     }),
                   ]}
                 />
               }
             >
-              {loaderData.targetHabitInfo.note && (
+              {targetHabitNote && (
                 <EntityNoteEditor
-                  initialNote={loaderData.targetHabitInfo.note}
+                  initialNote={targetHabitNote}
                   inputsEnabled={inputsEnabled}
                 />
               )}
@@ -2282,16 +1321,16 @@ export default function TimePlanActivity() {
                       value: "target-habit-stack-create-note",
                       highlight: false,
                       disabled:
-                        loaderData.targetHabitStackInfo.note !== null &&
-                        loaderData.targetHabitStackInfo.note !== undefined,
+                        targetHabitStackNote !== null &&
+                        targetHabitStackNote !== undefined,
                     }),
                   ]}
                 />
               }
             >
-              {loaderData.targetHabitStackInfo.note && (
+              {targetHabitStackNote && (
                 <EntityNoteEditor
-                  initialNote={loaderData.targetHabitStackInfo.note}
+                  initialNote={targetHabitStackNote}
                   inputsEnabled={inputsEnabled}
                 />
               )}
@@ -2388,16 +1427,16 @@ export default function TimePlanActivity() {
                       value: "target-chore-stack-create-note",
                       highlight: false,
                       disabled:
-                        loaderData.targetChoreStackInfo.note !== null &&
-                        loaderData.targetChoreStackInfo.note !== undefined,
+                        targetChoreStackNote !== null &&
+                        targetChoreStackNote !== undefined,
                     }),
                   ]}
                 />
               }
             >
-              {loaderData.targetChoreStackInfo.note && (
+              {targetChoreStackNote && (
                 <EntityNoteEditor
-                  initialNote={loaderData.targetChoreStackInfo.note}
+                  initialNote={targetChoreStackNote}
                   inputsEnabled={inputsEnabled}
                 />
               )}
@@ -2474,16 +1513,16 @@ export default function TimePlanActivity() {
                       value: "target-chore-create-note",
                       highlight: false,
                       disabled:
-                        loaderData.targetChoreInfo.note !== null &&
-                        loaderData.targetChoreInfo.note !== undefined,
+                        targetChoreNote !== null &&
+                        targetChoreNote !== undefined,
                     }),
                   ]}
                 />
               }
             >
-              {loaderData.targetChoreInfo.note && (
+              {targetChoreNote && (
                 <EntityNoteEditor
-                  initialNote={loaderData.targetChoreInfo.note}
+                  initialNote={targetChoreNote}
                   inputsEnabled={inputsEnabled}
                 />
               )}

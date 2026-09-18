@@ -26,7 +26,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -39,8 +43,18 @@ class VacationUpdateArgs(JupiterUpdateCrownEntityArgs):
     end_date: UpdateAction[ADate]
 
 
+@use_case_result
+class VacationUpdateResult(UseCaseResultBase):
+    """VacationUpdate result."""
+
+    updated_vacation: Vacation
+    updated_time_event_full_days_block: TimeEventFullDaysBlock
+
+
 @mutation_use_case(WorkspaceFeature.VACATIONS)
-class VacationUpdateUseCase(JupiterUpdateCrownEntityUseCase[VacationUpdateArgs, None]):
+class VacationUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[VacationUpdateArgs, VacationUpdateResult]
+):
     """The command for updating a vacation's properties."""
 
     async def _perform_transactional_mutation(
@@ -49,7 +63,7 @@ class VacationUpdateUseCase(JupiterUpdateCrownEntityUseCase[VacationUpdateArgs, 
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: VacationUpdateArgs,
-    ) -> None:
+    ) -> VacationUpdateResult:
         """Execute the command's action."""
         vacation = await self.load_entity(
             uow, context.user.ref_id, Vacation, args.ref_id
@@ -83,4 +97,9 @@ class VacationUpdateUseCase(JupiterUpdateCrownEntityUseCase[VacationUpdateArgs, 
 
         time_event_block = await uow.get_for(TimeEventFullDaysBlock).save(
             time_event_block
+        )
+
+        return VacationUpdateResult(
+            updated_vacation=vacation,
+            updated_time_event_full_days_block=time_event_block,
         )

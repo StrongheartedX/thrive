@@ -29,7 +29,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -42,9 +46,19 @@ class ScheduleEventFullDaysUpdateArgs(JupiterUpdateCrownEntityArgs):
     duration_days: UpdateAction[int]
 
 
+@use_case_result
+class ScheduleEventFullDaysUpdateResult(UseCaseResultBase):
+    """ScheduleEventFullDaysUpdate result."""
+
+    updated_schedule_event_full_days: ScheduleEventFullDays
+    updated_time_event_full_days_block: TimeEventFullDaysBlock
+
+
 @mutation_use_case(WorkspaceFeature.SCHEDULE)
 class ScheduleEventFullDaysUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[ScheduleEventFullDaysUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[
+        ScheduleEventFullDaysUpdateArgs, ScheduleEventFullDaysUpdateResult
+    ]
 ):
     """Use case for updating a full day block in the schedule."""
 
@@ -54,7 +68,7 @@ class ScheduleEventFullDaysUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ScheduleEventFullDaysUpdateArgs,
-    ) -> None:
+    ) -> ScheduleEventFullDaysUpdateResult:
         """Execute the command's action."""
         schedule_event_full_days = await self.load_entity(
             uow, context.user.ref_id, ScheduleEventFullDays, args.ref_id
@@ -81,4 +95,9 @@ class ScheduleEventFullDaysUpdateUseCase(
             start_date=args.start_date,
             duration_days=args.duration_days,
         )
-        await uow.get_for(TimeEventFullDaysBlock).save(time_event)
+        time_event = await uow.get_for(TimeEventFullDaysBlock).save(time_event)
+
+        return ScheduleEventFullDaysUpdateResult(
+            updated_schedule_event_full_days=schedule_event_full_days,
+            updated_time_event_full_days_block=time_event,
+        )

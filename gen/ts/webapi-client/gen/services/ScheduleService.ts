@@ -12,6 +12,7 @@ import type { ScheduleEventFullDaysLoadPublicFromScheduleStreamArgs } from '../m
 import type { ScheduleEventFullDaysLoadResult } from '../models/ScheduleEventFullDaysLoadResult';
 import type { ScheduleEventFullDaysRemoveArgs } from '../models/ScheduleEventFullDaysRemoveArgs';
 import type { ScheduleEventFullDaysUpdateArgs } from '../models/ScheduleEventFullDaysUpdateArgs';
+import type { ScheduleEventFullDaysUpdateResult } from '../models/ScheduleEventFullDaysUpdateResult';
 import type { ScheduleEventInDayArchiveArgs } from '../models/ScheduleEventInDayArchiveArgs';
 import type { ScheduleEventInDayChangeScheduleStreamArgs } from '../models/ScheduleEventInDayChangeScheduleStreamArgs';
 import type { ScheduleEventInDayCreateArgs } from '../models/ScheduleEventInDayCreateArgs';
@@ -22,6 +23,7 @@ import type { ScheduleEventInDayLoadPublicFromScheduleStreamArgs } from '../mode
 import type { ScheduleEventInDayLoadResult } from '../models/ScheduleEventInDayLoadResult';
 import type { ScheduleEventInDayRemoveArgs } from '../models/ScheduleEventInDayRemoveArgs';
 import type { ScheduleEventInDayUpdateArgs } from '../models/ScheduleEventInDayUpdateArgs';
+import type { ScheduleEventInDayUpdateResult } from '../models/ScheduleEventInDayUpdateResult';
 import type { ScheduleExportArchiveArgs } from '../models/ScheduleExportArchiveArgs';
 import type { ScheduleExportCreateArgs } from '../models/ScheduleExportCreateArgs';
 import type { ScheduleExportCreateResult } from '../models/ScheduleExportCreateResult';
@@ -33,6 +35,7 @@ import type { ScheduleExportLoadByExternalIdResult } from '../models/ScheduleExp
 import type { ScheduleExportLoadResult } from '../models/ScheduleExportLoadResult';
 import type { ScheduleExportRemoveArgs } from '../models/ScheduleExportRemoveArgs';
 import type { ScheduleExportUpdateArgs } from '../models/ScheduleExportUpdateArgs';
+import type { ScheduleExportUpdateResult } from '../models/ScheduleExportUpdateResult';
 import type { ScheduleExternalSyncDoArgs } from '../models/ScheduleExternalSyncDoArgs';
 import type { ScheduleExternalSyncLoadRunsArgs } from '../models/ScheduleExternalSyncLoadRunsArgs';
 import type { ScheduleExternalSyncLoadRunsResult } from '../models/ScheduleExternalSyncLoadRunsResult';
@@ -48,6 +51,7 @@ import type { ScheduleStreamLoadPublicArgs } from '../models/ScheduleStreamLoadP
 import type { ScheduleStreamLoadResult } from '../models/ScheduleStreamLoadResult';
 import type { ScheduleStreamRemoveArgs } from '../models/ScheduleStreamRemoveArgs';
 import type { ScheduleStreamUpdateArgs } from '../models/ScheduleStreamUpdateArgs';
+import type { ScheduleStreamUpdateResult } from '../models/ScheduleStreamUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class ScheduleService {
@@ -251,12 +255,12 @@ export class ScheduleService {
     /**
      * Use case for updating a full day block in the schedule.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ScheduleEventFullDaysUpdateResult Successful response
      * @throws ApiError
      */
     public scheduleEventFullDaysUpdate(
         requestBody?: ScheduleEventFullDaysUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ScheduleEventFullDaysUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/schedule-event-full-days-update',
@@ -475,12 +479,12 @@ export class ScheduleService {
     /**
      * Use case for updating a schedule in day event.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ScheduleEventInDayUpdateResult Successful response
      * @throws ApiError
      */
     public scheduleEventInDayUpdate(
         requestBody?: ScheduleEventInDayUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ScheduleEventInDayUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/schedule-event-in-day-update',
@@ -671,12 +675,12 @@ export class ScheduleService {
     /**
      * Use case for updating a schedule export.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ScheduleExportUpdateResult Successful response
      * @throws ApiError
      */
     public scheduleExportUpdate(
         requestBody?: ScheduleExportUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ScheduleExportUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/schedule-export-update',
@@ -951,12 +955,12 @@ export class ScheduleService {
     /**
      * Use case for updating a schedule stream.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ScheduleStreamUpdateResult Successful response
      * @throws ApiError
      */
     public scheduleStreamUpdate(
         requestBody?: ScheduleStreamUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ScheduleStreamUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/schedule-stream-update',

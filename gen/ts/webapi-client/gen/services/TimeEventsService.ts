@@ -5,6 +5,7 @@
 import type { TimeEventFullDaysBlockLoadArgs } from '../models/TimeEventFullDaysBlockLoadArgs';
 import type { TimeEventFullDaysBlockLoadResult } from '../models/TimeEventFullDaysBlockLoadResult';
 import type { TimeEventInDayBlockArchiveArgs } from '../models/TimeEventInDayBlockArchiveArgs';
+import type { TimeEventInDayBlockArchiveResult } from '../models/TimeEventInDayBlockArchiveResult';
 import type { TimeEventInDayBlockCreateForBigPlanArgs } from '../models/TimeEventInDayBlockCreateForBigPlanArgs';
 import type { TimeEventInDayBlockCreateForBigPlanResult } from '../models/TimeEventInDayBlockCreateForBigPlanResult';
 import type { TimeEventInDayBlockCreateForChoreArgs } from '../models/TimeEventInDayBlockCreateForChoreArgs';
@@ -23,6 +24,7 @@ import type { TimeEventInDayBlockLoadArgs } from '../models/TimeEventInDayBlockL
 import type { TimeEventInDayBlockLoadResult } from '../models/TimeEventInDayBlockLoadResult';
 import type { TimeEventInDayBlockRemoveArgs } from '../models/TimeEventInDayBlockRemoveArgs';
 import type { TimeEventInDayBlockUpdateArgs } from '../models/TimeEventInDayBlockUpdateArgs';
+import type { TimeEventInDayBlockUpdateResult } from '../models/TimeEventInDayBlockUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class TimeEventsService {
@@ -58,12 +60,12 @@ export class TimeEventsService {
     /**
      * Use case for archiving the in day event.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns TimeEventInDayBlockArchiveResult Successful response
      * @throws ApiError
      */
     public timeEventInDayBlockArchive(
         requestBody?: TimeEventInDayBlockArchiveArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<TimeEventInDayBlockArchiveResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/time-event-in-day-block-archive',
@@ -338,12 +340,12 @@ export class TimeEventsService {
     /**
      * Use case for updating a time event in day.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns TimeEventInDayBlockUpdateResult Successful response
      * @throws ApiError
      */
     public timeEventInDayBlockUpdate(
         requestBody?: TimeEventInDayBlockUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<TimeEventInDayBlockUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/time-event-in-day-block-update',

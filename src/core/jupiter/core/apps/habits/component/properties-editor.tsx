@@ -318,6 +318,7 @@ export function HabitPropertiesEditor(props: HabitPropertiesEditorProps) {
           allowSkipRule
           namePrefix={props.namePrefix}
           period={selectedPeriod}
+          allowPeriodChange={false}
           onChangePeriod={(newPeriod) => {
             if (newPeriod === "none") {
               setSelectedPeriod(RecurringTaskPeriod.DAILY);

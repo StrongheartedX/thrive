@@ -9,6 +9,7 @@ import {
 import { Form } from "@remix-run/react";
 import type { PropsWithChildren } from "react";
 
+import { useInterceptedSubmit } from "#/core/infra/component/intent-interceptor";
 import { CARD_INNER_CORNER_RADIUS } from "#/core/infra/component/theme";
 
 // What the section keeps between its own border and the content inside it -
@@ -31,10 +32,11 @@ interface SectionCardProps {
 
 export function SectionCard(props: PropsWithChildren<SectionCardProps>) {
   const actionsPosition = props.actionsPosition ?? ActionsPosition.ABOVE;
+  const handleSubmit = useInterceptedSubmit();
 
   return (
     <StyledCard id={props.id}>
-      <Form method={props.method ?? "post"}>
+      <Form method={props.method ?? "post"} onSubmit={handleSubmit}>
         <SectionHeader>
           <SectionHeaderContent>
             <SectionTitle label={props.title} />

@@ -14,7 +14,6 @@ import {
   Difficulty,
   Eisen,
   InboxTaskStatus,
-  RecurringTaskPeriod,
   WorkspaceFeature,
 } from "@jupiter/webapi-client";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
@@ -79,7 +78,6 @@ const UpdateFormSchema = z.discriminatedUnion("intent", [
     chapter: z.string().optional(),
     goal: z.string().optional(),
     isKey: CheckboxAsString,
-    period: z.nativeEnum(RecurringTaskPeriod),
     eisen: z.nativeEnum(Eisen),
     difficulty: z.nativeEnum(Difficulty),
     actionableFromDay: z.string().optional(),
@@ -259,10 +257,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
             value:
               form.stack !== undefined && form.stack !== "" ? form.stack : null,
           },
-          period: {
-            should_change: true,
-            value: form.period,
-          },
           eisen: {
             should_change: true,
             value: form.eisen,
@@ -417,6 +411,9 @@ export default function Chore() {
   for (const it of loaderData.inboxTasks) {
     moreInfoByRefId[it.ref_id] = {
       chore: loaderData.chore,
+      choreStack: loaderData.allStacks.find(
+        (stack) => stack.ref_id === loaderData.chore.stack_ref_id,
+      ),
       owner: loaderData.owner,
       accessStatus: loaderData.accessStatus ?? undefined,
       location: loaderData.location ?? undefined,

@@ -11,6 +11,7 @@ import type { TravelWishLoadArgs } from '../models/TravelWishLoadArgs';
 import type { TravelWishLoadResult } from '../models/TravelWishLoadResult';
 import type { TravelWishRemoveArgs } from '../models/TravelWishRemoveArgs';
 import type { TravelWishUpdateArgs } from '../models/TravelWishUpdateArgs';
+import type { TravelWishUpdateResult } from '../models/TravelWishUpdateResult';
 import type { VacationArchiveArgs } from '../models/VacationArchiveArgs';
 import type { VacationCreateArgs } from '../models/VacationCreateArgs';
 import type { VacationCreateFromTravelWishArgs } from '../models/VacationCreateFromTravelWishArgs';
@@ -23,6 +24,7 @@ import type { VacationLoadPublicArgs } from '../models/VacationLoadPublicArgs';
 import type { VacationLoadResult } from '../models/VacationLoadResult';
 import type { VacationRemoveArgs } from '../models/VacationRemoveArgs';
 import type { VacationUpdateArgs } from '../models/VacationUpdateArgs';
+import type { VacationUpdateResult } from '../models/VacationUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class VacationsService {
@@ -170,12 +172,12 @@ export class VacationsService {
     /**
      * The command for updating a travel wish's properties.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns TravelWishUpdateResult Successful response
      * @throws ApiError
      */
     public travelWishUpdate(
         requestBody?: TravelWishUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<TravelWishUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/travel-wish-update',
@@ -394,12 +396,12 @@ export class VacationsService {
     /**
      * The command for updating a vacation's properties.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns VacationUpdateResult Successful response
      * @throws ApiError
      */
     public vacationUpdate(
         requestBody?: VacationUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<VacationUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/vacation-update',

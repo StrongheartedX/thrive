@@ -1,0 +1,657 @@
+[
+  {
+    "name": "inbox-finish-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "done" }
+  },
+  {
+    "name": "inbox-finish-not-done-status-is-completed",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "not-done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "done" }
+  },
+  {
+    "name": "inbox-finish-in-progress",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "in-progress",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "working" }
+  },
+  {
+    "name": "inbox-finish-blocked",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "blocked",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "working" }
+  },
+  {
+    "name": "inbox-finish-not-started",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "not-started",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "not-done" }
+  },
+  {
+    "name": "inbox-make-progress-completed-outside-window-still-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "1",
+        "kind": "make-progress",
+        "target": "InboxTask:std:100"
+      }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-01-01T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "done" }
+  },
+  {
+    "name": "inbox-make-progress-working-inside-window-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "1",
+        "kind": "make-progress",
+        "target": "InboxTask:std:100"
+      }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "in-progress",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "done" }
+  },
+  {
+    "name": "inbox-make-progress-working-before-window-is-working",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "1",
+        "kind": "make-progress",
+        "target": "InboxTask:std:100"
+      }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "in-progress",
+        "last_modified_time": "2026-07-05T23:59:59Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "working" }
+  },
+  {
+    "name": "inbox-make-progress-working-at-start-boundary-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "1",
+        "kind": "make-progress",
+        "target": "InboxTask:std:100"
+      }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "in-progress",
+        "last_modified_time": "2026-07-06T00:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "done" }
+  },
+  {
+    "name": "inbox-make-progress-working-at-end-plus-30-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "1",
+        "kind": "make-progress",
+        "target": "InboxTask:std:100"
+      }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "blocked",
+        "last_modified_time": "2026-08-11T23:59:59Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "done" }
+  },
+  {
+    "name": "inbox-make-progress-working-after-end-plus-30-is-working",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "1",
+        "kind": "make-progress",
+        "target": "InboxTask:std:100"
+      }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "in-progress",
+        "last_modified_time": "2026-08-12T00:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "working" }
+  },
+  {
+    "name": "inbox-make-progress-not-started-inside-window-is-not-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "1",
+        "kind": "make-progress",
+        "target": "InboxTask:std:100"
+      }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "not-started",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "not-done" }
+  },
+  {
+    "name": "inbox-missing-target-omitted",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" }
+    ],
+    "inbox_tasks": [],
+    "expected": {}
+  },
+  {
+    "name": "todo-activity-resolves-owned-inbox-task",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "TodoTask:std:700" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "TodoTask:std:700"
+      }
+    ],
+    "expected": { "1": "done" }
+  },
+  {
+    "name": "todo-activity-without-inbox-omitted",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "TodoTask:std:700" }
+    ],
+    "inbox_tasks": [],
+    "expected": {}
+  },
+  {
+    "name": "big-plan-missing-target-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "2", "kind": "finish", "target": "BigPlan:std:200" }
+    ],
+    "inbox_tasks": [],
+    "expected": { "2": "done" }
+  },
+  {
+    "name": "big-plan-finish-completed",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "2", "kind": "finish", "target": "BigPlan:std:200" }
+    ],
+    "inbox_tasks": [],
+    "big_plans": [
+      {
+        "ref_id": "200",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z"
+      }
+    ],
+    "expected": { "2": "done" }
+  },
+  {
+    "name": "big-plan-finish-not-started-no-subs",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "2", "kind": "finish", "target": "BigPlan:std:200" }
+    ],
+    "inbox_tasks": [],
+    "big_plans": [
+      {
+        "ref_id": "200",
+        "status": "not-started",
+        "last_modified_time": "2026-07-08T12:00:00Z"
+      }
+    ],
+    "expected": { "2": "not-done" }
+  },
+  {
+    "name": "big-plan-finish-subactivity-working",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "2", "kind": "finish", "target": "BigPlan:std:200" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "in-progress",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "BigPlan:std:200"
+      }
+    ],
+    "big_plans": [
+      {
+        "ref_id": "200",
+        "status": "not-started",
+        "last_modified_time": "2026-07-08T12:00:00Z"
+      }
+    ],
+    "expected": { "1": "working", "2": "working" }
+  },
+  {
+    "name": "big-plan-make-progress-all-subs-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "2", "kind": "make-progress", "target": "BigPlan:std:200" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "BigPlan:std:200"
+      }
+    ],
+    "big_plans": [
+      {
+        "ref_id": "200",
+        "status": "not-started",
+        "last_modified_time": "2026-01-01T12:00:00Z"
+      }
+    ],
+    "expected": { "1": "done", "2": "done" }
+  },
+  {
+    "name": "big-plan-make-progress-modified-in-60-day-window",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "2",
+        "kind": "make-progress",
+        "target": "BigPlan:std:200"
+      }
+    ],
+    "inbox_tasks": [],
+    "big_plans": [
+      {
+        "ref_id": "200",
+        "status": "in-progress",
+        "last_modified_time": "2026-08-20T12:00:00Z"
+      }
+    ],
+    "expected": { "2": "working" }
+  },
+  {
+    "name": "big-plan-make-progress-modified-after-60-day-window",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      {
+        "ref_id": "2",
+        "kind": "make-progress",
+        "target": "BigPlan:std:200"
+      }
+    ],
+    "inbox_tasks": [],
+    "big_plans": [
+      {
+        "ref_id": "200",
+        "status": "in-progress",
+        "last_modified_time": "2026-09-20T12:00:00Z"
+      }
+    ],
+    "expected": { "2": "not-done" }
+  },
+  {
+    "name": "habit-missing-target-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "3", "kind": "finish", "target": "Habit:std:300" }
+    ],
+    "inbox_tasks": [],
+    "expected": { "3": "done" }
+  },
+  {
+    "name": "habit-finish-all-subs-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "11", "kind": "finish", "target": "InboxTask:std:101" },
+      { "ref_id": "3", "kind": "finish", "target": "Habit:std:300" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      },
+      {
+        "ref_id": "101",
+        "status": "not-done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      }
+    ],
+    "habits": [{ "ref_id": "300", "stack_ref_id": null }],
+    "expected": { "1": "done", "11": "done", "3": "done" }
+  },
+  {
+    "name": "habit-finish-some-subs-working",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "11", "kind": "finish", "target": "InboxTask:std:101" },
+      { "ref_id": "3", "kind": "finish", "target": "Habit:std:300" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      },
+      {
+        "ref_id": "101",
+        "status": "in-progress",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      }
+    ],
+    "habits": [{ "ref_id": "300", "stack_ref_id": null }],
+    "expected": { "1": "done", "11": "working", "3": "working" }
+  },
+  {
+    "name": "habit-finish-no-subs",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "3", "kind": "finish", "target": "Habit:std:300" }
+    ],
+    "inbox_tasks": [],
+    "habits": [{ "ref_id": "300", "stack_ref_id": null }],
+    "expected": { "3": "not-done" }
+  },
+  {
+    "name": "habit-make-progress-majority-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "11", "kind": "finish", "target": "InboxTask:std:101" },
+      { "ref_id": "12", "kind": "finish", "target": "InboxTask:std:102" },
+      { "ref_id": "3", "kind": "make-progress", "target": "Habit:std:300" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      },
+      {
+        "ref_id": "101",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      },
+      {
+        "ref_id": "102",
+        "status": "not-started",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      }
+    ],
+    "habits": [{ "ref_id": "300", "stack_ref_id": null }],
+    "expected": { "1": "done", "11": "done", "12": "not-done", "3": "done" }
+  },
+  {
+    "name": "habit-make-progress-half-done-is-working",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "11", "kind": "finish", "target": "InboxTask:std:101" },
+      { "ref_id": "3", "kind": "make-progress", "target": "Habit:std:300" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      },
+      {
+        "ref_id": "101",
+        "status": "not-started",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      }
+    ],
+    "habits": [{ "ref_id": "300", "stack_ref_id": null }],
+    "expected": { "1": "done", "11": "not-done", "3": "working" }
+  },
+  {
+    "name": "habit-stack-missing-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "4", "kind": "finish", "target": "HabitStack:std:400" }
+    ],
+    "inbox_tasks": [],
+    "expected": { "4": "done" }
+  },
+  {
+    "name": "habit-stack-rolls-up-member-habit-activities",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "11", "kind": "finish", "target": "InboxTask:std:101" },
+      { "ref_id": "3", "kind": "finish", "target": "Habit:std:300" },
+      { "ref_id": "31", "kind": "finish", "target": "Habit:std:301" },
+      { "ref_id": "32", "kind": "finish", "target": "Habit:std:302" },
+      { "ref_id": "4", "kind": "finish", "target": "HabitStack:std:400" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      },
+      {
+        "ref_id": "101",
+        "status": "not-started",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:301"
+      }
+    ],
+    "habits": [
+      { "ref_id": "300", "stack_ref_id": "400" },
+      { "ref_id": "301", "stack_ref_id": "400" },
+      { "ref_id": "302", "stack_ref_id": "401" }
+    ],
+    "habit_stacks": [{ "ref_id": "400" }],
+    "expected": {
+      "1": "done",
+      "11": "not-done",
+      "3": "done",
+      "31": "not-done",
+      "32": "not-done",
+      "4": "working"
+    }
+  },
+  {
+    "name": "habit-stack-make-progress-majority-of-habit-activities",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "11", "kind": "finish", "target": "InboxTask:std:101" },
+      { "ref_id": "3", "kind": "finish", "target": "Habit:std:300" },
+      { "ref_id": "31", "kind": "finish", "target": "Habit:std:301" },
+      { "ref_id": "4", "kind": "make-progress", "target": "HabitStack:std:400" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:300"
+      },
+      {
+        "ref_id": "101",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Habit:std:301"
+      }
+    ],
+    "habits": [
+      { "ref_id": "300", "stack_ref_id": "400" },
+      { "ref_id": "301", "stack_ref_id": "400" }
+    ],
+    "habit_stacks": [{ "ref_id": "400" }],
+    "expected": {
+      "1": "done",
+      "11": "done",
+      "3": "done",
+      "31": "done",
+      "4": "done"
+    }
+  },
+  {
+    "name": "chore-finish-all-subs-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "5", "kind": "finish", "target": "Chore:std:500" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Chore:std:500"
+      }
+    ],
+    "chores": [{ "ref_id": "500", "stack_ref_id": null }],
+    "expected": { "1": "done", "5": "done" }
+  },
+  {
+    "name": "chore-missing-target-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "5", "kind": "finish", "target": "Chore:std:500" }
+    ],
+    "inbox_tasks": [],
+    "expected": { "5": "done" }
+  },
+  {
+    "name": "chore-stack-rolls-up-member-chore-activities",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "1", "kind": "finish", "target": "InboxTask:std:100" },
+      { "ref_id": "5", "kind": "finish", "target": "Chore:std:500" },
+      { "ref_id": "51", "kind": "finish", "target": "Chore:std:501" },
+      { "ref_id": "6", "kind": "make-progress", "target": "ChoreStack:std:600" }
+    ],
+    "inbox_tasks": [
+      {
+        "ref_id": "100",
+        "status": "done",
+        "last_modified_time": "2026-07-08T12:00:00Z",
+        "owner": "Chore:std:500"
+      }
+    ],
+    "chores": [
+      { "ref_id": "500", "stack_ref_id": "600" },
+      { "ref_id": "501", "stack_ref_id": "600" }
+    ],
+    "chore_stacks": [{ "ref_id": "600" }],
+    "expected": { "1": "done", "5": "done", "51": "not-done", "6": "working" }
+  },
+  {
+    "name": "chore-stack-missing-is-done",
+    "time_plan": { "start_date": "2026-07-06", "end_date": "2026-07-12" },
+    "activities": [
+      { "ref_id": "6", "kind": "finish", "target": "ChoreStack:std:600" }
+    ],
+    "inbox_tasks": [],
+    "expected": { "6": "done" }
+  }
+]

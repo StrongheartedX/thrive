@@ -13,6 +13,7 @@ import type { TagLoadArgs } from '../models/TagLoadArgs';
 import type { TagLoadResult } from '../models/TagLoadResult';
 import type { TagRemoveArgs } from '../models/TagRemoveArgs';
 import type { TagUpdateArgs } from '../models/TagUpdateArgs';
+import type { TagUpdateResult } from '../models/TagUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class TagsService {
@@ -188,12 +189,12 @@ export class TagsService {
     /**
      * Use case for updating a tag.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns TagUpdateResult Successful response
      * @throws ApiError
      */
     public tagUpdate(
         requestBody?: TagUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<TagUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/tag-update',

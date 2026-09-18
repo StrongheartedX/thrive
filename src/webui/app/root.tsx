@@ -11,7 +11,7 @@ import {
   useLoaderData,
 } from "@remix-run/react";
 import { SnackbarProvider } from "notistack";
-import { StrictMode, useMemo } from "react";
+import { StrictMode, useEffect, useMemo } from "react";
 import { EnvBanner } from "@jupiter/core/infra/component/env-banner";
 import { serverToClientGlobalProperties } from "@jupiter/core/config-client";
 import { GLOBAL_PROPERTIES } from "@jupiter/core/config-server";
@@ -114,6 +114,12 @@ export default function Root() {
     () => buildTheme(effectiveNightMode),
     [effectiveNightMode],
   );
+
+  // Effects only run once hydration has committed, so this tells the itests
+  // when clicks and fills stop getting lost to it.
+  useEffect(() => {
+    document.documentElement.dataset.hydrated = "true";
+  }, []);
 
   return (
     <html

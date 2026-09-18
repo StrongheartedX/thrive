@@ -14,6 +14,7 @@ import type { MetricEntryLoadPublicFromMetricArgs } from '../models/MetricEntryL
 import type { MetricEntryLoadResult } from '../models/MetricEntryLoadResult';
 import type { MetricEntryRemoveArgs } from '../models/MetricEntryRemoveArgs';
 import type { MetricEntryUpdateArgs } from '../models/MetricEntryUpdateArgs';
+import type { MetricEntryUpdateResult } from '../models/MetricEntryUpdateResult';
 import type { MetricFindArgs } from '../models/MetricFindArgs';
 import type { MetricFindResult } from '../models/MetricFindResult';
 import type { MetricLoadArgs } from '../models/MetricLoadArgs';
@@ -24,6 +25,7 @@ import type { MetricLoadSettingsResult } from '../models/MetricLoadSettingsResul
 import type { MetricRegenArgs } from '../models/MetricRegenArgs';
 import type { MetricRemoveArgs } from '../models/MetricRemoveArgs';
 import type { MetricUpdateArgs } from '../models/MetricUpdateArgs';
+import type { MetricUpdateResult } from '../models/MetricUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class MetricsService {
@@ -199,12 +201,12 @@ export class MetricsService {
     /**
      * The command for updating a metric entry's properties.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns MetricEntryUpdateResult Successful response
      * @throws ApiError
      */
     public metricEntryUpdate(
         requestBody?: MetricEntryUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<MetricEntryUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/metric-entry-update',
@@ -451,12 +453,12 @@ export class MetricsService {
     /**
      * The command for updating a metric's properties.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns MetricUpdateResult Successful response
      * @throws ApiError
      */
     public metricUpdate(
         requestBody?: MetricUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<MetricUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/metric-update',

@@ -221,7 +221,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
           response.in_day_block.name;
         if (response.time_plan_activity) {
           const activityResponse =
-            await apiClient.timePlans.timePlanActivityLoad({
+            await apiClient.timePlans.timePlanActivityLoadTarget({
               ref_id: response.time_plan_activity.ref_id,
               allow_archived: true,
             });

@@ -236,6 +236,11 @@ def test_api_common_inbox_task_update(
     )
     assert response.status_code == 200
 
+    updated = response.json()["updated_inbox_task"]
+    assert updated["ref_id"] == created.ref_id
+    assert updated["name"] == "New Task Name"
+    assert updated["is_key"] is True
+
     response2 = requests.get(
         f"{api_url}/v1/common/inbox-tasks/{created.ref_id}?allow_archived=false",
         headers=_headers(api_key),
@@ -355,3 +360,32 @@ def test_api_common_inbox_task_requires_auth(api_url: str) -> None:
         timeout=10,
     )
     assert response_bad.status_code == 401
+
+
+def test_api_common_inbox_task_update_returns_its_big_plan_stats(
+    api_url: str, api_key: str, create_archivable_inbox_task
+) -> None:
+    created = create_archivable_inbox_task("Stats Task")
+
+    response = requests.put(
+        f"{api_url}/v1/common/inbox-tasks/{created.ref_id}",
+        headers=_headers(api_key),
+        json={
+            "ref_id": created.ref_id,
+            "name": {"should_change": False},
+            "status": {"should_change": True, "value": "done"},
+            "is_key": {"should_change": False},
+            "eisen": {"should_change": False},
+            "difficulty": {"should_change": False},
+            "actionable_date": {"should_change": False},
+            "due_date": {"should_change": False},
+        },
+        timeout=10,
+    )
+    assert response.status_code == 200
+
+    body = response.json()
+    assert body["updated_inbox_task"]["status"] == "done"
+    stats = body["updated_big_plan_stats"]
+    assert stats["all_inbox_tasks_cnt"] == 1
+    assert stats["completed_inbox_tasks_cnt"] == 1

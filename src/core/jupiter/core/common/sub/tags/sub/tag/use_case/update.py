@@ -16,7 +16,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -27,8 +31,17 @@ class TagUpdateArgs(JupiterUpdateLeafSupportEntityArgs):
     name: UpdateAction[TagName]
 
 
+@use_case_result
+class TagUpdateResult(UseCaseResultBase):
+    """TagUpdate result."""
+
+    updated_tag: Tag
+
+
 @mutation_use_case(exclude_component=[AppCore.CLI])
-class TagUpdateUseCase(JupiterUpdateLeafSupportEntityUseCase[TagUpdateArgs, None]):
+class TagUpdateUseCase(
+    JupiterUpdateLeafSupportEntityUseCase[TagUpdateArgs, TagUpdateResult]
+):
     """Use case for updating a tag."""
 
     async def _perform_transactional_mutation(
@@ -37,7 +50,7 @@ class TagUpdateUseCase(JupiterUpdateLeafSupportEntityUseCase[TagUpdateArgs, None
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TagUpdateArgs,
-    ) -> None:
+    ) -> TagUpdateResult:
         """Execute the command's action."""
         _, tag = await self.load_in_parent(
             uow,
@@ -50,4 +63,6 @@ class TagUpdateUseCase(JupiterUpdateLeafSupportEntityUseCase[TagUpdateArgs, None
             ctx=context.domain_context,
             name=args.name,
         )
-        await uow.get_for(Tag).save(tag)
+        tag = await uow.get_for(Tag).save(tag)
+
+        return TagUpdateResult(updated_tag=tag)

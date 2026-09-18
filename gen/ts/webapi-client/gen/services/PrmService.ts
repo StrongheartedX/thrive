@@ -11,6 +11,7 @@ import type { CircleLoadArgs } from '../models/CircleLoadArgs';
 import type { CircleLoadResult } from '../models/CircleLoadResult';
 import type { CircleRemoveArgs } from '../models/CircleRemoveArgs';
 import type { CircleUpdateArgs } from '../models/CircleUpdateArgs';
+import type { CircleUpdateResult } from '../models/CircleUpdateResult';
 import type { OccasionArchiveArgs } from '../models/OccasionArchiveArgs';
 import type { OccasionCreateArgs } from '../models/OccasionCreateArgs';
 import type { OccasionCreateResult } from '../models/OccasionCreateResult';
@@ -18,6 +19,7 @@ import type { OccasionLoadArgs } from '../models/OccasionLoadArgs';
 import type { OccasionLoadResult } from '../models/OccasionLoadResult';
 import type { OccasionRemoveArgs } from '../models/OccasionRemoveArgs';
 import type { OccasionUpdateArgs } from '../models/OccasionUpdateArgs';
+import type { OccasionUpdateResult } from '../models/OccasionUpdateResult';
 import type { PersonArchiveArgs } from '../models/PersonArchiveArgs';
 import type { PersonCreateArgs } from '../models/PersonCreateArgs';
 import type { PersonCreateResult } from '../models/PersonCreateResult';
@@ -31,6 +33,7 @@ import type { PersonLoadSettingsResult } from '../models/PersonLoadSettingsResul
 import type { PersonRegenArgs } from '../models/PersonRegenArgs';
 import type { PersonRemoveArgs } from '../models/PersonRemoveArgs';
 import type { PersonUpdateArgs } from '../models/PersonUpdateArgs';
+import type { PersonUpdateResult } from '../models/PersonUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class PrmService {
@@ -178,12 +181,12 @@ export class PrmService {
     /**
      * The command for updating a circle.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns CircleUpdateResult Successful response
      * @throws ApiError
      */
     public circleUpdate(
         requestBody?: CircleUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<CircleUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/circle-update',
@@ -318,12 +321,12 @@ export class PrmService {
     /**
      * The command for updating an occasion.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns OccasionUpdateResult Successful response
      * @throws ApiError
      */
     public occasionUpdate(
         requestBody?: OccasionUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<OccasionUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/occasion-update',
@@ -542,12 +545,12 @@ export class PrmService {
     /**
      * The command for updating a person.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns PersonUpdateResult Successful response
      * @throws ApiError
      */
     public personUpdate(
         requestBody?: PersonUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<PersonUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/person-update',

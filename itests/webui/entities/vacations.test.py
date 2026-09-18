@@ -495,7 +495,7 @@ def test_webui_vacations_vacation_link_multiple_locations(
         f"{paris.ref_id},{rome.ref_id}"
     )
     expect(page.locator("#leaf-panel")).to_contain_text("Paris")
-    expect(page.locator("#leaf-panel")).to_contain_text("Rome")
+    expect(page.locator("#leaf-panel")).to_contain_text("+1")
 
 
 def test_webui_vacations_travel_wish_view_all(page: Page, create_travel_wish) -> None:
@@ -583,7 +583,10 @@ def test_webui_vacations_travel_wish_add_location_after_create(
     page.reload()
     page.wait_for_selector("#leaf-panel")
     expect(page.locator("#leaf-panel")).to_contain_text("Kyoto")
-    expect(page.locator("#leaf-panel")).to_contain_text("Rome")
+    expect(page.locator('input[name="locations"]')).to_have_value(
+        re.compile(rf"(^|,){rome.ref_id}(,|$)")
+    )
+    expect(page.locator("#leaf-panel")).to_contain_text("+1")
     expect(page.locator('input[name="locations"]')).to_have_value(
         re.compile(rf"{rome.ref_id}")
     )

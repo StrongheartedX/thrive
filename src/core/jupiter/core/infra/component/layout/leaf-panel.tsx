@@ -35,6 +35,11 @@ import {
   type UserLight,
 } from "@jupiter/webapi-client";
 
+import {
+  IntentInterceptorProvider,
+  interceptIntentSubmit,
+} from "#/core/infra/component/intent-interceptor";
+import type { IntentHandlers } from "#/core/infra/component/intent-interceptor";
 import { PublishPanel } from "#/core/common/sub/publish/components/publish-panel";
 import { AccessPanel } from "#/core/common/sub/access/components/access-panel";
 import {
@@ -87,10 +92,21 @@ interface LeafPanelProps {
   accessOwner?: UserLight;
   accessStatus?: AccessStatus | null;
   disabled?: boolean;
+  /** Form intents the panel's content handles itself, instead of submitting. */
+  intentHandlers?: IntentHandlers;
 }
+
+const NO_INTENT_HANDLERS: IntentHandlers = {};
 
 export function LeafPanel(props: PropsWithChildren<LeafPanelProps>) {
   const isBigScreen = useBigScreen();
+  const children = (
+    <IntentInterceptorProvider
+      handlers={props.intentHandlers ?? NO_INTENT_HANDLERS}
+    >
+      {props.children}
+    </IntentInterceptorProvider>
+  );
   const topLevelInfo = useContext(TopLevelInfoContext);
   const navigation = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -350,7 +366,15 @@ export function LeafPanel(props: PropsWithChildren<LeafPanelProps>) {
       isBigScreen={isBigScreen}
     >
       {showControls && (
-        <Form method="post">
+        <Form
+          method="post"
+          onSubmit={(event) =>
+            interceptIntentSubmit(
+              event,
+              props.intentHandlers ?? NO_INTENT_HANDLERS,
+            )
+          }
+        >
           <LeafPanelControls id="leaf-panel-controls">
             <ButtonGroup size="small">
               {isBigScreen && (
@@ -554,13 +578,13 @@ export function LeafPanel(props: PropsWithChildren<LeafPanelProps>) {
               sx={{ display: showingAlternateView ? "none" : undefined }}
               aria-hidden={showingAlternateView}
             >
-              <Stack spacing={2}>{props.children}</Stack>
+              <Stack spacing={2}>{children}</Stack>
               <Box sx={{ height: "4rem" }}></Box>
             </Box>
           </LeafPanelContent>
         )}
 
-        {!isBigScreen && props.shouldShowALeaflet && <>{props.children}</>}
+        {!isBigScreen && props.shouldShowALeaflet && <>{children}</>}
       </LeafPanelExpansionStateContext.Provider>
     </LeafPanelFrame>
   );

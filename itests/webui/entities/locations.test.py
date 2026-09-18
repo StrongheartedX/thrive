@@ -413,7 +413,7 @@ def test_webui_search_filter_by_location(
     dialog = page.get_by_role("dialog")
     expect(dialog).to_be_visible()
 
-    query = dialog.get_by_label("Query").filter(visible=True)
+    query = dialog.get_by_label("Query", exact=True).filter(visible=True)
     query.fill("Search Filter")
     expect(dialog).to_contain_text("Search Filter Cafe Task")
     expect(dialog).to_contain_text("Search Filter Park Task")

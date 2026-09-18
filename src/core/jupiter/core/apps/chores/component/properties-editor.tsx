@@ -320,6 +320,7 @@ export function ChorePropertiesEditor(props: ChorePropertiesEditorProps) {
           allowSkipRule
           namePrefix={props.namePrefix}
           period={selectedPeriod}
+          allowPeriodChange={false}
           onChangePeriod={(newPeriod) => {
             if (newPeriod === "none") {
               setSelectedPeriod(RecurringTaskPeriod.DAILY);

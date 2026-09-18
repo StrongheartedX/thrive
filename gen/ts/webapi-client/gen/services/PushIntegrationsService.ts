@@ -11,6 +11,7 @@ import type { EmailTaskLoadSettingsArgs } from '../models/EmailTaskLoadSettingsA
 import type { EmailTaskLoadSettingsResult } from '../models/EmailTaskLoadSettingsResult';
 import type { EmailTaskRemoveArgs } from '../models/EmailTaskRemoveArgs';
 import type { EmailTaskUpdateArgs } from '../models/EmailTaskUpdateArgs';
+import type { EmailTaskUpdateResult } from '../models/EmailTaskUpdateResult';
 import type { SlackTaskArchiveArgs } from '../models/SlackTaskArchiveArgs';
 import type { SlackTaskFindArgs } from '../models/SlackTaskFindArgs';
 import type { SlackTaskFindResult } from '../models/SlackTaskFindResult';
@@ -20,6 +21,7 @@ import type { SlackTaskLoadSettingsArgs } from '../models/SlackTaskLoadSettingsA
 import type { SlackTaskLoadSettingsResult } from '../models/SlackTaskLoadSettingsResult';
 import type { SlackTaskRemoveArgs } from '../models/SlackTaskRemoveArgs';
 import type { SlackTaskUpdateArgs } from '../models/SlackTaskUpdateArgs';
+import type { SlackTaskUpdateResult } from '../models/SlackTaskUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class PushIntegrationsService {
@@ -167,12 +169,12 @@ export class PushIntegrationsService {
     /**
      * The command for updating a email task.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns EmailTaskUpdateResult Successful response
      * @throws ApiError
      */
     public emailTaskUpdate(
         requestBody?: EmailTaskUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<EmailTaskUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/email-task-update',
@@ -335,12 +337,12 @@ export class PushIntegrationsService {
     /**
      * The command for updating a slack task.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns SlackTaskUpdateResult Successful response
      * @throws ApiError
      */
     public slackTaskUpdate(
         requestBody?: SlackTaskUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<SlackTaskUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/slack-task-update',

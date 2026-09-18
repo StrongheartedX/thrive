@@ -1,7 +1,7 @@
 """The command for updating a inbox task."""
 
 from jupiter.core.apps.big_plans.root import BigPlan
-from jupiter.core.apps.big_plans.stats import BigPlanStatsRepository
+from jupiter.core.apps.big_plans.stats import BigPlanStats, BigPlanStatsRepository
 from jupiter.core.apps.habits.sub.habit.root import Habit
 from jupiter.core.apps.habits.sub.habit.service.streak_recorder import (
     HabitStreakRecorderService,
@@ -82,6 +82,8 @@ class InboxTaskUpdateResult(UseCaseResultBase):
     """InboxTaskUpdate result."""
 
     record_score_result: RecordScoreResult | None
+    updated_inbox_task: InboxTask
+    updated_big_plan_stats: BigPlanStats | None
 
 
 class InboxTaskUpdateUseCase(
@@ -109,6 +111,7 @@ class InboxTaskUpdateUseCase(
             AccessLevel.WRITER,
         )
 
+        updated_big_plan_stats: BigPlanStats | None = None
         try:
             big_plan = None
             if inbox_task.owner.the_type == NamedEntityTag.BIG_PLAN.value:
@@ -139,7 +142,7 @@ class InboxTaskUpdateUseCase(
                 due_date=args.due_date,
             )
 
-            await uow.get_for(InboxTask).save(new_inbox_task)
+            new_inbox_task = await uow.get_for(InboxTask).save(new_inbox_task)
 
             if big_plan is not None:
                 await self._process_big_plan_stats(
@@ -150,6 +153,10 @@ class InboxTaskUpdateUseCase(
                     new_inbox_task,
                     big_plan,
                 )
+                big_plan_stats = await uow.get(BigPlanStatsRepository).find_all(
+                    [big_plan.ref_id]
+                )
+                updated_big_plan_stats = big_plan_stats[0] if big_plan_stats else None
 
             await self._process_streak_marks(
                 uow,
@@ -169,7 +176,11 @@ class InboxTaskUpdateUseCase(
                 context.domain_context, uow, context.user, new_inbox_task
             )
 
-        return InboxTaskUpdateResult(record_score_result=record_score_result)
+        return InboxTaskUpdateResult(
+            record_score_result=record_score_result,
+            updated_inbox_task=new_inbox_task,
+            updated_big_plan_stats=updated_big_plan_stats,
+        )
 
     async def _process_time_plans_for_big_plan(
         self,

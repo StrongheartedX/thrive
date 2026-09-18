@@ -17,7 +17,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -28,11 +32,20 @@ class JournalQuestionUpdateArgs(JupiterUpdateLeafSupportEntityArgs):
     name: UpdateAction[EntityName]
 
 
+@use_case_result
+class JournalQuestionUpdateResult(UseCaseResultBase):
+    """JournalQuestionUpdate result."""
+
+    updated_journal_question: JournalQuestion
+
+
 @mutation_use_case(
     WorkspaceFeature.JOURNALS, only_for_component=[AppCore.WEBUI, AppCore.API]
 )
 class JournalQuestionUpdateUseCase(
-    JupiterUpdateLeafSupportEntityUseCase[JournalQuestionUpdateArgs, None]
+    JupiterUpdateLeafSupportEntityUseCase[
+        JournalQuestionUpdateArgs, JournalQuestionUpdateResult
+    ]
 ):
     """Use case for updating a journal question."""
 
@@ -42,7 +55,7 @@ class JournalQuestionUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: JournalQuestionUpdateArgs,
-    ) -> None:
+    ) -> JournalQuestionUpdateResult:
         """Execute the command's action."""
         _, journal_question = await self.load_in_parent(
             uow,
@@ -55,4 +68,6 @@ class JournalQuestionUpdateUseCase(
             ctx=context.domain_context,
             name=args.name,
         )
-        await uow.get_for(JournalQuestion).save(journal_question)
+        journal_question = await uow.get_for(JournalQuestion).save(journal_question)
+
+        return JournalQuestionUpdateResult(updated_journal_question=journal_question)

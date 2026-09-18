@@ -5,6 +5,7 @@ from jupiter.core.apps.schedule.sub.event_in_day.root import (
     ScheduleEventInDay,
 )
 from jupiter.core.common.sub.time_events.sub.in_day_block.root import (
+    TimeEventInDayBlock,
     TimeEventInDayBlockRepository,
 )
 from jupiter.core.common.time_in_day import TimeInDay
@@ -27,7 +28,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -43,9 +48,19 @@ class ScheduleEventInDayUpdateArgs(JupiterUpdateCrownEntityArgs):
     buffer_after_mins: UpdateAction[int | None]
 
 
+@use_case_result
+class ScheduleEventInDayUpdateResult(UseCaseResultBase):
+    """ScheduleEventInDayUpdate result."""
+
+    updated_schedule_event_in_day: ScheduleEventInDay
+    updated_time_event_in_day_block: TimeEventInDayBlock
+
+
 @mutation_use_case(WorkspaceFeature.SCHEDULE)
 class ScheduleEventInDayUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[ScheduleEventInDayUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[
+        ScheduleEventInDayUpdateArgs, ScheduleEventInDayUpdateResult
+    ]
 ):
     """Use case for updating a schedule in day event."""
 
@@ -55,7 +70,7 @@ class ScheduleEventInDayUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ScheduleEventInDayUpdateArgs,
-    ) -> None:
+    ) -> ScheduleEventInDayUpdateResult:
         """Execute the command's action."""
         schedule_event_in_day = await self.load_entity(
             uow, context.user.ref_id, ScheduleEventInDay, args.ref_id
@@ -84,4 +99,9 @@ class ScheduleEventInDayUpdateUseCase(
             buffer_before_mins=args.buffer_before_mins,
             buffer_after_mins=args.buffer_after_mins,
         )
-        await uow.get(TimeEventInDayBlockRepository).save(time_event)
+        time_event = await uow.get(TimeEventInDayBlockRepository).save(time_event)
+
+        return ScheduleEventInDayUpdateResult(
+            updated_schedule_event_in_day=schedule_event_in_day,
+            updated_time_event_in_day_block=time_event,
+        )

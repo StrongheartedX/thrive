@@ -6,23 +6,15 @@ import {
   OutlinedInput,
   Stack,
 } from "@mui/material";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
-import type { ShouldRevalidateFunction } from "@remix-run/react";
 import {
-  useActionData,
+  useNavigate,
   useNavigation,
   useParams,
   useSearchParams,
 } from "@remix-run/react";
 import { DateTime } from "luxon";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { parseForm, parseParams, parseQuery } from "zodix";
-import {
-  parseTimeEventBufferMins,
-  timeEventInDayBlockParamsToUtc,
-} from "@jupiter/core/common/sub/time_events/time-event";
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { FieldError, GlobalError } from "@jupiter/core/infra/component/errors";
 import { LeafPanel } from "@jupiter/core/infra/component/layout/leaf-panel";
@@ -38,153 +30,110 @@ import { LeafPanelExpansionState } from "@jupiter/core/infra/leaf-panel-expansio
 import { TopLevelInfoContext } from "@jupiter/core/infra/top-level-context";
 import { timePlanActivityTargetNameForEvent } from "@jupiter/core/apps/time_plans/sub/activity/root";
 import { habitActivitiesForStackMembers } from "@jupiter/core/apps/time_plans/sub/activity/habit-chore-group";
-import { isTimePlanActivityHabitStackTarget } from "@jupiter/core/apps/time_plans/sub/activity/target-wire";
-import { handleActionApiError } from "@jupiter/core/infra/errors.server";
+import { selectActivityWithTarget } from "@jupiter/core/apps/time_plans/store/activity-target";
 import { withTimePlanView } from "@jupiter/core/apps/time_plans/view-mode";
-
-import { standardShouldRevalidate } from "~/rendering/standard-should-revalidate";
-import { useLoaderDataSafeForAnimation } from "~/rendering/use-loader-data-for-animation";
-import { getLoggedInApiClient } from "~/api-clients.server";
+import { useTimePlanStore } from "@jupiter/core/apps/time_plans/store/context";
+import { useTimePlanMutation } from "@jupiter/core/apps/time_plans/store/mutation";
+import { PLACE_TIME_EVENTS } from "@jupiter/core/apps/time_plans/store/mutations/place-time-events";
 
 const ParamsSchema = z.object({
   id: z.string(),
 });
 
-const QuerySchema = z.object({
-  timePlanActivityRefId: z.string(),
-  date: z
-    .string()
-    .regex(/[0-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9]/)
-    .optional(),
-});
-
-const CreateFormSchema = z.object({
-  userTimezone: z.string(),
-  startDate: z.string(),
-  startTimeInDay: z.string().optional(),
-  durationMins: z.string().transform((v) => parseInt(v, 10)),
-  bufferBeforeMins: z.string().optional(),
-  bufferAfterMins: z.string().optional(),
-});
+const DATE_PATTERN = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 
 export const handle = {
   displayType: DisplayType.LEAF,
 };
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const apiClient = await getLoggedInApiClient(request);
-  const query = parseQuery(request, QuerySchema);
-
-  const activityResponse = await apiClient.timePlans.timePlanActivityLoad({
-    ref_id: query.timePlanActivityRefId,
-    allow_archived: true,
-  });
-
-  return json({
-    date: query.date,
-    timePlanActivity: activityResponse.time_plan_activity,
-    targetInboxTask: activityResponse.target_inbox_task,
-    targetBigPlan: activityResponse.target_big_plan,
-    targetTodoTask: activityResponse.target_todo_task,
-    targetHabit: activityResponse.target_habit,
-    targetHabitStack: activityResponse.target_habit_stack,
-    targetHabitStackInfo: activityResponse.target_habit_stack_info,
-    targetChore: activityResponse.target_chore,
-  });
-}
-
-export async function action({ request, params }: ActionFunctionArgs) {
-  const apiClient = await getLoggedInApiClient(request);
-  const { id } = parseParams(params, ParamsSchema);
-  const query = parseQuery(request, QuerySchema);
-  const form = await parseForm(request, CreateFormSchema);
-  const timePlanView = new URL(request.url).searchParams;
-
-  try {
-    const activityResponse = await apiClient.timePlans.timePlanActivityLoad({
-      ref_id: query.timePlanActivityRefId,
-      allow_archived: true,
-    });
-
-    if (
-      isTimePlanActivityHabitStackTarget(
-        activityResponse.time_plan_activity.target,
-      ) &&
-      activityResponse.target_habit_stack_info
-    ) {
-      const timePlanResult = await apiClient.timePlans.timePlanLoad({
-        ref_id: id,
-        allow_archived: true,
-        include_targets: true,
-        include_completed_nontarget: false,
-        include_other_time_plans: false,
-      });
-      const memberActivities = habitActivitiesForStackMembers(
-        timePlanResult.activities,
-        activityResponse.target_habit_stack_info.habits,
-      );
-      const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
-        form,
-        form.userTimezone,
-      );
-      for (const memberActivity of memberActivities) {
-        await apiClient.timeEvents.timeEventInDayBlockCreateForTimePlanActivity(
-          {
-            time_plan_activity_ref_id: memberActivity.ref_id,
-            start_date: startDate,
-            start_time_in_day: startTimeInDay ?? "",
-            duration_mins: form.durationMins,
-            buffer_before_mins: parseTimeEventBufferMins(form.bufferBeforeMins),
-            buffer_after_mins: parseTimeEventBufferMins(form.bufferAfterMins),
-          },
-        );
-      }
-    } else {
-      const { startDate, startTimeInDay } = timeEventInDayBlockParamsToUtc(
-        form,
-        form.userTimezone,
-      );
-
-      await apiClient.timeEvents.timeEventInDayBlockCreateForTimePlanActivity({
-        time_plan_activity_ref_id: query.timePlanActivityRefId,
-        start_date: startDate,
-        start_time_in_day: startTimeInDay ?? "",
-        duration_mins: form.durationMins,
-        buffer_before_mins: parseTimeEventBufferMins(form.bufferBeforeMins),
-        buffer_after_mins: parseTimeEventBufferMins(form.bufferAfterMins),
-      });
-    }
-
-    return redirect(
-      withTimePlanView(
-        `/app/workspace/apps/time-plans/${id}/${query.timePlanActivityRefId}`,
-        timePlanView,
-      ),
-    );
-  } catch (error) {
-    return handleActionApiError(error);
-  }
-}
-
-export const shouldRevalidate: ShouldRevalidateFunction =
-  standardShouldRevalidate;
-
+// The activity and what it targets are already in the plan's store, so this
+// leaf loads nothing of its own.
 export default function TimePlanActivityTimeEventNew() {
-  const loaderData = useLoaderDataSafeForAnimation<typeof loader>();
-  const actionData = useActionData<typeof action>();
   const topLevelInfo = useContext(TopLevelInfoContext);
   const navigation = useNavigation();
   const { id } = useParams();
   const [query] = useSearchParams();
   const timePlanView = query;
+  const navigate = useNavigate();
+  const { entities } = useTimePlanStore();
+  const {
+    runForResult: runPlaceTimeEvents,
+    inFlight,
+    error,
+  } = useTimePlanMutation(PLACE_TIME_EVENTS);
+  const activityRefId = query.get("timePlanActivityRefId") ?? "";
+  const queryDate = query.get("date");
+  const activity = useMemo(
+    () => selectActivityWithTarget(entities, activityRefId),
+    [entities, activityRefId],
+  );
 
-  const inputsEnabled =
-    navigation.state === "idle" && !loaderData.timePlanActivity.archived;
+  // Making the event is a local edit: it shows up on the calendar right away,
+  // and going on to the activity doesn't reload the plan. A habit stack's event
+  // goes on each of its member habits' activities in the plan.
+  const intentHandlers = useMemo(
+    () => ({
+      create: (formData: FormData) => {
+        if (activity === null) {
+          return;
+        }
+        const activityLocation = withTimePlanView(
+          `/app/workspace/apps/time-plans/${id}/${activity.timePlanActivity.ref_id}`,
+          timePlanView,
+        );
+        const planActivities = Object.values(entities.activities).filter(
+          (it) => it.time_plan_ref_id === id && !it.archived,
+        );
+        const activities =
+          activity.targetHabitStack !== null
+            ? habitActivitiesForStackMembers(
+                planActivities,
+                activity.habitStackMembers,
+              )
+            : [activity.timePlanActivity];
+        if (activities.length === 0) {
+          navigate(activityLocation);
+          return;
+        }
+        const durationMins = parseInt(
+          String(formData.get("durationMins") ?? ""),
+          10,
+        );
+        void runPlaceTimeEvents({
+          placements: activities.map((it) => ({
+            activityRefId: it.ref_id,
+            durationMins,
+          })),
+          startDate: String(formData.get("startDate") ?? ""),
+          startTimeInDay: String(formData.get("startTimeInDay") ?? ""),
+          userTimezone: String(formData.get("userTimezone") ?? ""),
+          bufferBeforeMins: String(formData.get("bufferBeforeMins") ?? ""),
+          bufferAfterMins: String(formData.get("bufferAfterMins") ?? ""),
+          placeholderRefId: crypto.randomUUID(),
+          modifiedTime: new Date().toISOString(),
+        }).then((result) => {
+          if (result !== null) {
+            navigate(activityLocation);
+          }
+        });
+      },
+    }),
+    [
+      activity,
+      entities.activities,
+      id,
+      timePlanView,
+      navigate,
+      runPlaceTimeEvents,
+    ],
+  );
 
   const rightNow = DateTime.local({ zone: topLevelInfo.user.timezone });
 
   const [startDate, setStartDate] = useState(
-    loaderData.date ?? rightNow.toFormat("yyyy-MM-dd"),
+    queryDate !== null && DATE_PATTERN.test(queryDate)
+      ? queryDate
+      : rightNow.toFormat("yyyy-MM-dd"),
   );
   const [startTimeInDay, setStartTimeInDay] = useState(
     rightNow.toFormat("HH:mm"),
@@ -203,6 +152,15 @@ export default function TimePlanActivityTimeEventNew() {
     }
   }, [query]);
 
+  if (activity === null) {
+    throw new Error(`Could not find activity ${activityRefId} in this plan!`);
+  }
+
+  const inputsEnabled =
+    navigation.state === "idle" &&
+    !inFlight &&
+    !activity.timePlanActivity.archived;
+
   return (
     <LeafPanel
       key="time-plan-activity-time-event/new"
@@ -213,13 +171,14 @@ export default function TimePlanActivityTimeEventNew() {
       )}
       inputsEnabled={inputsEnabled}
       initialExpansionState={LeafPanelExpansionState.SMALL}
+      intentHandlers={intentHandlers}
     >
       <TimeEventParamsSource
         startDate={startDate}
         startTimeInDay={startTimeInDay}
         durationMins={durationMins}
       />
-      <GlobalError actionResult={actionData} />
+      <GlobalError actionResult={error ?? undefined} />
       <SectionCard
         id="time-event-in-day-block-properties"
         title="Properties"
@@ -250,13 +209,13 @@ export default function TimePlanActivityTimeEventNew() {
             label="name"
             name="name"
             defaultValue={timePlanActivityTargetNameForEvent(
-              loaderData.targetInboxTask,
-              loaderData.targetBigPlan,
-              loaderData.timePlanActivity.ref_id,
-              loaderData.targetTodoTask,
-              loaderData.targetHabit,
-              loaderData.targetChore,
-              loaderData.targetHabitStack,
+              activity.targetInboxTask,
+              activity.targetBigPlan,
+              activity.timePlanActivity.ref_id,
+              activity.targetTodoTask,
+              activity.targetHabit,
+              activity.targetChore,
+              activity.targetHabitStack,
             )}
             readOnly={true}
           />
@@ -277,7 +236,10 @@ export default function TimePlanActivityTimeEventNew() {
             onChange={(e) => setStartDate(e.target.value)}
           />
 
-          <FieldError actionResult={actionData} fieldName="/start_date" />
+          <FieldError
+            actionResult={error ?? undefined}
+            fieldName="/start_date"
+          />
         </FormControl>
 
         <FormControl fullWidth>
@@ -294,7 +256,7 @@ export default function TimePlanActivityTimeEventNew() {
           />
 
           <FieldError
-            actionResult={actionData}
+            actionResult={error ?? undefined}
             fieldName="/start_time_in_day"
           />
         </FormControl>
@@ -345,7 +307,10 @@ export default function TimePlanActivityTimeEventNew() {
               }}
             />
 
-            <FieldError actionResult={actionData} fieldName="/duration_mins" />
+            <FieldError
+              actionResult={error ?? undefined}
+              fieldName="/duration_mins"
+            />
           </FormControl>
         </Stack>
 
@@ -355,7 +320,7 @@ export default function TimePlanActivityTimeEventNew() {
           bufferAfterMins={bufferAfterMins}
           onBufferBeforeMinsChange={setBufferBeforeMins}
           onBufferAfterMinsChange={setBufferAfterMins}
-          actionResult={actionData}
+          actionResult={error ?? undefined}
         />
       </SectionCard>
     </LeafPanel>

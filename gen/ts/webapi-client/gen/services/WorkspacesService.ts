@@ -6,6 +6,7 @@ import type { WorkspaceChangeFeatureFlagsArgs } from '../models/WorkspaceChangeF
 import type { WorkspaceLoadArgs } from '../models/WorkspaceLoadArgs';
 import type { WorkspaceLoadResult } from '../models/WorkspaceLoadResult';
 import type { WorkspaceUpdateArgs } from '../models/WorkspaceUpdateArgs';
+import type { WorkspaceUpdateResult } from '../models/WorkspaceUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class WorkspacesService {
@@ -69,12 +70,12 @@ export class WorkspacesService {
     /**
      * UseCase for updating a workspace.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns WorkspaceUpdateResult Successful response
      * @throws ApiError
      */
     public workspaceUpdate(
         requestBody?: WorkspaceUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<WorkspaceUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/workspace-update',

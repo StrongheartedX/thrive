@@ -15,7 +15,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -26,9 +30,16 @@ class ContactUpdateArgs(JupiterUpdateLeafSupportEntityArgs):
     name: UpdateAction[ContactName]
 
 
+@use_case_result
+class ContactUpdateResult(UseCaseResultBase):
+    """ContactUpdate result."""
+
+    updated_contact: Contact
+
+
 @mutation_use_case()
 class ContactUpdateUseCase(
-    JupiterUpdateLeafSupportEntityUseCase[ContactUpdateArgs, None]
+    JupiterUpdateLeafSupportEntityUseCase[ContactUpdateArgs, ContactUpdateResult]
 ):
     """Use case for updating a contact."""
 
@@ -38,7 +49,7 @@ class ContactUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ContactUpdateArgs,
-    ) -> None:
+    ) -> ContactUpdateResult:
         """Execute the command's action."""
         _, contact = await self.load_in_parent(
             uow,
@@ -51,4 +62,6 @@ class ContactUpdateUseCase(
             ctx=context.domain_context,
             name=args.name,
         )
-        await uow.get_for(Contact).save(contact)
+        contact = await uow.get_for(Contact).save(contact)
+
+        return ContactUpdateResult(updated_contact=contact)

@@ -2,7 +2,7 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { z } from "zod";
 import { parseForm } from "zodix";
-import { noErrorNoData } from "@jupiter/core/infra/action-result";
+import { noErrorSomeData } from "@jupiter/core/infra/action-result";
 import { timeEventInDayBlockParamsToUtc } from "@jupiter/core/common/sub/time_events/time-event";
 import { handleActionApiError } from "@jupiter/core/infra/errors.server";
 
@@ -40,9 +40,10 @@ export async function action({ request }: ActionFunctionArgs) {
   const keepBuffers = { should_change: false as const };
 
   try {
+    // Views that keep their own copy of the entities merge what moved back in.
     switch (form.kind) {
       case "schedule-event-in-day": {
-        await apiClient.schedule.scheduleEventInDayUpdate({
+        const result = await apiClient.schedule.scheduleEventInDayUpdate({
           ref_id: form.refId,
           name: {
             should_change: false,
@@ -59,11 +60,17 @@ export async function action({ request }: ActionFunctionArgs) {
           buffer_before_mins: keepBuffers,
           buffer_after_mins: keepBuffers,
         });
-        break;
+        return json(
+          noErrorSomeData({
+            updated_time_event_in_day_block:
+              result.updated_time_event_in_day_block,
+            updated_schedule_event_in_day: result.updated_schedule_event_in_day,
+          }),
+        );
       }
 
       case "time-event-in-day-block": {
-        await apiClient.timeEvents.timeEventInDayBlockUpdate({
+        const result = await apiClient.timeEvents.timeEventInDayBlockUpdate({
           ref_id: form.refId,
           start_date: {
             should_change: true,
@@ -77,14 +84,18 @@ export async function action({ request }: ActionFunctionArgs) {
           buffer_before_mins: keepBuffers,
           buffer_after_mins: keepBuffers,
         });
-        break;
+        return json(
+          noErrorSomeData({
+            updated_time_event_in_day_block:
+              result.updated_time_event_in_day_block,
+            updated_schedule_event_in_day: null,
+          }),
+        );
       }
 
       default:
         throw new Response("Bad Kind", { status: 500 });
     }
-
-    return json(noErrorNoData());
   } catch (error) {
     return handleActionApiError(error);
   }

@@ -12,6 +12,7 @@ import type { AspectLoadResult } from '../models/AspectLoadResult';
 import type { AspectRemoveArgs } from '../models/AspectRemoveArgs';
 import type { AspectReorderChildrenArgs } from '../models/AspectReorderChildrenArgs';
 import type { AspectUpdateArgs } from '../models/AspectUpdateArgs';
+import type { AspectUpdateResult } from '../models/AspectUpdateResult';
 import type { ChapterArchiveArgs } from '../models/ChapterArchiveArgs';
 import type { ChapterCreateArgs } from '../models/ChapterCreateArgs';
 import type { ChapterCreateResult } from '../models/ChapterCreateResult';
@@ -21,6 +22,7 @@ import type { ChapterLoadArgs } from '../models/ChapterLoadArgs';
 import type { ChapterLoadResult } from '../models/ChapterLoadResult';
 import type { ChapterRemoveArgs } from '../models/ChapterRemoveArgs';
 import type { ChapterUpdateArgs } from '../models/ChapterUpdateArgs';
+import type { ChapterUpdateResult } from '../models/ChapterUpdateResult';
 import type { GoalArchiveArgs } from '../models/GoalArchiveArgs';
 import type { GoalCreateArgs } from '../models/GoalCreateArgs';
 import type { GoalCreateResult } from '../models/GoalCreateResult';
@@ -30,11 +32,13 @@ import type { GoalLoadArgs } from '../models/GoalLoadArgs';
 import type { GoalLoadResult } from '../models/GoalLoadResult';
 import type { GoalRemoveArgs } from '../models/GoalRemoveArgs';
 import type { GoalUpdateArgs } from '../models/GoalUpdateArgs';
+import type { GoalUpdateResult } from '../models/GoalUpdateResult';
 import type { LifePlanLoadEvalSettingsArgs } from '../models/LifePlanLoadEvalSettingsArgs';
 import type { LifePlanLoadEvalSettingsResult } from '../models/LifePlanLoadEvalSettingsResult';
 import type { LifePlanRegenArgs } from '../models/LifePlanRegenArgs';
 import type { LifePlanUpdateArgs } from '../models/LifePlanUpdateArgs';
 import type { LifePlanUpdateEvalSettingsArgs } from '../models/LifePlanUpdateEvalSettingsArgs';
+import type { LifePlanUpdateResult } from '../models/LifePlanUpdateResult';
 import type { MilestoneArchiveArgs } from '../models/MilestoneArchiveArgs';
 import type { MilestoneCreateArgs } from '../models/MilestoneCreateArgs';
 import type { MilestoneCreateResult } from '../models/MilestoneCreateResult';
@@ -44,6 +48,7 @@ import type { MilestoneLoadArgs } from '../models/MilestoneLoadArgs';
 import type { MilestoneLoadResult } from '../models/MilestoneLoadResult';
 import type { MilestoneRemoveArgs } from '../models/MilestoneRemoveArgs';
 import type { MilestoneUpdateArgs } from '../models/MilestoneUpdateArgs';
+import type { MilestoneUpdateResult } from '../models/MilestoneUpdateResult';
 import type { VisionArchiveArgs } from '../models/VisionArchiveArgs';
 import type { VisionCreateDraftArgs } from '../models/VisionCreateDraftArgs';
 import type { VisionCreateDraftResult } from '../models/VisionCreateDraftResult';
@@ -230,12 +235,12 @@ export class LifePlanService {
     /**
      * The command for updating a aspect.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns AspectUpdateResult Successful response
      * @throws ApiError
      */
     public aspectUpdate(
         requestBody?: AspectUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<AspectUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/aspect-update',
@@ -398,12 +403,12 @@ export class LifePlanService {
     /**
      * The command for updating a chapter.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ChapterUpdateResult Successful response
      * @throws ApiError
      */
     public chapterUpdate(
         requestBody?: ChapterUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ChapterUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/chapter-update',
@@ -566,12 +571,12 @@ export class LifePlanService {
     /**
      * The command for updating a goal.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns GoalUpdateResult Successful response
      * @throws ApiError
      */
     public goalUpdate(
         requestBody?: GoalUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<GoalUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/goal-update',
@@ -734,12 +739,12 @@ export class LifePlanService {
     /**
      * The command for updating a milestone.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns MilestoneUpdateResult Successful response
      * @throws ApiError
      */
     public milestoneUpdate(
         requestBody?: MilestoneUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<MilestoneUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/milestone-update',
@@ -1014,12 +1019,12 @@ export class LifePlanService {
     /**
      * The command for updating a life plan.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns LifePlanUpdateResult Successful response
      * @throws ApiError
      */
     public lifePlanUpdate(
         requestBody?: LifePlanUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<LifePlanUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/life-plan-update',

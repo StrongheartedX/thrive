@@ -3,7 +3,7 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { z } from "zod";
 import { parseForm } from "zodix";
-import { noErrorNoData } from "@jupiter/core/infra/action-result";
+import { noErrorSomeData } from "@jupiter/core/infra/action-result";
 import { saveScoreAction } from "@jupiter/core/gamification/scores.server";
 import { handleActionApiError } from "@jupiter/core/infra/errors.server";
 
@@ -34,15 +34,21 @@ export async function action({ request }: ActionFunctionArgs) {
       due_date: { should_change: false },
     });
 
+    // Views that keep their own copy of the entities merge these back in.
+    const data = noErrorSomeData({
+      updated_inbox_task: result.updated_inbox_task,
+      updated_big_plan_stats: result.updated_big_plan_stats ?? null,
+    });
+
     if (result.record_score_result) {
-      return json(noErrorNoData(), {
+      return json(data, {
         headers: {
           "Set-Cookie": await saveScoreAction(result.record_score_result),
         },
       });
     }
 
-    return json(noErrorNoData());
+    return json(data);
   } catch (error) {
     return handleActionApiError(error);
   }

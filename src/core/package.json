@@ -54,7 +54,9 @@
     "@types/luxon": "^3.4.2",
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.8",
-    "tsc-alias": "^1.8.16"
+    "tsc-alias": "^1.8.16",
+    "vite": "^6.4.1",
+    "vitest": "^5.0.0"
   },
   "engines": {
     "node": ">=14"

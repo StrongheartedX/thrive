@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from ..models.habit_update_args_goal_ref_id import HabitUpdateArgsGoalRefId
     from ..models.habit_update_args_is_key import HabitUpdateArgsIsKey
     from ..models.habit_update_args_name import HabitUpdateArgsName
-    from ..models.habit_update_args_period import HabitUpdateArgsPeriod
     from ..models.habit_update_args_repeats_in_period_count import HabitUpdateArgsRepeatsInPeriodCount
     from ..models.habit_update_args_repeats_strategy import HabitUpdateArgsRepeatsStrategy
     from ..models.habit_update_args_skip_rule import HabitUpdateArgsSkipRule
@@ -40,7 +39,6 @@ class HabitUpdateArgs:
         goal_ref_id (HabitUpdateArgsGoalRefId):
         stack_ref_id (HabitUpdateArgsStackRefId):
         is_key (HabitUpdateArgsIsKey):
-        period (HabitUpdateArgsPeriod):
         eisen (HabitUpdateArgsEisen):
         difficulty (HabitUpdateArgsDifficulty):
         actionable_from_day (HabitUpdateArgsActionableFromDay):
@@ -59,7 +57,6 @@ class HabitUpdateArgs:
     goal_ref_id: HabitUpdateArgsGoalRefId
     stack_ref_id: HabitUpdateArgsStackRefId
     is_key: HabitUpdateArgsIsKey
-    period: HabitUpdateArgsPeriod
     eisen: HabitUpdateArgsEisen
     difficulty: HabitUpdateArgsDifficulty
     actionable_from_day: HabitUpdateArgsActionableFromDay
@@ -85,8 +82,6 @@ class HabitUpdateArgs:
         stack_ref_id = self.stack_ref_id.to_dict()
 
         is_key = self.is_key.to_dict()
-
-        period = self.period.to_dict()
 
         eisen = self.eisen.to_dict()
 
@@ -117,7 +112,6 @@ class HabitUpdateArgs:
                 "goal_ref_id": goal_ref_id,
                 "stack_ref_id": stack_ref_id,
                 "is_key": is_key,
-                "period": period,
                 "eisen": eisen,
                 "difficulty": difficulty,
                 "actionable_from_day": actionable_from_day,
@@ -145,7 +139,6 @@ class HabitUpdateArgs:
         from ..models.habit_update_args_goal_ref_id import HabitUpdateArgsGoalRefId  # noqa: PLC0415
         from ..models.habit_update_args_is_key import HabitUpdateArgsIsKey  # noqa: PLC0415
         from ..models.habit_update_args_name import HabitUpdateArgsName  # noqa: PLC0415
-        from ..models.habit_update_args_period import HabitUpdateArgsPeriod  # noqa: PLC0415
         from ..models.habit_update_args_repeats_in_period_count import (
             HabitUpdateArgsRepeatsInPeriodCount,  # noqa: PLC0415
         )
@@ -167,8 +160,6 @@ class HabitUpdateArgs:
         stack_ref_id = HabitUpdateArgsStackRefId.from_dict(d.pop("stack_ref_id"))
 
         is_key = HabitUpdateArgsIsKey.from_dict(d.pop("is_key"))
-
-        period = HabitUpdateArgsPeriod.from_dict(d.pop("period"))
 
         eisen = HabitUpdateArgsEisen.from_dict(d.pop("eisen"))
 
@@ -196,7 +187,6 @@ class HabitUpdateArgs:
             goal_ref_id=goal_ref_id,
             stack_ref_id=stack_ref_id,
             is_key=is_key,
-            period=period,
             eisen=eisen,
             difficulty=difficulty,
             actionable_from_day=actionable_from_day,

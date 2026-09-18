@@ -27,7 +27,11 @@ from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 from jupiter.framework.utils.generic_crown_archiver import generic_crown_archiver
 
 
@@ -38,11 +42,20 @@ class TimePlanActivityArchiveArgs(JupiterArchiveCrownEntityArgs):
     ref_id: EntityId
 
 
+@use_case_result
+class TimePlanActivityArchiveResult(UseCaseResultBase):
+    """Result."""
+
+    archived_time_plan_activities: list[TimePlanActivity]
+
+
 @mutation_use_case(
     WorkspaceFeature.TIME_PLANS, only_for_component=[AppCore.WEBUI, AppCore.API]
 )
 class TimePlanActivityArchiveUseCase(
-    JupiterArchiveCrownEntityUseCase[TimePlanActivityArchiveArgs, None]
+    JupiterArchiveCrownEntityUseCase[
+        TimePlanActivityArchiveArgs, TimePlanActivityArchiveResult
+    ]
 ):
     """Use case for archiving a time plan activity."""
 
@@ -52,8 +65,9 @@ class TimePlanActivityArchiveUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TimePlanActivityArchiveArgs,
-    ) -> None:
+    ) -> TimePlanActivityArchiveResult:
         """Execute the command's action."""
+        archived_ref_ids: list[EntityId] = []
         workspace = context.workspace
         activity = await self.load_entity(
             uow, context.user.ref_id, TimePlanActivity, args.ref_id
@@ -92,6 +106,7 @@ class TimePlanActivityArchiveUseCase(
                         inbox_task_activity.ref_id,
                         JupiterArchivalReason.USER,
                     )
+                    archived_ref_ids.append(inbox_task_activity.ref_id)
 
         if activity.is_target_todo_task:
             await self.check_entity(
@@ -126,6 +141,7 @@ class TimePlanActivityArchiveUseCase(
                         inbox_task_activity.ref_id,
                         JupiterArchivalReason.USER,
                     )
+                    archived_ref_ids.append(inbox_task_activity.ref_id)
 
         if activity.is_target_habit:
             await self.check_entity(
@@ -160,6 +176,7 @@ class TimePlanActivityArchiveUseCase(
                         inbox_task_activity.ref_id,
                         JupiterArchivalReason.USER,
                     )
+                    archived_ref_ids.append(inbox_task_activity.ref_id)
 
         if activity.is_target_habit_stack:
             await self.check_entity(
@@ -212,6 +229,7 @@ class TimePlanActivityArchiveUseCase(
                                 inbox_task_activity.ref_id,
                                 JupiterArchivalReason.USER,
                             )
+                            archived_ref_ids.append(inbox_task_activity.ref_id)
                     await generic_crown_archiver(
                         context.domain_context,
                         uow,
@@ -220,6 +238,7 @@ class TimePlanActivityArchiveUseCase(
                         habit_activity.ref_id,
                         JupiterArchivalReason.USER,
                     )
+                    archived_ref_ids.append(habit_activity.ref_id)
 
         if activity.is_target_chore_stack:
             await self.check_entity(
@@ -272,6 +291,7 @@ class TimePlanActivityArchiveUseCase(
                                 inbox_task_activity.ref_id,
                                 JupiterArchivalReason.USER,
                             )
+                            archived_ref_ids.append(inbox_task_activity.ref_id)
                     await generic_crown_archiver(
                         context.domain_context,
                         uow,
@@ -280,6 +300,7 @@ class TimePlanActivityArchiveUseCase(
                         chore_activity.ref_id,
                         JupiterArchivalReason.USER,
                     )
+                    archived_ref_ids.append(chore_activity.ref_id)
 
         if activity.is_target_chore:
             await self.check_entity(
@@ -314,6 +335,7 @@ class TimePlanActivityArchiveUseCase(
                         inbox_task_activity.ref_id,
                         JupiterArchivalReason.USER,
                     )
+                    archived_ref_ids.append(inbox_task_activity.ref_id)
 
         await generic_crown_archiver(
             context.domain_context,
@@ -322,4 +344,13 @@ class TimePlanActivityArchiveUseCase(
             TimePlanActivity,
             args.ref_id,
             JupiterArchivalReason.USER,
+        )
+        archived_ref_ids.append(args.ref_id)
+        return TimePlanActivityArchiveResult(
+            archived_time_plan_activities=[
+                await uow.get_for(TimePlanActivity).load_by_id(
+                    ref_id, allow_archived=True
+                )
+                for ref_id in archived_ref_ids
+            ]
         )

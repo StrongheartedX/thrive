@@ -21,7 +21,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -34,9 +38,16 @@ class MilestoneUpdateArgs(JupiterUpdateCrownEntityArgs):
     aspect_ref_id: UpdateAction[EntityId]
 
 
+@use_case_result
+class MilestoneUpdateResult(UseCaseResultBase):
+    """MilestoneUpdate result."""
+
+    updated_milestone: Milestone
+
+
 @mutation_use_case(WorkspaceFeature.LIFE_PLAN)
 class MilestoneUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[MilestoneUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[MilestoneUpdateArgs, MilestoneUpdateResult]
 ):
     """The command for updating a milestone."""
 
@@ -46,7 +57,7 @@ class MilestoneUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: MilestoneUpdateArgs,
-    ) -> None:
+    ) -> MilestoneUpdateResult:
         """Execute the command's action."""
         milestone = await self.load_entity(
             uow, context.user.ref_id, Milestone, args.ref_id
@@ -126,5 +137,7 @@ class MilestoneUpdateUseCase(
             aspect_ref_id=args.aspect_ref_id,
         )
 
-        await uow.get_for(Milestone).save(milestone)
+        milestone = await uow.get_for(Milestone).save(milestone)
         await progress_reporter.mark_updated(milestone)
+
+        return MilestoneUpdateResult(updated_milestone=milestone)

@@ -36,14 +36,23 @@ from jupiter_webapi_client.api.inbox_tasks.inbox_task_update import (
 from jupiter_webapi_client.api.test_helper.workspace_set_feature import (
     sync_detailed as workspace_set_feature_sync,
 )
+from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_time_plan_activity import (
+    sync_detailed as time_event_in_day_block_create_for_time_plan_activity_sync,
+)
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_big_plans import (
     sync_detailed as time_plan_activity_create_big_plan_sync,
 )
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_chore_stacks import (
     sync_detailed as time_plan_associate_with_chore_stacks_sync,
 )
+from jupiter_webapi_client.api.time_plans.time_plan_associate_with_chores import (
+    sync_detailed as time_plan_associate_with_chores_sync,
+)
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_habit_stacks import (
     sync_detailed as time_plan_associate_with_habit_stacks_sync,
+)
+from jupiter_webapi_client.api.time_plans.time_plan_associate_with_habits import (
+    sync_detailed as time_plan_associate_with_habits_sync,
 )
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_inbox_tasks import (
     sync_detailed as time_plan_activity_associate_inbox_task_sync,
@@ -148,6 +157,13 @@ from jupiter_webapi_client.models.invite_users_to_entity_args import (
 )
 from jupiter_webapi_client.models.named_entity_tag import NamedEntityTag
 from jupiter_webapi_client.models.recurring_task_period import RecurringTaskPeriod
+from jupiter_webapi_client.models.time_event_in_day_block import TimeEventInDayBlock
+from jupiter_webapi_client.models.time_event_in_day_block_create_for_time_plan_activity_args import (
+    TimeEventInDayBlockCreateForTimePlanActivityArgs,
+)
+from jupiter_webapi_client.models.time_event_in_day_block_create_for_time_plan_activity_result import (
+    TimeEventInDayBlockCreateForTimePlanActivityResult,
+)
 from jupiter_webapi_client.models.time_plan import TimePlan
 from jupiter_webapi_client.models.time_plan_activity import TimePlanActivity
 from jupiter_webapi_client.models.time_plan_activity_feasability import (
@@ -166,11 +182,23 @@ from jupiter_webapi_client.models.time_plan_associate_with_chore_stacks_args imp
 from jupiter_webapi_client.models.time_plan_associate_with_chore_stacks_result import (
     TimePlanAssociateWithChoreStacksResult,
 )
+from jupiter_webapi_client.models.time_plan_associate_with_chores_args import (
+    TimePlanAssociateWithChoresArgs,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_chores_result import (
+    TimePlanAssociateWithChoresResult,
+)
 from jupiter_webapi_client.models.time_plan_associate_with_habit_stacks_args import (
     TimePlanAssociateWithHabitStacksArgs,
 )
 from jupiter_webapi_client.models.time_plan_associate_with_habit_stacks_result import (
     TimePlanAssociateWithHabitStacksResult,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_habits_args import (
+    TimePlanAssociateWithHabitsArgs,
+)
+from jupiter_webapi_client.models.time_plan_associate_with_habits_result import (
+    TimePlanAssociateWithHabitsResult,
 )
 from jupiter_webapi_client.models.time_plan_associate_with_inbox_tasks_args import (
     TimePlanAssociateWithInboxTasksArgs,
@@ -195,12 +223,14 @@ from jupiter_webapi_client.models.workspace_set_feature_args import (
 )
 from jupiter_webapi_client.types import UNSET
 from playwright.sync_api import Page, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from itests.helpers import (
     fill_after_hydration,
     get_parsed_from_response,
     open_branch_publish_panel,
     type_entity_note_editor_and_wait_for_save,
+    wait_for_hydration,
 )
 from itests.webui.entities.conftest import AnotherUserAndWorkspace
 
@@ -311,11 +341,21 @@ def _set_new_time_plan_question_selected(
 ) -> None:
     assert entity_id is not None
     card = page.locator(f"#{entity_id}")
+    is_selected = "el => getComputedStyle(el).boxShadow.includes('inset')"
     for _ in range(4):
-        box_shadow = card.evaluate("el => getComputedStyle(el).boxShadow") or ""
-        if ("inset" in box_shadow) == selected:
+        if card.evaluate(is_selected) == selected:
             return
         card.click()
+        # The card animates its shadow, and mid-animation it still reads as
+        # selected; wait for the click to show before looking again.
+        try:
+            page.wait_for_function(
+                "([el, want]) => getComputedStyle(el).boxShadow.includes('inset') === want",
+                arg=[card.element_handle(), selected],
+                timeout=2000,
+            )
+        except PlaywrightTimeoutError:
+            continue
     raise AssertionError(f"Could not set {entity_id} selected={selected}")
 
 
@@ -337,6 +377,151 @@ def create_time_plan_activity_from_big_plan(logged_in_client: AuthenticatedClien
         return get_parsed_from_response(
             TimePlanAssociateWithBigPlansResult, result
         ).new_time_plan_activities[0]
+
+    return _create_time_plan_activity
+
+
+@pytest.fixture()
+def create_time_plan_activity_from_habit(logged_in_client: AuthenticatedClient):
+    def _create_time_plan_activity(
+        time_plan_id: str, habit_id: str
+    ) -> TimePlanActivity:
+        result = time_plan_associate_with_habits_sync(
+            client=logged_in_client,
+            body=TimePlanAssociateWithHabitsArgs(
+                ref_id=str(time_plan_id),
+                habit_ref_ids=[str(habit_id)],
+                kind=TimePlanActivityKind.FINISH,
+                feasability=TimePlanActivityFeasability.MUST_DO,
+            ),
+        )
+        return next(
+            activity
+            for activity in get_parsed_from_response(
+                TimePlanAssociateWithHabitsResult, result
+            ).new_time_plan_activities
+            if activity.target == f"Habit:std:{habit_id}"
+        )
+
+    return _create_time_plan_activity
+
+
+@pytest.fixture()
+def create_time_plan_activity_from_chore(logged_in_client: AuthenticatedClient):
+    def _create_time_plan_activity(
+        time_plan_id: str, chore_id: str
+    ) -> TimePlanActivity:
+        result = time_plan_associate_with_chores_sync(
+            client=logged_in_client,
+            body=TimePlanAssociateWithChoresArgs(
+                ref_id=str(time_plan_id),
+                chore_ref_ids=[str(chore_id)],
+                kind=TimePlanActivityKind.FINISH,
+                feasability=TimePlanActivityFeasability.MUST_DO,
+            ),
+        )
+        return next(
+            activity
+            for activity in get_parsed_from_response(
+                TimePlanAssociateWithChoresResult, result
+            ).new_time_plan_activities
+            if activity.target == f"Chore:std:{chore_id}"
+        )
+
+    return _create_time_plan_activity
+
+
+@pytest.fixture()
+def create_time_plan_activity_from_habit_stack(logged_in_client: AuthenticatedClient):
+    def _create_time_plan_activity(
+        time_plan_id: str, stack_id: str
+    ) -> TimePlanActivity:
+        result = time_plan_associate_with_habit_stacks_sync(
+            client=logged_in_client,
+            body=TimePlanAssociateWithHabitStacksArgs(
+                ref_id=str(time_plan_id),
+                habit_stack_ref_ids=[str(stack_id)],
+                kind=TimePlanActivityKind.FINISH,
+                feasability=TimePlanActivityFeasability.MUST_DO,
+            ),
+        )
+        return next(
+            activity
+            for activity in get_parsed_from_response(
+                TimePlanAssociateWithHabitStacksResult, result
+            ).new_time_plan_activities
+            if activity.target == f"HabitStack:std:{stack_id}"
+        )
+
+    return _create_time_plan_activity
+
+
+@pytest.fixture()
+def create_time_plan_activity_from_chore_stack(logged_in_client: AuthenticatedClient):
+    def _create_time_plan_activity(
+        time_plan_id: str, stack_id: str
+    ) -> TimePlanActivity:
+        result = time_plan_associate_with_chore_stacks_sync(
+            client=logged_in_client,
+            body=TimePlanAssociateWithChoreStacksArgs(
+                ref_id=str(time_plan_id),
+                chore_stack_ref_ids=[str(stack_id)],
+                kind=TimePlanActivityKind.FINISH,
+                feasability=TimePlanActivityFeasability.MUST_DO,
+            ),
+        )
+        return next(
+            activity
+            for activity in get_parsed_from_response(
+                TimePlanAssociateWithChoreStacksResult, result
+            ).new_time_plan_activities
+            if activity.target == f"ChoreStack:std:{stack_id}"
+        )
+
+    return _create_time_plan_activity
+
+
+@pytest.fixture()
+def create_time_event_for_time_plan_activity(logged_in_client: AuthenticatedClient):
+    def _create_time_event(
+        activity_id: str, start_date: str, start_time_in_day: str, duration_mins: int
+    ) -> TimeEventInDayBlock:
+        result = time_event_in_day_block_create_for_time_plan_activity_sync(
+            client=logged_in_client,
+            body=TimeEventInDayBlockCreateForTimePlanActivityArgs(
+                time_plan_activity_ref_id=str(activity_id),
+                start_date=start_date,
+                start_time_in_day=start_time_in_day,
+                duration_mins=duration_mins,
+            ),
+        )
+        return get_parsed_from_response(
+            TimeEventInDayBlockCreateForTimePlanActivityResult, result
+        ).new_time_event
+
+    return _create_time_event
+
+
+@pytest.fixture()
+def create_time_plan_activity_from_todo_task(logged_in_client: AuthenticatedClient):
+    def _create_time_plan_activity(time_plan_id: int, name: str) -> TimePlanActivity:
+        result = todo_task_create_sync(
+            client=logged_in_client,
+            body=TodoTaskCreateArgs(
+                name=name,
+                is_key=False,
+                eisen=Eisen.REGULAR,
+                difficulty=Difficulty.EASY,
+                time_plan_ref_id=str(time_plan_id),
+                time_plan_activity_kind=TimePlanActivityKind.FINISH,
+                time_plan_activity_feasability=TimePlanActivityFeasability.MUST_DO,
+            ),
+        )
+        activity = get_parsed_from_response(
+            TodoTaskCreateResult, result
+        ).new_time_plan_activity
+        assert isinstance(activity, TimePlanActivity)
+        return activity
 
     return _create_time_plan_activity
 
@@ -434,6 +619,23 @@ def _with_habits_enabled(logged_in_client: AuthenticatedClient) -> Iterator[None
         workspace_set_feature_sync(
             client=logged_in_client,
             body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.HABITS, value=False),
+        )
+
+
+@pytest.fixture()
+def _with_schedule_enabled(logged_in_client: AuthenticatedClient) -> Iterator[None]:
+    try:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(feature=WorkspaceFeature.SCHEDULE, value=True),
+        )
+        yield
+    finally:
+        workspace_set_feature_sync(
+            client=logged_in_client,
+            body=WorkspaceSetFeatureArgs(
+                feature=WorkspaceFeature.SCHEDULE, value=False
+            ),
         )
 
 
@@ -999,11 +1201,12 @@ def test_webui_time_plan_create_new_todo_task_activity(
 ) -> None:
     time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.DAILY)
     page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#section-action-nav-multiple-compact-button").click()
     page.get_by_role("menuitem", name="New Todo").click()
 
-    page.wait_for_url(re.compile("/app/workspace/apps/todos/new"))
+    page.wait_for_url(re.compile(r"/app/workspace/apps/time-plans/\d+/new-todo-task"))
 
     page.locator('input[name="name"]').fill("New Todo Task")
     page.locator("button[id='todo-create']").click()
@@ -1029,11 +1232,12 @@ def test_webui_time_plan_create_new_todo_task_shows_in_activities(
 ) -> None:
     time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.DAILY)
     page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#section-action-nav-multiple-compact-button").click()
     page.get_by_role("menuitem", name="New Todo").click()
 
-    page.wait_for_url(re.compile("/app/workspace/apps/todos/new"))
+    page.wait_for_url(re.compile(r"/app/workspace/apps/time-plans/\d+/new-todo-task"))
 
     page.locator('input[name="name"]').fill("New Todo Task")
     page.locator("button[id='todo-create']").click()
@@ -1059,11 +1263,12 @@ def test_webui_time_plan_create_new_big_plan_activity(
 ) -> None:
     time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.DAILY)
     page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#section-action-nav-multiple-compact-button").click()
     page.get_by_role("menuitem", name="New Big Plan").click()
 
-    page.wait_for_url(re.compile("/app/workspace/apps/big-plans/new"))
+    page.wait_for_url(re.compile(r"/app/workspace/apps/time-plans/\d+/new-big-plan"))
 
     page.locator('input[name="name"]').fill("New Big Plan")
     page.locator("button[id='big-plan-create']").click()
@@ -1103,13 +1308,13 @@ def test_webui_time_plan_create_new_inbox_task_from_big_plan_activity(
     page.locator("#leaf-panel").locator("a", has_text="New Inbox Task").click()
 
     page.wait_for_url(
-        re.compile(rf"/app/workspace/apps/big-plans/{big_plan.ref_id}/inbox-tasks/new")
+        re.compile(
+            rf"/app/workspace/apps/time-plans/{time_plan.ref_id}/new-big-plan-inbox-task"
+        )
     )
 
-    page.locator("#leaflet-panel").locator('input[name="name"]').fill(
-        "The New Inbox Task"
-    )
-    page.locator("#leaflet-panel").locator(
+    page.locator("#leaf-panel").locator('input[name="name"]').fill("The New Inbox Task")
+    page.locator("#leaf-panel").locator(
         "button[id='big-plan-inbox-task-create']"
     ).click()
 
@@ -1316,8 +1521,8 @@ def test_webui_time_plan_associate_previous_activity_inbox_task(
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1370,8 +1575,8 @@ def test_webui_time_plan_associate_previous_activity_inbox_task_no_dates(
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1422,8 +1627,8 @@ def test_webui_time_plan_associate_previous_activity_inbox_task_override_dates(
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1478,8 +1683,8 @@ def test_webui_time_plan_associate_previous_activity_inbox_task_and_pulls_big_pl
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1534,8 +1739,8 @@ def test_webui_time_plan_associate_previous_activity_inbox_task_and_pulls_big_pl
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1590,8 +1795,8 @@ def test_webui_time_plan_associate_previous_activity_inbox_task_and_pulls_big_pl
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1652,11 +1857,11 @@ def test_webui_time_plan_associate_previous_activity_two_of_three_inbox_tasks(
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task 1"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task 1", exact=True
     ).click()
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task 3"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task 3", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1728,11 +1933,11 @@ def test_webui_time_plan_associate_previous_activity_tasks_that_pull_in_some_mor
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task 1"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task 1", exact=True
     ).click()
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task 3"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task 3", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1787,8 +1992,8 @@ def test_webui_time_plan_associate_previous_activity_big_plan(
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Big Plan"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Big Plan", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1840,8 +2045,8 @@ def test_webui_time_plan_associate_previous_activity_big_plan_no_dates(
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Big Plan"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Big Plan", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1893,8 +2098,8 @@ def test_webui_time_plan_associate_previous_activity_big_plan_and_override_dates
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Big Plan"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Big Plan", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -1957,11 +2162,11 @@ def test_webui_time_plan_associate_previous_activity_some_already_associated(
         )
     )
 
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task 1"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task 1", exact=True
     ).click()
-    page.locator("#time-plan-current-activities").locator(
-        "p", has_text="The Inbox Task 3"
+    page.locator("#time-plan-current-activities").get_by_text(
+        "The Inbox Task 3", exact=True
     ).click()
 
     page.locator("#time-plan-current-activities").locator(
@@ -2394,14 +2599,14 @@ def test_webui_time_plan_show_activity_doneness(
     page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
 
     expect(
-        page.locator("#time-plan-activities").locator("p", has_text="The Inbox Task")
+        page.locator("#time-plan-activities").get_by_text("The Inbox Task", exact=True)
     ).not_to_have_css("font-weight", "100")
 
     _mark_inbox_task_done(logged_in_client, inbox_task)
     page.reload()
 
     expect(
-        page.locator("#time-plan-activities").locator("p", has_text="The Inbox Task")
+        page.locator("#time-plan-activities").get_by_text("The Inbox Task", exact=True)
     ).to_have_css("font-weight", "700")
 
 
@@ -2421,6 +2626,7 @@ def test_webui_time_plan_activity_update(
         f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
     )
 
+    wait_for_hydration(page)
     page.locator("#time-plan-activity-kind-make-progress").click()
     page.locator("#time-plan-activity-feasability-stretch").click()
     page.locator("#time-plan-activity-properties").locator(
@@ -2450,6 +2656,735 @@ def test_webui_time_plan_activity_update(
     expect(
         page.locator('button[id="time-plan-activity-feasability-stretch"]')
     ).to_have_attribute("aria-pressed", "true")
+
+
+def test_webui_time_plan_activity_inbox_task_update(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Inbox Task")
+    inbox_task_activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+    )
+
+    fill_after_hydration(
+        page.locator('input[name="targetInboxTaskName"]'), "The Renamed Inbox Task"
+    )
+    page.locator("#inbox-task-editor").locator("button", has_text="Save").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    expect(page.locator("#time-plan-activities")).to_contain_text(
+        "The Renamed Inbox Task"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+    )
+
+    expect(page.locator('input[name="targetInboxTaskName"]')).to_have_value(
+        "The Renamed Inbox Task"
+    )
+
+
+def test_webui_time_plan_activity_inbox_task_mark_done(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Inbox Task")
+    inbox_task_activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+    )
+
+    wait_for_hydration(page)
+    page.locator('button[value="target-inbox-task-mark-done"]').click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+    )
+
+    expect(page.locator('button[value="target-inbox-task-reactivate"]')).to_be_visible()
+
+
+def test_webui_time_plan_activity_inbox_task_delay(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Inbox Task")
+    inbox_task_activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+    )
+
+    wait_for_hydration(page)
+    page.locator('button[value="target-inbox-task-delay-1-week"]').click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+    )
+
+    expect(page.locator('input[name="targetInboxTaskActionableDate"]')).to_have_value(
+        re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    )
+
+
+def test_webui_time_plan_activity_todo_task_update(
+    page: Page,
+    create_time_plan,
+    create_time_plan_activity_from_todo_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    todo_task_activity = create_time_plan_activity_from_todo_task(
+        time_plan.ref_id, "The Todo Task"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{todo_task_activity.ref_id}"
+    )
+
+    fill_after_hydration(
+        page.locator('input[name="targetTodoTaskName"]'), "The Renamed Todo Task"
+    )
+    page.locator("button#todo-update").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    expect(page.locator("#time-plan-activities")).to_contain_text(
+        "The Renamed Todo Task"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{todo_task_activity.ref_id}"
+    )
+
+    expect(page.locator('input[name="targetTodoTaskName"]')).to_have_value(
+        "The Renamed Todo Task"
+    )
+
+
+def test_webui_time_plan_activity_todo_task_mark_done(
+    page: Page,
+    create_time_plan,
+    create_time_plan_activity_from_todo_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    todo_task_activity = create_time_plan_activity_from_todo_task(
+        time_plan.ref_id, "The Todo Task"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{todo_task_activity.ref_id}"
+    )
+
+    wait_for_hydration(page)
+    page.locator('button[value="target-todo-task-mark-done"]').click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{todo_task_activity.ref_id}"
+    )
+
+    expect(page.locator('button[value="target-todo-task-reactivate"]')).to_be_visible()
+
+
+def test_webui_time_plan_activity_todo_task_delay(
+    page: Page,
+    create_time_plan,
+    create_time_plan_activity_from_todo_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    todo_task_activity = create_time_plan_activity_from_todo_task(
+        time_plan.ref_id, "The Todo Task"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{todo_task_activity.ref_id}"
+    )
+
+    wait_for_hydration(page)
+    page.locator('button[value="target-todo-task-delay-1-week"]').click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{todo_task_activity.ref_id}"
+    )
+
+    expect(page.locator('input[name="targetTodoTaskActionableDate"]')).to_have_value(
+        re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    )
+
+
+def test_webui_time_plan_activity_big_plan_update(
+    page: Page,
+    create_time_plan,
+    create_big_plan,
+    create_time_plan_activity_from_big_plan,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    big_plan = create_big_plan("The Big Plan")
+    big_plan_activity = create_time_plan_activity_from_big_plan(
+        time_plan.ref_id, big_plan.ref_id
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{big_plan_activity.ref_id}"
+    )
+
+    fill_after_hydration(
+        page.locator('input[name="targetBigPlanName"]'), "The Renamed Big Plan"
+    )
+    page.locator("#big-plan-editor-save").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    expect(page.locator("#time-plan-activities")).to_contain_text(
+        "The Renamed Big Plan"
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{big_plan_activity.ref_id}"
+    )
+
+    expect(page.locator('input[name="targetBigPlanName"]')).to_have_value(
+        "The Renamed Big Plan"
+    )
+
+
+def test_webui_time_plan_activity_big_plan_mark_done(
+    page: Page,
+    create_time_plan,
+    create_big_plan,
+    create_time_plan_activity_from_big_plan,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    big_plan = create_big_plan("The Big Plan")
+    big_plan_activity = create_time_plan_activity_from_big_plan(
+        time_plan.ref_id, big_plan.ref_id
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{big_plan_activity.ref_id}"
+    )
+
+    wait_for_hydration(page)
+    page.locator('button[value="target-big-plan-mark-done"]').click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{big_plan_activity.ref_id}"
+    )
+
+    expect(page.locator('button[value="target-big-plan-reactivate"]')).to_be_visible()
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_webui_time_plan_activity_habit_update(
+    page: Page,
+    create_time_plan,
+    create_habit,
+    create_time_plan_activity_from_habit,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    habit = create_habit("The Habit")
+    activity = create_time_plan_activity_from_habit(time_plan.ref_id, habit.ref_id)
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    fill_after_hydration(
+        page.locator('input[name="targetHabitName"]'), "The Renamed Habit"
+    )
+    page.locator("button#habit-update").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    expect(page.locator("#time-plan-activities")).to_contain_text("The Renamed Habit")
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    expect(page.locator('input[name="targetHabitName"]')).to_have_value(
+        "The Renamed Habit"
+    )
+    # A rename doesn't change what the habit generates, so there's no regen to
+    # offer.
+    expect(page.get_by_role("button", name="Regenerate")).to_have_count(0)
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_webui_time_plan_activity_habit_update_offers_regen(
+    page: Page,
+    create_time_plan,
+    create_habit,
+    create_time_plan_activity_from_habit,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    habit = create_habit("The Habit")
+    activity = create_time_plan_activity_from_habit(time_plan.ref_id, habit.ref_id)
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+    wait_for_hydration(page)
+
+    page.locator("#leaf-panel").locator("#eisen-important").click()
+    page.locator("button#habit-update").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    regenerate = page.get_by_role("button", name="Regenerate")
+    expect(regenerate).to_be_visible()
+
+    with page.expect_response(
+        lambda response: "mutations/regen-habit" in response.url
+    ) as response_info:
+        regenerate.click()
+
+    assert response_info.value.json()["theType"] == "no-error-no-data"
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_webui_time_plan_activity_habit_gen(
+    page: Page,
+    create_time_plan,
+    create_habit,
+    create_time_plan_activity_from_habit,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    habit = create_habit("The Habit")
+    activity = create_time_plan_activity_from_habit(time_plan.ref_id, habit.ref_id)
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+    wait_for_hydration(page)
+
+    with page.expect_response(
+        lambda response: "mutations/regen-habit" in response.url
+    ) as response_info:
+        page.locator("#leaf-panel").locator('button[value="target-habit-gen"]').click()
+
+    assert response_info.value.json()["theType"] == "no-error-no-data"
+    # Regen keeps the panel open, like the redirect it replaces.
+    expect(page).to_have_url(
+        re.compile(
+            rf"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}"
+        )
+    )
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_webui_time_plan_activity_chore_update(
+    page: Page,
+    create_time_plan,
+    create_chore,
+    create_time_plan_activity_from_chore,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    chore = create_chore("The Chore")
+    activity = create_time_plan_activity_from_chore(time_plan.ref_id, chore.ref_id)
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    fill_after_hydration(
+        page.locator('input[name="targetChoreName"]'), "The Renamed Chore"
+    )
+    page.locator("button#chore-update").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    expect(page.locator("#time-plan-activities")).to_contain_text("The Renamed Chore")
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    expect(page.locator('input[name="targetChoreName"]')).to_have_value(
+        "The Renamed Chore"
+    )
+
+
+@pytest.mark.usefixtures("_with_habits_enabled")
+def test_webui_time_plan_activity_habit_stack_update(
+    page: Page,
+    create_time_plan,
+    create_habit,
+    create_habit_stack,
+    create_time_plan_activity_from_habit_stack,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    habit = create_habit("The Stacked Habit")
+    stack = create_habit_stack("The Habit Stack", [habit.ref_id])
+    activity = create_time_plan_activity_from_habit_stack(
+        time_plan.ref_id, stack.ref_id
+    )
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    fill_after_hydration(
+        page.locator('input[name="targetHabitStackName"]'), "The Renamed Habit Stack"
+    )
+    page.locator("button#habit-stack-update").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    expect(page.locator("#time-plan-activities")).to_contain_text(
+        "The Renamed Habit Stack"
+    )
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    expect(page.locator('input[name="targetHabitStackName"]')).to_have_value(
+        "The Renamed Habit Stack"
+    )
+
+
+@pytest.mark.usefixtures("_with_chores_enabled")
+def test_webui_time_plan_activity_chore_stack_update(
+    page: Page,
+    create_time_plan,
+    create_chore,
+    create_chore_stack,
+    create_time_plan_activity_from_chore_stack,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    chore = create_chore("The Stacked Chore")
+    stack = create_chore_stack("The Chore Stack", [chore.ref_id])
+    activity = create_time_plan_activity_from_chore_stack(
+        time_plan.ref_id, stack.ref_id
+    )
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    fill_after_hydration(
+        page.locator('input[name="targetChoreStackName"]'), "The Renamed Chore Stack"
+    )
+    page.locator("button#chore-stack-update").click()
+
+    page.wait_for_url(
+        re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}$")
+    )
+    expect(page.locator("#time-plan-activities")).to_contain_text(
+        "The Renamed Chore Stack"
+    )
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}")
+
+    expect(page.locator('input[name="targetChoreStackName"]')).to_have_value(
+        "The Renamed Chore Stack"
+    )
+
+
+def test_webui_time_plan_kanban_drag_moves_inbox_task(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Kanban Task")
+    create_time_plan_activity_from_inbox_task(time_plan.ref_id, inbox_task.ref_id)
+
+    page.goto(f"/app/workspace/apps/time-plans/{time_plan.ref_id}?timePlanView=kanban")
+    wait_for_hydration(page)
+
+    card_selector = f"#inbox-task-{inbox_task.ref_id}"
+    not_started = page.locator(
+        "[data-rfd-droppable-id="
+        f'"inbox-tasks-column:undefined:{InboxTaskStatus.NOT_STARTED.value}"]'
+    )
+    in_progress = page.locator(
+        "[data-rfd-droppable-id="
+        f'"inbox-tasks-column:undefined:{InboxTaskStatus.IN_PROGRESS.value}"]'
+    )
+    expect(not_started.locator(card_selector)).to_be_visible()
+
+    card = not_started.locator(card_selector)
+    card.scroll_into_view_if_needed()
+    card_box = card.bounding_box()
+    target_box = in_progress.bounding_box()
+    assert card_box is not None
+    assert target_box is not None
+    start_x = card_box["x"] + card_box["width"] / 2
+    start_y = card_box["y"] + card_box["height"] / 2
+
+    with page.expect_response(
+        lambda response: "update-status-and-eisen" in response.url
+    ) as response_info:
+        page.mouse.move(start_x, start_y)
+        page.mouse.down()
+        page.mouse.move(start_x, start_y + 10, steps=5)
+        page.mouse.move(
+            target_box["x"] + target_box["width"] / 2,
+            target_box["y"] + 40,
+            steps=20,
+        )
+        page.mouse.up()
+
+    body = response_info.value.json()
+    assert (
+        body["data"]["updated_inbox_task"]["status"]
+        == InboxTaskStatus.IN_PROGRESS.value
+    )
+    expect(in_progress.locator(card_selector)).to_be_visible()
+
+    page.reload()
+
+    expect(in_progress.locator(card_selector)).to_be_visible()
+
+
+def test_webui_time_plan_activity_big_plan_card_mark_done(
+    page: Page,
+    create_time_plan,
+    create_big_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_big_plan,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    big_plan = create_big_plan("The Big Plan")
+    inbox_task = create_inbox_task("The Big Plan Task", big_plan_id=big_plan.ref_id)
+    big_plan_activity = create_time_plan_activity_from_big_plan(
+        time_plan.ref_id, big_plan.ref_id
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{big_plan_activity.ref_id}"
+    )
+    wait_for_hydration(page)
+
+    with page.expect_response(
+        lambda response: "update-status-and-eisen" in response.url
+    ) as response_info:
+        page.locator("#leaf-panel").locator(
+            f"#inbox-task-{inbox_task.ref_id} button.MuiIconButton-colorSuccess"
+        ).click()
+
+    body = response_info.value.json()
+    assert body["data"]["updated_inbox_task"]["status"] == InboxTaskStatus.DONE.value
+    expect(page).to_have_url(
+        re.compile(
+            rf"/app/workspace/apps/time-plans/{time_plan.ref_id}/{big_plan_activity.ref_id}"
+        )
+    )
+
+
+def test_webui_time_plan_activity_remove(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Removed Inbox Task")
+    inbox_task_activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+    activity_url = f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+
+    page.goto(activity_url)
+    wait_for_hydration(page)
+    page.locator("#leaf-entity-archive").click()
+    with page.expect_response(
+        lambda response: "mutations/archive-activity" in response.url
+    ) as archive_info:
+        page.locator("#leaf-entity-archive-confirm").click()
+    assert [
+        activity["ref_id"]
+        for activity in archive_info.value.json()["data"][
+            "archived_time_plan_activities"
+        ]
+    ] == [inbox_task_activity.ref_id]
+    page.wait_for_url(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
+
+    page.goto(activity_url)
+    wait_for_hydration(page)
+    page.locator("#leaf-entity-archive").click()
+    with page.expect_response(
+        lambda response: "mutations/remove-activity" in response.url
+    ) as remove_info:
+        page.locator("#leaf-entity-archive-confirm").click()
+    assert remove_info.value.json()["data"]["removed_time_plan_activity_ref_ids"] == [
+        inbox_task_activity.ref_id
+    ]
+    page.wait_for_url(f"/app/workspace/apps/time-plans/{time_plan.ref_id}")
+
+    expect(page.locator("#time-plan-activities")).not_to_contain_text(
+        "The Removed Inbox Task"
+    )
+
+
+def test_webui_time_plan_activity_time_event_update(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+    create_time_event_for_time_plan_activity,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Scheduled Inbox Task")
+    inbox_task_activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+    time_event = create_time_event_for_time_plan_activity(
+        inbox_task_activity.ref_id, "2024-06-18", "09:00", 30
+    )
+    time_event_url = (
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+        f"?timeEventRefId={time_event.ref_id}"
+    )
+
+    page.goto(time_event_url)
+    fill_after_hydration(page.locator('input[name="durationMins"]'), "45")
+    with page.expect_response(
+        lambda response: "mutations/update-time-event" in response.url
+    ) as response_info:
+        page.locator('button[value="update-time-event"]').click()
+
+    body = response_info.value.json()
+    assert body["data"]["updated_time_event_in_day_block"]["duration_mins"] == 45
+    expect(page.locator('input[name="durationMins"]')).to_be_visible()
+
+    page.goto(time_event_url)
+
+    expect(page.locator('input[name="durationMins"]')).to_have_value("45")
+
+
+def test_webui_time_plan_activity_time_event_remove(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+    create_time_event_for_time_plan_activity,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Unscheduled Inbox Task")
+    inbox_task_activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+    time_event = create_time_event_for_time_plan_activity(
+        inbox_task_activity.ref_id, "2024-06-18", "09:00", 30
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}"
+        f"?timeEventRefId={time_event.ref_id}"
+    )
+    wait_for_hydration(page)
+    with page.expect_response(
+        lambda response: "mutations/archive-time-event" in response.url
+    ) as response_info:
+        page.locator('button[value="remove-time-event"]').click()
+
+    body = response_info.value.json()
+    assert body["data"]["archived_time_event_in_day_block"]["archived"] is True
+    page.wait_for_url(
+        re.compile(
+            rf"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}$"
+        )
+    )
+    expect(page.locator('button[value="update-time-event"]')).to_have_count(0)
+
+
+def test_webui_time_plan_activity_big_plan_create_note(
+    page: Page,
+    create_time_plan,
+    create_big_plan,
+    create_time_plan_activity_from_big_plan,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    big_plan = create_big_plan("The Noted Big Plan")
+    big_plan_activity = create_time_plan_activity_from_big_plan(
+        time_plan.ref_id, big_plan.ref_id
+    )
+    activity_url = (
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/{big_plan_activity.ref_id}"
+    )
+
+    page.goto(activity_url)
+    wait_for_hydration(page)
+    with page.expect_response(
+        lambda response: "mutations/create-note" in response.url
+    ) as response_info:
+        page.locator("#leaf-panel").locator(
+            'button[value="target-big-plan-create-note"]'
+        ).click()
+
+    assert "new_note" in response_info.value.json()["data"]
+    expect(page.locator("#leaf-panel #entity-block-editor")).to_be_visible()
+    expect(page).to_have_url(re.compile(rf"{re.escape(activity_url)}$"))
+
+    page.goto(activity_url)
+
+    expect(page.locator("#leaf-panel #entity-block-editor")).to_be_visible()
+
+
+def test_webui_time_plan_activity_new_time_event(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Newly Scheduled Inbox Task")
+    inbox_task_activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}/new-activity-time-event"
+        f"?timePlanActivityRefId={inbox_task_activity.ref_id}&date=2024-06-18"
+    )
+    wait_for_hydration(page)
+    with page.expect_response(
+        lambda response: "place-activity-time-event" in response.url
+    ) as response_info:
+        page.locator("#leaf-panel").locator('button[value="create"]').click()
+
+    new_time_events = response_info.value.json()["data"]["new_time_events"]
+    assert [event["owner"] for event in new_time_events] == [
+        f"TimePlanActivity:std:{inbox_task_activity.ref_id}"
+    ]
+    page.wait_for_url(
+        re.compile(
+            rf"/app/workspace/apps/time-plans/{time_plan.ref_id}/{inbox_task_activity.ref_id}$"
+        )
+    )
 
 
 def test_webui_time_plan_activity_archive_inbox_task(
@@ -2944,6 +3879,7 @@ def test_webui_time_plan_add_big_plan_to_an_already_existing_time_plan(
     big_plan = create_big_plan("The Big Plan")
 
     page.goto(f"/app/workspace/apps/big-plans/{big_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#big-plan-time-plans").locator("a", has_text="Add").click()
 
@@ -2977,6 +3913,7 @@ def test_webui_time_plan_add_big_plan_to_an_already_existing_time_plan_no_dates(
     big_plan = create_big_plan("The Big Plan")
 
     page.goto(f"/app/workspace/apps/big-plans/{big_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#big-plan-time-plans").locator("a", has_text="Add").click()
 
@@ -3016,6 +3953,7 @@ def test_webui_time_plan_add_big_plan_to_an_already_existing_time_plan_with_date
     )
 
     page.goto(f"/app/workspace/apps/big-plans/{big_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#big-plan-time-plans").locator("a", has_text="Add").click()
 
@@ -3054,6 +3992,7 @@ def test_webui_time_plan_add_big_plan_to_multiple_already_existing_time_plans(
     big_plan = create_big_plan("The Big Plan")
 
     page.goto(f"/app/workspace/apps/big-plans/{big_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#big-plan-time-plans").locator("a", has_text="Add").click()
 
@@ -3104,6 +4043,7 @@ def test_webui_time_plan_add_big_plan_to_an_already_existing_time_plan_with_inbo
     create_inbox_task("The Inbox Task 2", big_plan_id=big_plan.ref_id)
 
     page.goto(f"/app/workspace/apps/big-plans/{big_plan.ref_id}")
+    wait_for_hydration(page)
 
     page.locator("#big-plan-time-plans").locator("a", has_text="Add").click()
 
@@ -3387,6 +4327,8 @@ def test_webui_time_plan_associate_with_habit_stack(
     page.wait_for_url(re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}"))
 
     expect(page.locator("#time-plan-activities")).to_contain_text("Morning Stack")
+    # Stacks show collapsed; their members appear once expanded.
+    page.locator("#time-plan-activities").get_by_role("img", name="Show tasks").click()
     expect(page.locator("#time-plan-activities")).to_contain_text("Stacked Habit")
 
 
@@ -3476,6 +4418,8 @@ def test_webui_time_plan_associate_with_chore_stack(
     page.wait_for_url(re.compile(rf"/app/workspace/apps/time-plans/{time_plan.ref_id}"))
 
     expect(page.locator("#time-plan-activities")).to_contain_text("Morning Stack")
+    # Stacks show collapsed; their members appear once expanded.
+    page.locator("#time-plan-activities").get_by_role("img", name="Show tasks").click()
     expect(page.locator("#time-plan-activities")).to_contain_text("Stacked Chore")
 
 
@@ -3524,3 +4468,106 @@ def test_webui_time_plan_chore_stack_activity_view(
 # ideas
 # * view time plan should show some activities
 # * test that created activities show up in the timeplan too
+
+
+def test_webui_time_plan_activity_no_parent_redirects_to_its_plan(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Unparented Inbox Task")
+    activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+
+    page.goto(f"/app/workspace/apps/time-plans/no-parent/{activity.ref_id}")
+
+    page.wait_for_url(
+        re.compile(
+            rf"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}"
+        )
+    )
+    expect(page.locator('input[name="targetInboxTaskName"]')).to_have_value(
+        "The Unparented Inbox Task"
+    )
+
+
+@pytest.mark.usefixtures("_with_schedule_enabled")
+def test_webui_calendar_time_event_for_time_plan_activity(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+    create_time_event_for_time_plan_activity,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Calendar Inbox Task")
+    activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+    time_event = create_time_event_for_time_plan_activity(
+        activity.ref_id, "2024-06-18", "09:00", 30
+    )
+
+    page.goto(f"/app/workspace/calendar/time-event/in-day-block/{time_event.ref_id}")
+
+    expect(page.locator('input[name="durationMins"]')).to_have_value("30")
+    expect(page.get_by_text("There was an error")).to_have_count(0)
+
+
+@pytest.mark.usefixtures("_with_schedule_enabled")
+def test_webui_calendar_new_time_event_for_time_plan_activity(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Calendar Inbox Task")
+    activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+
+    page.goto(
+        "/app/workspace/calendar/time-event/in-day-block/new-for-time-plan-activity"
+        f"?timePlanActivityRefId={activity.ref_id}"
+        f"&timePlanRefId={time_plan.ref_id}&date=2024-06-18"
+    )
+
+    expect(page.locator('input[name="name"]')).to_have_value("The Calendar Inbox Task")
+    wait_for_hydration(page)
+    page.locator('button[value="create"]').click()
+
+    page.wait_for_url(
+        re.compile(
+            rf"/app/workspace/apps/time-plans/{time_plan.ref_id}/{activity.ref_id}"
+        )
+    )
+
+
+def test_webui_time_plan_calendar_event_shows_activity_name(
+    page: Page,
+    create_time_plan,
+    create_inbox_task,
+    create_time_plan_activity_from_inbox_task,
+    create_time_event_for_time_plan_activity,
+) -> None:
+    time_plan = create_time_plan("2024-06-18", RecurringTaskPeriod.WEEKLY)
+    inbox_task = create_inbox_task("The Named Calendar Inbox Task")
+    activity = create_time_plan_activity_from_inbox_task(
+        time_plan.ref_id, inbox_task.ref_id
+    )
+    time_event = create_time_event_for_time_plan_activity(
+        activity.ref_id, "2024-06-18", "09:00", 30
+    )
+
+    page.goto(
+        f"/app/workspace/apps/time-plans/{time_plan.ref_id}"
+        f"/calendar-event/time-event-in-day-block/{time_event.ref_id}"
+    )
+
+    expect(page.locator('input[name="name"]')).to_have_value(
+        "The Named Calendar Inbox Task"
+    )

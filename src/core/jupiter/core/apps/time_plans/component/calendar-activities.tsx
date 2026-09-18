@@ -16,6 +16,10 @@ import {
   CalendarNavigationProvider,
   timePlanCalendarNavigation,
 } from "#/core/calendar/component/calendar-navigation";
+import type {
+  CalendarPlaceHandler,
+  CalendarRescheduleHandler,
+} from "#/core/calendar/component/event-drag";
 import { CalendarEventDragProvider } from "#/core/calendar/component/event-drag";
 import { ViewAsCalendarDaily } from "#/core/calendar/component/view-as-calendar-daily";
 import { ViewAsCalendarWeekly } from "#/core/calendar/component/view-as-calendar-weekly";
@@ -55,6 +59,12 @@ interface TimePlanCalendarActivitiesProps {
   isAdding?: boolean;
   viewMode: TimePlanViewMode.CALENDAR | TimePlanViewMode.CALENDAR_3_DAYS;
   additionalTimezones?: Array<Timezone>;
+  // Saves an event dragged or stretched on the calendar; without it the move
+  // is posted and the plan reloads.
+  onReschedule?: CalendarRescheduleHandler;
+  // Makes the events for an activity dropped on the calendar; without it the
+  // drop is posted and the plan reloads.
+  onPlace?: CalendarPlaceHandler;
 }
 
 // The activities of a time plan with the calendar of the period they're
@@ -186,7 +196,11 @@ export function TimePlanCalendarActivities(
 
   return (
     <CalendarNavigationProvider value={navigation}>
-      <CalendarEventDragProvider timezone={timezone}>
+      <CalendarEventDragProvider
+        timezone={timezone}
+        onReschedule={props.onReschedule}
+        onPlace={props.onPlace}
+      >
         {isBigScreen ? (
           <Box
             sx={{

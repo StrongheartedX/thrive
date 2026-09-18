@@ -21,7 +21,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -35,8 +39,17 @@ class ChapterUpdateArgs(JupiterUpdateCrownEntityArgs):
     end_date: UpdateAction[PartialDate]
 
 
+@use_case_result
+class ChapterUpdateResult(UseCaseResultBase):
+    """ChapterUpdate result."""
+
+    updated_chapter: Chapter
+
+
 @mutation_use_case(WorkspaceFeature.LIFE_PLAN)
-class ChapterUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChapterUpdateArgs, None]):
+class ChapterUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[ChapterUpdateArgs, ChapterUpdateResult]
+):
     """The command for updating a chapter."""
 
     async def _perform_transactional_mutation(
@@ -45,7 +58,7 @@ class ChapterUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChapterUpdateArgs, No
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ChapterUpdateArgs,
-    ) -> None:
+    ) -> ChapterUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
@@ -100,5 +113,7 @@ class ChapterUpdateUseCase(JupiterUpdateCrownEntityUseCase[ChapterUpdateArgs, No
             end_date=args.end_date,
         )
 
-        await uow.get_for(Chapter).save(chapter)
+        chapter = await uow.get_for(Chapter).save(chapter)
         await progress_reporter.mark_updated(chapter)
+
+        return ChapterUpdateResult(updated_chapter=chapter)

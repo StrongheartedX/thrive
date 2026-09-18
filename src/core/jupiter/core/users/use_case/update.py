@@ -13,7 +13,12 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import UseCaseArgsBase, use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseArgsBase,
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -24,9 +29,16 @@ class UserUpdateArgs(UseCaseArgsBase):
     timezone: UpdateAction[Timezone]
 
 
+@use_case_result
+class UserUpdateResult(UseCaseResultBase):
+    """UserUpdate result."""
+
+    updated_user: User
+
+
 @mutation_use_case()
 class UserUpdateUseCase(
-    JupiterTransactionalLoggedInMutationUseCase[UserUpdateArgs, None]
+    JupiterTransactionalLoggedInMutationUseCase[UserUpdateArgs, UserUpdateResult]
 ):
     """The command for updating a user's properties."""
 
@@ -36,11 +48,13 @@ class UserUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: UserUpdateArgs,
-    ) -> None:
+    ) -> UserUpdateResult:
         """Execute the command's action."""
         user = context.user.update(
             context.domain_context,
             name=args.name,
             timezone=args.timezone,
         )
-        await uow.get_for(User).save(user)
+        user = await uow.get_for(User).save(user)
+
+        return UserUpdateResult(updated_user=user)

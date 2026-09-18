@@ -14,7 +14,6 @@ import {
   Eisen,
   HabitRepeatsStrategy,
   InboxTaskStatus,
-  RecurringTaskPeriod,
   WorkspaceFeature,
 } from "@jupiter/webapi-client";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
@@ -89,7 +88,6 @@ const UpdateFormSchema = z.discriminatedUnion("intent", [
     aspect: z.string().optional(),
     chapter: z.string().optional(),
     goal: z.string().optional(),
-    period: z.nativeEnum(RecurringTaskPeriod),
     isKey: CheckboxAsString,
     eisen: z.nativeEnum(Eisen),
     difficulty: z.nativeEnum(Difficulty),
@@ -279,10 +277,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
             should_change: true,
             value:
               form.stack !== undefined && form.stack !== "" ? form.stack : null,
-          },
-          period: {
-            should_change: true,
-            value: form.period,
           },
           is_key: {
             should_change: true,

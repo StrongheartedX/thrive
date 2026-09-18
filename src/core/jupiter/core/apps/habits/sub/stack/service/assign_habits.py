@@ -17,25 +17,30 @@ class HabitStackAssignHabitsService:
         progress_reporter: ProgressReporter,
         stack: HabitStack,
         habits: list[Habit],
-    ) -> None:
-        """Set membership to exactly ``habits``."""
+    ) -> list[Habit]:
+        """Set membership to exactly ``habits``, returning the habits that changed."""
         current_members = await uow.get_for(Habit).find_all_generic(
             parent_ref_id=None,
             allow_archived=True,
             stack_ref_id=stack.ref_id,
         )
         desired_ref_ids = {habit.ref_id for habit in habits}
+        changed_habits: list[Habit] = []
 
         for habit in current_members:
             if habit.ref_id in desired_ref_ids:
                 continue
             habit = habit.change_stack(ctx, None)
-            await uow.get_for(Habit).save(habit)
+            habit = await uow.get_for(Habit).save(habit)
             await progress_reporter.mark_updated(habit)
+            changed_habits.append(habit)
 
         for habit in habits:
             if habit.stack_ref_id == stack.ref_id:
                 continue
             habit = habit.change_stack(ctx, stack.ref_id)
-            await uow.get_for(Habit).save(habit)
+            habit = await uow.get_for(Habit).save(habit)
             await progress_reporter.mark_updated(habit)
+            changed_habits.append(habit)
+
+        return changed_habits

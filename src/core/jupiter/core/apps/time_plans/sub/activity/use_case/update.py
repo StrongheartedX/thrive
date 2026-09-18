@@ -23,7 +23,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -35,11 +39,20 @@ class TimePlanActivityUpdateArgs(JupiterUpdateCrownEntityArgs):
     feasability: UpdateAction[TimePlanActivityFeasability]
 
 
+@use_case_result
+class TimePlanActivityUpdateResult(UseCaseResultBase):
+    """TimePlanActivityUpdate result."""
+
+    updated_time_plan_activity: TimePlanActivity
+
+
 @mutation_use_case(
     WorkspaceFeature.TIME_PLANS, only_for_component=[AppCore.WEBUI, AppCore.API]
 )
 class TimePlanActivityUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[TimePlanActivityUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[
+        TimePlanActivityUpdateArgs, TimePlanActivityUpdateResult
+    ]
 ):
     """The command for updating a time plan activity."""
 
@@ -49,7 +62,7 @@ class TimePlanActivityUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TimePlanActivityUpdateArgs,
-    ) -> None:
+    ) -> TimePlanActivityUpdateResult:
         """Execute the command's action."""
         activity = await self.load_entity(
             uow, context.user.ref_id, TimePlanActivity, args.ref_id
@@ -57,5 +70,7 @@ class TimePlanActivityUpdateUseCase(
         activity = activity.update(
             context.domain_context, kind=args.kind, feasability=args.feasability
         )
-        await uow.get_for(TimePlanActivity).save(activity)
+        activity = await uow.get_for(TimePlanActivity).save(activity)
         await progress_reporter.mark_updated(activity)
+
+        return TimePlanActivityUpdateResult(updated_time_plan_activity=activity)

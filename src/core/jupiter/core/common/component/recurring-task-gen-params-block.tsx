@@ -30,6 +30,8 @@ interface RecurringTaskGenParamsBlockProps {
   allowNonePeriod?: boolean;
   allowSkipRule?: boolean;
   period: RecurringTaskPeriod | "none";
+  // The period is still submitted, it just can't be changed. Defaults to true.
+  allowPeriodChange?: boolean;
   onChangePeriod?: (period: RecurringTaskPeriod | "none") => void;
   eisen?: Eisen | null;
   difficulty?: Difficulty | null;
@@ -45,6 +47,8 @@ export function RecurringTaskGenParamsBlock(
   props: RecurringTaskGenParamsBlockProps,
 ) {
   const isBigScreen = useBigScreen();
+  const periodInputsEnabled =
+    props.inputsEnabled && props.allowPeriodChange !== false;
   const [period, setPeriod] = useState(props.period);
   useEffect(() => {
     setPeriod(props.period);
@@ -87,12 +91,12 @@ export function RecurringTaskGenParamsBlock(
           size="small"
         >
           {props.allowNonePeriod && (
-            <ToggleButton value="none" disabled={!props.inputsEnabled}>
+            <ToggleButton value="none" disabled={!periodInputsEnabled}>
               None
             </ToggleButton>
           )}
           {Object.values(RecurringTaskPeriod).map((s) => (
-            <ToggleButton key={s} value={s} disabled={!props.inputsEnabled}>
+            <ToggleButton key={s} value={s} disabled={!periodInputsEnabled}>
               {periodName(s, isBigScreen)}
             </ToggleButton>
           ))}

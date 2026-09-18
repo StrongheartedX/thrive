@@ -26,9 +26,11 @@ import type { HabitStackLoadPublicArgs } from '../models/HabitStackLoadPublicArg
 import type { HabitStackLoadResult } from '../models/HabitStackLoadResult';
 import type { HabitStackRemoveArgs } from '../models/HabitStackRemoveArgs';
 import type { HabitStackUpdateArgs } from '../models/HabitStackUpdateArgs';
+import type { HabitStackUpdateResult } from '../models/HabitStackUpdateResult';
 import type { HabitSuspendArgs } from '../models/HabitSuspendArgs';
 import type { HabitUnsuspendArgs } from '../models/HabitUnsuspendArgs';
 import type { HabitUpdateArgs } from '../models/HabitUpdateArgs';
+import type { HabitUpdateResult } from '../models/HabitUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class HabitsService {
@@ -315,13 +317,17 @@ export class HabitsService {
     }
     /**
      * The command for updating a habit.
+     *
+     * Only the habit itself changes. Its inbox tasks catch up the next time they are
+     * generated - via a regen, or the periodic gen run.
+     *
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns HabitUpdateResult Successful response
      * @throws ApiError
      */
     public habitUpdate(
         requestBody?: HabitUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<HabitUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/habit-update',
@@ -540,12 +546,12 @@ export class HabitsService {
     /**
      * The command for updating a habit stack.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns HabitStackUpdateResult Successful response
      * @throws ApiError
      */
     public habitStackUpdate(
         requestBody?: HabitStackUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<HabitStackUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/habit-stack-update',

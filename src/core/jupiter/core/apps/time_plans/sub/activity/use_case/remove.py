@@ -26,7 +26,11 @@ from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 from jupiter.framework.utils.generic_crown_remover import generic_crown_remover
 
 
@@ -37,11 +41,20 @@ class TimePlanActivityRemoveArgs(JupiterRemoveCrownEntityArgs):
     ref_id: EntityId
 
 
+@use_case_result
+class TimePlanActivityRemoveResult(UseCaseResultBase):
+    """Result."""
+
+    removed_time_plan_activity_ref_ids: list[EntityId]
+
+
 @mutation_use_case(
     WorkspaceFeature.TIME_PLANS, only_for_component=[AppCore.WEBUI, AppCore.API]
 )
 class TimePlanActivityRemoveUseCase(
-    JupiterRemoveCrownEntityUseCase[TimePlanActivityRemoveArgs, None]
+    JupiterRemoveCrownEntityUseCase[
+        TimePlanActivityRemoveArgs, TimePlanActivityRemoveResult
+    ]
 ):
     """Use case for removing a time plan activity."""
 
@@ -51,8 +64,9 @@ class TimePlanActivityRemoveUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TimePlanActivityRemoveArgs,
-    ) -> None:
+    ) -> TimePlanActivityRemoveResult:
         """Execute the command's action."""
+        removed_ref_ids: list[EntityId] = []
         workspace = context.workspace
         activity = await self.load_entity(
             uow, context.user.ref_id, TimePlanActivity, args.ref_id
@@ -90,6 +104,7 @@ class TimePlanActivityRemoveUseCase(
                         TimePlanActivity,
                         inbox_task_activity.ref_id,
                     )
+                    removed_ref_ids.append(inbox_task_activity.ref_id)
 
         if activity.is_target_todo_task:
             await self.check_entity(
@@ -123,6 +138,7 @@ class TimePlanActivityRemoveUseCase(
                         TimePlanActivity,
                         inbox_task_activity.ref_id,
                     )
+                    removed_ref_ids.append(inbox_task_activity.ref_id)
 
         if activity.is_target_habit:
             await self.check_entity(
@@ -156,6 +172,7 @@ class TimePlanActivityRemoveUseCase(
                         TimePlanActivity,
                         inbox_task_activity.ref_id,
                     )
+                    removed_ref_ids.append(inbox_task_activity.ref_id)
 
         if activity.is_target_habit_stack:
             await self.check_entity(
@@ -207,6 +224,7 @@ class TimePlanActivityRemoveUseCase(
                                 TimePlanActivity,
                                 inbox_task_activity.ref_id,
                             )
+                            removed_ref_ids.append(inbox_task_activity.ref_id)
                     await generic_crown_remover(
                         context.domain_context,
                         uow,
@@ -214,6 +232,7 @@ class TimePlanActivityRemoveUseCase(
                         TimePlanActivity,
                         habit_activity.ref_id,
                     )
+                    removed_ref_ids.append(habit_activity.ref_id)
 
         if activity.is_target_chore_stack:
             await self.check_entity(
@@ -265,6 +284,7 @@ class TimePlanActivityRemoveUseCase(
                                 TimePlanActivity,
                                 inbox_task_activity.ref_id,
                             )
+                            removed_ref_ids.append(inbox_task_activity.ref_id)
                     await generic_crown_remover(
                         context.domain_context,
                         uow,
@@ -272,6 +292,7 @@ class TimePlanActivityRemoveUseCase(
                         TimePlanActivity,
                         chore_activity.ref_id,
                     )
+                    removed_ref_ids.append(chore_activity.ref_id)
 
         if activity.is_target_chore:
             await self.check_entity(
@@ -305,6 +326,7 @@ class TimePlanActivityRemoveUseCase(
                         TimePlanActivity,
                         inbox_task_activity.ref_id,
                     )
+                    removed_ref_ids.append(inbox_task_activity.ref_id)
 
         await generic_crown_remover(
             context.domain_context,
@@ -312,4 +334,8 @@ class TimePlanActivityRemoveUseCase(
             progress_reporter,
             TimePlanActivity,
             args.ref_id,
+        )
+        removed_ref_ids.append(args.ref_id)
+        return TimePlanActivityRemoveResult(
+            removed_time_plan_activity_ref_ids=removed_ref_ids
         )

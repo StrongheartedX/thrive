@@ -24,7 +24,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -37,8 +41,17 @@ class GoalUpdateArgs(JupiterUpdateCrownEntityArgs):
     parent_goal_ref_id: UpdateAction[EntityId | None] = UpdateAction.do_nothing()
 
 
+@use_case_result
+class GoalUpdateResult(UseCaseResultBase):
+    """GoalUpdate result."""
+
+    updated_goal: Goal
+
+
 @mutation_use_case(WorkspaceFeature.LIFE_PLAN)
-class GoalUpdateUseCase(JupiterUpdateCrownEntityUseCase[GoalUpdateArgs, None]):
+class GoalUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[GoalUpdateArgs, GoalUpdateResult]
+):
     """The command for updating a goal."""
 
     async def _perform_transactional_mutation(
@@ -47,7 +60,7 @@ class GoalUpdateUseCase(JupiterUpdateCrownEntityUseCase[GoalUpdateArgs, None]):
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: GoalUpdateArgs,
-    ) -> None:
+    ) -> GoalUpdateResult:
         """Execute the command's action."""
         goal = await self.load_entity(uow, context.user.ref_id, Goal, args.ref_id)
 
@@ -82,10 +95,12 @@ class GoalUpdateUseCase(JupiterUpdateCrownEntityUseCase[GoalUpdateArgs, None]):
             parent_goal_ref_id=args.parent_goal_ref_id,
         )
 
-        await uow.get_for(Goal).save(goal)
+        goal = await uow.get_for(Goal).save(goal)
         await progress_reporter.mark_updated(goal)
 
         try:
             await GoalCheckCyclesService().check_for_cycles(uow, goal)
         except GoalTreeHasCyclesError as err:
             raise InputValidationError("The goal tree has cycles.") from err
+
+        return GoalUpdateResult(updated_goal=goal)

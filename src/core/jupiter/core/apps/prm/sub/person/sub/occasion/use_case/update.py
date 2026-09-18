@@ -19,6 +19,7 @@ from jupiter.core.common.sub.inbox_tasks.root import (
     InboxTaskRepository,
 )
 from jupiter.core.common.sub.time_events.sub.full_days_block.root import (
+    TimeEventFullDaysBlock,
     TimeEventFullDaysBlockRepository,
 )
 from jupiter.core.config import (
@@ -40,7 +41,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -53,8 +58,19 @@ class OccasionUpdateArgs(JupiterUpdateCrownEntityArgs):
     date: UpdateAction[Birthday]
 
 
+@use_case_result
+class OccasionUpdateResult(UseCaseResultBase):
+    """OccasionUpdate result."""
+
+    updated_occasion: Occasion
+    updated_inbox_tasks: list[InboxTask]
+    updated_time_event_full_days_blocks: list[TimeEventFullDaysBlock]
+
+
 @mutation_use_case(WorkspaceFeature.PRM)
-class OccasionUpdateUseCase(JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, None]):
+class OccasionUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, OccasionUpdateResult]
+):
     """The command for updating an occasion."""
 
     async def _perform_transactional_mutation(
@@ -63,7 +79,7 @@ class OccasionUpdateUseCase(JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, 
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: OccasionUpdateArgs,
-    ) -> None:
+    ) -> OccasionUpdateResult:
         """Execute the command's action."""
         occasion = await uow.get_for(Occasion).load_by_id(args.ref_id)
         person = await self.load_entity(
@@ -77,7 +93,7 @@ class OccasionUpdateUseCase(JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, 
             date=args.date,
         )
 
-        await uow.get_for(Occasion).save(occasion)
+        occasion = await uow.get_for(Occasion).save(occasion)
         await progress_reporter.mark_updated(occasion)
 
         contact_link = await uow.get(ContactLinkRepository).load_optional_for_owner(
@@ -100,6 +116,7 @@ class OccasionUpdateUseCase(JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, 
             owner=EntityLink.std(NamedEntityTag.OCCASION.value, occasion.ref_id),
         )
 
+        updated_inbox_tasks: list[InboxTask] = []
         for inbox_task in person_occasion_tasks:
             schedule = schedules.get_schedule(
                 RecurringTaskPeriod.YEARLY,
@@ -128,7 +145,8 @@ class OccasionUpdateUseCase(JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, 
                 due_time=schedule.due_date,
             )
 
-            await uow.get_for(InboxTask).save(inbox_task)
+            inbox_task = await uow.get_for(InboxTask).save(inbox_task)
+            updated_inbox_tasks.append(inbox_task)
 
         occasion_time_event_blocks = await uow.get(
             TimeEventFullDaysBlockRepository
@@ -137,6 +155,7 @@ class OccasionUpdateUseCase(JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, 
             allow_archived=False,
         )
 
+        updated_time_event_full_days_blocks: list[TimeEventFullDaysBlock] = []
         for occasion_time_event_block in occasion_time_event_blocks:
             occasion_time_event_block = (
                 occasion_time_event_block.update_for_person_occasion(
@@ -146,6 +165,13 @@ class OccasionUpdateUseCase(JupiterUpdateCrownEntityUseCase[OccasionUpdateArgs, 
                     ),
                 )
             )
-            await uow.get(TimeEventFullDaysBlockRepository).save(
-                occasion_time_event_block
-            )
+            occasion_time_event_block = await uow.get(
+                TimeEventFullDaysBlockRepository
+            ).save(occasion_time_event_block)
+            updated_time_event_full_days_blocks.append(occasion_time_event_block)
+
+        return OccasionUpdateResult(
+            updated_occasion=occasion,
+            updated_inbox_tasks=updated_inbox_tasks,
+            updated_time_event_full_days_blocks=updated_time_event_full_days_blocks,
+        )

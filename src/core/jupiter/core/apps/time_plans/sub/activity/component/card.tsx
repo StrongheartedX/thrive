@@ -284,6 +284,7 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
         )}
         <EntityLink
           to={activityLocation}
+          prefetch="intent"
           block={props.onClick !== undefined}
           singleLine
         >
@@ -378,6 +379,7 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
         </CardCornerChipStack>
         <EntityLink
           to={activityLocation}
+          prefetch="intent"
           block={props.onClick !== undefined}
           singleLine
         >
@@ -877,6 +879,7 @@ function TimePlanActivityCardBody(props: TimePlanActivityCardProps) {
         </CardCornerChipStack>
         <EntityLink
           to={activityLocation}
+          prefetch="intent"
           block={props.onClick !== undefined}
           singleLine
         >
@@ -967,7 +970,12 @@ function ActivityCardContents(props: {
           overflow: "hidden",
         }}
       >
-        <EntityLink to={props.activityLocation} inline singleLine>
+        <EntityLink
+          to={props.activityLocation}
+          inline
+          singleLine
+          prefetch="intent"
+        >
           {name}
         </EntityLink>
       </Box>

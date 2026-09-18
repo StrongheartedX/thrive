@@ -14,10 +14,12 @@ from jupiter.framework.base.entity_name import EntityName
 from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
-from jupiter.framework.use_case import (
-    mutation_use_case,
+from jupiter.framework.use_case import mutation_use_case
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
 )
-from jupiter.framework.use_case_io import use_case_args
 
 
 @use_case_args
@@ -29,8 +31,17 @@ class HomeTabUpdateArgs(JupiterUpdateCrownEntityArgs):
     icon: UpdateAction[EntityIcon | None]
 
 
+@use_case_result
+class HomeTabUpdateResult(UseCaseResultBase):
+    """HomeTabUpdate result."""
+
+    updated_home_tab: HomeTab
+
+
 @mutation_use_case()
-class HomeTabUpdateUseCase(JupiterUpdateCrownEntityUseCase[HomeTabUpdateArgs, None]):
+class HomeTabUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[HomeTabUpdateArgs, HomeTabUpdateResult]
+):
     """The command for updating a home tab's properties."""
 
     async def _perform_transactional_mutation(
@@ -39,7 +50,7 @@ class HomeTabUpdateUseCase(JupiterUpdateCrownEntityUseCase[HomeTabUpdateArgs, No
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: HomeTabUpdateArgs,
-    ) -> None:
+    ) -> HomeTabUpdateResult:
         """Execute the command's action."""
         home_tab = await self.load_entity(
             uow, context.user.ref_id, HomeTab, args.ref_id
@@ -51,5 +62,7 @@ class HomeTabUpdateUseCase(JupiterUpdateCrownEntityUseCase[HomeTabUpdateArgs, No
             icon=args.icon,
         )
 
-        await uow.get_for(HomeTab).save(home_tab)
+        home_tab = await uow.get_for(HomeTab).save(home_tab)
         await progress_reporter.mark_updated(home_tab)
+
+        return HomeTabUpdateResult(updated_home_tab=home_tab)

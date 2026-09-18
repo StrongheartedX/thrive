@@ -1,0 +1,28 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import type { BigPlan } from './BigPlan';
+import type { Chore } from './Chore';
+import type { ChoreStack } from './ChoreStack';
+import type { Habit } from './Habit';
+import type { HabitStack } from './HabitStack';
+import type { InboxTask } from './InboxTask';
+import type { TimePlanActivity } from './TimePlanActivity';
+import type { TodoTask } from './TodoTask';
+/**
+ * TimePlanActivityLoadTarget result.
+ */
+export type TimePlanActivityLoadTargetResult = {
+    time_plan_activity: TimePlanActivity;
+    target_inbox_task?: (InboxTask | null);
+    target_big_plan?: (BigPlan | null);
+    target_todo_task?: (TodoTask | null);
+    target_habit?: (Habit | null);
+    target_habit_stack?: (HabitStack | null);
+    target_chore?: (Chore | null);
+    target_chore_stack?: (ChoreStack | null);
+    habit_stack_members: Array<Habit>;
+    chore_stack_members: Array<Chore>;
+};
+

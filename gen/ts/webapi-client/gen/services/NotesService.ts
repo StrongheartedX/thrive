@@ -13,6 +13,7 @@ import type { NoteLoadSettingsArgs } from '../models/NoteLoadSettingsArgs';
 import type { NoteLoadSettingsResult } from '../models/NoteLoadSettingsResult';
 import type { NoteRemoveArgs } from '../models/NoteRemoveArgs';
 import type { NoteUpdateArgs } from '../models/NoteUpdateArgs';
+import type { NoteUpdateResult } from '../models/NoteUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class NotesService {
@@ -188,12 +189,12 @@ export class NotesService {
     /**
      * Update a note use case.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns NoteUpdateResult Successful response
      * @throws ApiError
      */
     public noteUpdate(
         requestBody?: NoteUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<NoteUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/note-update',

@@ -41,7 +41,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -60,9 +64,17 @@ class SlackTaskUpdateArgs(JupiterUpdateCrownEntityArgs):
     generation_due_date: UpdateAction[ADate | None]
 
 
+@use_case_result
+class SlackTaskUpdateResult(UseCaseResultBase):
+    """SlackTaskUpdate result."""
+
+    updated_slack_task: SlackTask
+    updated_inbox_task: InboxTask
+
+
 @mutation_use_case(WorkspaceFeature.SLACK_TASKS)
 class SlackTaskUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[SlackTaskUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[SlackTaskUpdateArgs, SlackTaskUpdateResult]
 ):
     """The command for updating a slack task."""
 
@@ -72,7 +84,7 @@ class SlackTaskUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: SlackTaskUpdateArgs,
-    ) -> None:
+    ) -> SlackTaskUpdateResult:
         """Execute the command's action."""
         user = context.user
         workspace = context.workspace
@@ -134,7 +146,7 @@ class SlackTaskUpdateUseCase(
             generation_extra_info=slack_task.generation_extra_info,
         )
 
-        await uow.get_for(InboxTask).save(generated_inbox_task)
+        generated_inbox_task = await uow.get_for(InboxTask).save(generated_inbox_task)
 
         slack_task = slack_task.update(
             ctx=context.domain_context,
@@ -144,15 +156,20 @@ class SlackTaskUpdateUseCase(
             generation_extra_info=generation_extra_info,
         )
 
-        await uow.get_for(SlackTask).save(slack_task)
+        slack_task = await uow.get_for(SlackTask).save(slack_task)
         await progress_reporter.mark_updated(slack_task)
+
+        return SlackTaskUpdateResult(
+            updated_slack_task=slack_task,
+            updated_inbox_task=generated_inbox_task,
+        )
 
     async def _perform_post_transactional_mutation_work(
         self,
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: SlackTaskUpdateArgs,
-        result: None,
+        result: SlackTaskUpdateResult,
     ) -> None:
         """Execute the command's post-mutation work."""
         await GenService(

@@ -13,6 +13,7 @@ import type { DirLoadPublicFromDirArgs } from '../models/DirLoadPublicFromDirArg
 import type { DirLoadResult } from '../models/DirLoadResult';
 import type { DirRemoveArgs } from '../models/DirRemoveArgs';
 import type { DirUpdateArgs } from '../models/DirUpdateArgs';
+import type { DirUpdateResult } from '../models/DirUpdateResult';
 import type { DocArchiveArgs } from '../models/DocArchiveArgs';
 import type { DocCreateArgs } from '../models/DocCreateArgs';
 import type { DocCreateResult } from '../models/DocCreateResult';
@@ -26,6 +27,7 @@ import type { DocRemoveArgs } from '../models/DocRemoveArgs';
 import type { DocsFindSharedArgs } from '../models/DocsFindSharedArgs';
 import type { DocsFindSharedResult } from '../models/DocsFindSharedResult';
 import type { DocUpdateArgs } from '../models/DocUpdateArgs';
+import type { DocUpdateResult } from '../models/DocUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DocsService {
@@ -229,12 +231,12 @@ export class DocsService {
     /**
      * Use case for updating a directory.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns DirUpdateResult Successful response
      * @throws ApiError
      */
     public dirUpdate(
         requestBody?: DirUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<DirUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/dir-update',
@@ -453,12 +455,12 @@ export class DocsService {
     /**
      * Update a doc use case.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns DocUpdateResult Successful response
      * @throws ApiError
      */
     public docUpdate(
         requestBody?: DocUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<DocUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/doc-update',

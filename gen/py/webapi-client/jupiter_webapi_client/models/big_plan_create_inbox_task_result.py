@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
+    from ..models.big_plan_stats import BigPlanStats
     from ..models.inbox_task import InboxTask
     from ..models.time_plan_activity import TimePlanActivity
 
@@ -23,13 +24,18 @@ class BigPlanCreateInboxTaskResult:
     Attributes:
         new_inbox_task (InboxTask): An inbox task.
         new_time_plan_activity (None | TimePlanActivity | Unset):
+        new_big_plan_time_plan_activity (None | TimePlanActivity | Unset):
+        updated_big_plan_stats (BigPlanStats | None | Unset):
     """
 
     new_inbox_task: InboxTask
     new_time_plan_activity: None | TimePlanActivity | Unset = UNSET
+    new_big_plan_time_plan_activity: None | TimePlanActivity | Unset = UNSET
+    updated_big_plan_stats: BigPlanStats | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.big_plan_stats import BigPlanStats  # noqa: PLC0415
         from ..models.time_plan_activity import TimePlanActivity  # noqa: PLC0415
 
         new_inbox_task = self.new_inbox_task.to_dict()
@@ -42,6 +48,22 @@ class BigPlanCreateInboxTaskResult:
         else:
             new_time_plan_activity = self.new_time_plan_activity
 
+        new_big_plan_time_plan_activity: dict[str, Any] | None | Unset
+        if isinstance(self.new_big_plan_time_plan_activity, Unset):
+            new_big_plan_time_plan_activity = UNSET
+        elif isinstance(self.new_big_plan_time_plan_activity, TimePlanActivity):
+            new_big_plan_time_plan_activity = self.new_big_plan_time_plan_activity.to_dict()
+        else:
+            new_big_plan_time_plan_activity = self.new_big_plan_time_plan_activity
+
+        updated_big_plan_stats: dict[str, Any] | None | Unset
+        if isinstance(self.updated_big_plan_stats, Unset):
+            updated_big_plan_stats = UNSET
+        elif isinstance(self.updated_big_plan_stats, BigPlanStats):
+            updated_big_plan_stats = self.updated_big_plan_stats.to_dict()
+        else:
+            updated_big_plan_stats = self.updated_big_plan_stats
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -51,11 +73,16 @@ class BigPlanCreateInboxTaskResult:
         )
         if new_time_plan_activity is not UNSET:
             field_dict["new_time_plan_activity"] = new_time_plan_activity
+        if new_big_plan_time_plan_activity is not UNSET:
+            field_dict["new_big_plan_time_plan_activity"] = new_big_plan_time_plan_activity
+        if updated_big_plan_stats is not UNSET:
+            field_dict["updated_big_plan_stats"] = updated_big_plan_stats
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.big_plan_stats import BigPlanStats  # noqa: PLC0415
         from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.time_plan_activity import TimePlanActivity  # noqa: PLC0415
 
@@ -79,9 +106,47 @@ class BigPlanCreateInboxTaskResult:
 
         new_time_plan_activity = _parse_new_time_plan_activity(d.pop("new_time_plan_activity", UNSET))
 
+        def _parse_new_big_plan_time_plan_activity(data: object) -> None | TimePlanActivity | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                new_big_plan_time_plan_activity_type_0 = TimePlanActivity.from_dict(data)
+
+                return new_big_plan_time_plan_activity_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | TimePlanActivity | Unset, data)
+
+        new_big_plan_time_plan_activity = _parse_new_big_plan_time_plan_activity(
+            d.pop("new_big_plan_time_plan_activity", UNSET)
+        )
+
+        def _parse_updated_big_plan_stats(data: object) -> BigPlanStats | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                updated_big_plan_stats_type_0 = BigPlanStats.from_dict(data)
+
+                return updated_big_plan_stats_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(BigPlanStats | None | Unset, data)
+
+        updated_big_plan_stats = _parse_updated_big_plan_stats(d.pop("updated_big_plan_stats", UNSET))
+
         big_plan_create_inbox_task_result = cls(
             new_inbox_task=new_inbox_task,
             new_time_plan_activity=new_time_plan_activity,
+            new_big_plan_time_plan_activity=new_big_plan_time_plan_activity,
+            updated_big_plan_stats=updated_big_plan_stats,
         )
 
         big_plan_create_inbox_task_result.additional_properties = d

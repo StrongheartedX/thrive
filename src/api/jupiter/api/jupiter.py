@@ -700,8 +700,14 @@ from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_bi
 from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_chore import (
     asyncio_detailed as time_event_in_day_block_create_for_chore,
 )
+from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_chore_stack import (
+    asyncio_detailed as time_event_in_day_block_create_for_chore_stack,
+)
 from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_habit import (
     asyncio_detailed as time_event_in_day_block_create_for_habit,
+)
+from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_habit_stack import (
+    asyncio_detailed as time_event_in_day_block_create_for_habit_stack,
 )
 from jupiter_webapi_client.api.time_events.time_event_in_day_block_create_for_time_plan_activity import (
     asyncio_detailed as time_event_in_day_block_create_for_time_plan_activity,
@@ -759,8 +765,14 @@ from jupiter_webapi_client.api.time_plans.time_plan_associate_with_activities im
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_big_plans import (
     asyncio_detailed as time_plan_associate_with_big_plans,
 )
+from jupiter_webapi_client.api.time_plans.time_plan_associate_with_chore_stacks import (
+    asyncio_detailed as time_plan_associate_with_chore_stacks,
+)
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_chores import (
     asyncio_detailed as time_plan_associate_with_chores,
+)
+from jupiter_webapi_client.api.time_plans.time_plan_associate_with_habit_stacks import (
+    asyncio_detailed as time_plan_associate_with_habit_stacks,
 )
 from jupiter_webapi_client.api.time_plans.time_plan_associate_with_habits import (
     asyncio_detailed as time_plan_associate_with_habits,
@@ -1027,6 +1039,18 @@ async def main() -> None:
                     "associate-with-chores",
                     JupiterApiGatewayMethod.post(
                         time_plan_associate_with_chores,
+                    ),
+                ),
+                JupiterApiResource.build(
+                    "associate-with-habit-stacks",
+                    JupiterApiGatewayMethod.post(
+                        time_plan_associate_with_habit_stacks,
+                    ),
+                ),
+                JupiterApiResource.build(
+                    "associate-with-chore-stacks",
+                    JupiterApiGatewayMethod.post(
+                        time_plan_associate_with_chore_stacks,
                     ),
                 ),
                 JupiterApiResource.build(
@@ -1784,6 +1808,18 @@ async def main() -> None:
                         "for-chore",
                         JupiterApiGatewayMethod.post(
                             time_event_in_day_block_create_for_chore,
+                        ),
+                    ),
+                    JupiterApiResource.build(
+                        "for-habit-stack",
+                        JupiterApiGatewayMethod.post(
+                            time_event_in_day_block_create_for_habit_stack,
+                        ),
+                    ),
+                    JupiterApiResource.build(
+                        "for-chore-stack",
+                        JupiterApiGatewayMethod.post(
+                            time_event_in_day_block_create_for_chore_stack,
                         ),
                     ),
                     JupiterApiResource.build(

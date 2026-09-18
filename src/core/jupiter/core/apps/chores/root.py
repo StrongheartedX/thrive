@@ -127,6 +127,10 @@ class Chore(LeafEntity):
         """Update the chore."""
         if gen_params.should_change:
             the_gen_params = gen_params.just_the_value
+            if the_gen_params.period != self.gen_params.period:
+                raise InputValidationError(
+                    "Chore period cannot be changed, create a new chore instead"
+                )
         else:
             the_gen_params = self.gen_params
 

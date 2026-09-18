@@ -18,7 +18,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -30,9 +34,16 @@ class SmartListUpdateArgs(JupiterUpdateCrownEntityArgs):
     icon: UpdateAction[EntityIcon | None]
 
 
+@use_case_result
+class SmartListUpdateResult(UseCaseResultBase):
+    """SmartListUpdate result."""
+
+    updated_smart_list: SmartList
+
+
 @mutation_use_case(WorkspaceFeature.SMART_LISTS)
 class SmartListUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[SmartListUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[SmartListUpdateArgs, SmartListUpdateResult]
 ):
     """The command for updating a smart list."""
 
@@ -42,7 +53,7 @@ class SmartListUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: SmartListUpdateArgs,
-    ) -> None:
+    ) -> SmartListUpdateResult:
         """Execute the command's action."""
         smart_list = await self.load_entity(
             uow, context.user.ref_id, SmartList, args.ref_id
@@ -54,5 +65,7 @@ class SmartListUpdateUseCase(
             icon=args.icon,
         )
 
-        await uow.get_for(SmartList).save(smart_list)
+        smart_list = await uow.get_for(SmartList).save(smart_list)
         await progress_reporter.mark_updated(smart_list)
+
+        return SmartListUpdateResult(updated_smart_list=smart_list)

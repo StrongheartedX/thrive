@@ -13,6 +13,7 @@ import type { ContactLoadArgs } from '../models/ContactLoadArgs';
 import type { ContactLoadResult } from '../models/ContactLoadResult';
 import type { ContactRemoveArgs } from '../models/ContactRemoveArgs';
 import type { ContactUpdateArgs } from '../models/ContactUpdateArgs';
+import type { ContactUpdateResult } from '../models/ContactUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class ContactsService {
@@ -160,12 +161,12 @@ export class ContactsService {
     /**
      * Use case for updating a contact.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns ContactUpdateResult Successful response
      * @throws ApiError
      */
     public contactUpdate(
         requestBody?: ContactUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<ContactUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/contact-update',

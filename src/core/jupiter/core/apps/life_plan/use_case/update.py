@@ -18,7 +18,12 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import UseCaseArgsBase, use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseArgsBase,
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -29,9 +34,18 @@ class LifePlanUpdateArgs(UseCaseArgsBase):
     birth_year: UpdateAction[BirthYear]
 
 
+@use_case_result
+class LifePlanUpdateResult(UseCaseResultBase):
+    """LifePlanUpdate result."""
+
+    updated_life_plan: LifePlan
+
+
 @mutation_use_case(WorkspaceFeature.LIFE_PLAN)
 class LifePlanUpdateUseCase(
-    JupiterTransactionalLoggedInMutationUseCase[LifePlanUpdateArgs, None]
+    JupiterTransactionalLoggedInMutationUseCase[
+        LifePlanUpdateArgs, LifePlanUpdateResult
+    ]
 ):
     """The command for updating a life plan."""
 
@@ -41,7 +55,7 @@ class LifePlanUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: LifePlanUpdateArgs,
-    ) -> None:
+    ) -> LifePlanUpdateResult:
         """Execute the command."""
         workspace = context.workspace
         today = ADate.from_timestamp(context.domain_context.action_timestamp)
@@ -100,3 +114,5 @@ class LifePlanUpdateUseCase(
                 )
 
         life_plan = await uow.get_for(LifePlan).save(life_plan)
+
+        return LifePlanUpdateResult(updated_life_plan=life_plan)

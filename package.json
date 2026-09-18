@@ -30,6 +30,7 @@
     "pm2": "^6.0.5",
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^5.0.0"
   }
 }

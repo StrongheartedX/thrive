@@ -1,7 +1,7 @@
 """The command for creating an inbox task for a big plan."""
 
 from jupiter.core.apps.big_plans.root import BigPlan
-from jupiter.core.apps.big_plans.stats import BigPlanStatsRepository
+from jupiter.core.apps.big_plans.stats import BigPlanStats, BigPlanStatsRepository
 from jupiter.core.apps.time_plans.root import TimePlan
 from jupiter.core.apps.time_plans.sub.activity.feasability import (
     TimePlanActivityFeasability,
@@ -68,6 +68,8 @@ class BigPlanCreateInboxTaskResult(UseCaseResultBase):
 
     new_inbox_task: InboxTask
     new_time_plan_activity: TimePlanActivity | None
+    new_big_plan_time_plan_activity: TimePlanActivity | None
+    updated_big_plan_stats: BigPlanStats | None
 
 
 @mutation_use_case(WorkspaceFeature.BIG_PLANS)
@@ -127,6 +129,7 @@ class BigPlanCreateInboxTaskUseCase(
         )
 
         new_time_plan_activity = None
+        new_big_plan_time_plan_activity: TimePlanActivity | None = None
         if time_plan:
             time_plan_activity_kind = args.time_plan_activity_kind
             time_plan_activity_feasability = args.time_plan_activity_feasability
@@ -167,12 +170,18 @@ class BigPlanCreateInboxTaskUseCase(
                     new_big_plan_time_plan_activity,
                 )
             except TimePlanAlreadyAssociatedWithTargetError:
-                pass
+                new_big_plan_time_plan_activity = None
 
         await uow.get(BigPlanStatsRepository).mark_add_inbox_task(
             big_plan.ref_id,
         )
+        big_plan_stats = await uow.get(BigPlanStatsRepository).find_all(
+            [big_plan.ref_id]
+        )
 
         return BigPlanCreateInboxTaskResult(
-            new_inbox_task=new_inbox_task, new_time_plan_activity=new_time_plan_activity
+            new_inbox_task=new_inbox_task,
+            new_time_plan_activity=new_time_plan_activity,
+            new_big_plan_time_plan_activity=new_big_plan_time_plan_activity,
+            updated_big_plan_stats=big_plan_stats[0] if big_plan_stats else None,
         )

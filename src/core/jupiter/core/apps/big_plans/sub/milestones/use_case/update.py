@@ -21,7 +21,9 @@ from jupiter.framework.use_case import (
     mutation_use_case,
 )
 from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
     use_case_args,
+    use_case_result,
 )
 
 
@@ -34,9 +36,18 @@ class BigPlanMilestoneUpdateArgs(JupiterUpdateCrownEntityArgs):
     name: UpdateAction[EntityName]
 
 
+@use_case_result
+class BigPlanMilestoneUpdateResult(UseCaseResultBase):
+    """BigPlanMilestoneUpdate result."""
+
+    updated_big_plan_milestone: BigPlanMilestone
+
+
 @mutation_use_case(WorkspaceFeature.BIG_PLANS)
 class BigPlanMilestoneUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[BigPlanMilestoneUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[
+        BigPlanMilestoneUpdateArgs, BigPlanMilestoneUpdateResult
+    ]
 ):
     """The command for updating a big plan milestone."""
 
@@ -46,7 +57,7 @@ class BigPlanMilestoneUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: BigPlanMilestoneUpdateArgs,
-    ) -> None:
+    ) -> BigPlanMilestoneUpdateResult:
         """Execute the command's action."""
         milestone = await uow.get_for(BigPlanMilestone).load_by_id(args.ref_id)
         big_plan = await self.load_entity(
@@ -69,5 +80,9 @@ class BigPlanMilestoneUpdateUseCase(
             date=args.date,
             name=args.name,
         )
-        await uow.get_for(BigPlanMilestone).save(updated_milestone)
+        updated_milestone = await uow.get_for(BigPlanMilestone).save(updated_milestone)
         await progress_reporter.mark_updated(updated_milestone)
+
+        return BigPlanMilestoneUpdateResult(
+            updated_big_plan_milestone=updated_milestone
+        )

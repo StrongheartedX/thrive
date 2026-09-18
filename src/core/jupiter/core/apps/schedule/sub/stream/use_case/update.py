@@ -23,7 +23,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -35,9 +39,18 @@ class ScheduleStreamUpdateArgs(JupiterUpdateCrownEntityArgs):
     color: UpdateAction[ScheduleStreamColor]
 
 
+@use_case_result
+class ScheduleStreamUpdateResult(UseCaseResultBase):
+    """ScheduleStreamUpdate result."""
+
+    updated_schedule_stream: ScheduleStream
+
+
 @mutation_use_case(WorkspaceFeature.SCHEDULE)
 class ScheduleStreamUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[ScheduleStreamUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[
+        ScheduleStreamUpdateArgs, ScheduleStreamUpdateResult
+    ]
 ):
     """Use case for updating a schedule stream."""
 
@@ -47,7 +60,7 @@ class ScheduleStreamUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ScheduleStreamUpdateArgs,
-    ) -> None:
+    ) -> ScheduleStreamUpdateResult:
         """Execute the command's action."""
         schedule_stream = await self.load_entity(
             uow, context.user.ref_id, ScheduleStream, args.ref_id
@@ -68,5 +81,7 @@ class ScheduleStreamUpdateUseCase(
             color=args.color,
         )
 
-        await uow.get_for(ScheduleStream).save(schedule_stream)
+        schedule_stream = await uow.get_for(ScheduleStream).save(schedule_stream)
         await progress_reporter.mark_updated(schedule_stream)
+
+        return ScheduleStreamUpdateResult(updated_schedule_stream=schedule_stream)

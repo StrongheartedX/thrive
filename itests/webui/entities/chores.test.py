@@ -363,8 +363,8 @@ def test_webui_chore_stack_view_one(page: Page, create_chore_stack) -> None:
 
 def test_webui_chore_stack_create(page: Page) -> None:
     page.goto("/app/workspace/apps/chores/stacks")
-    page.wait_for_selector("#branch-panel")
-    page.locator("a[id='branch-new-leaf-entity']").click()
+    page.wait_for_selector("#trunk-panel")
+    page.locator("a[id='trunk-new-leaf-entity']").click()
     page.wait_for_selector("#leaf-panel")
 
     page.locator('input[name="name"]').fill("Created Stack")
@@ -426,9 +426,9 @@ def test_webui_chore_inbox_task_shows_stack(
 
     page.goto(f"/app/workspace/apps/chores/chores/{chore.ref_id}")
     page.wait_for_selector("#leaf-panel")
-    expect(page.locator(f"#inbox-task-{inbox_task.ref_id}")).to_contain_text(
-        "Morning Stack"
-    )
+    expect(
+        page.locator(f"#leaf-panel-content #inbox-task-{inbox_task.ref_id}")
+    ).to_contain_text("Morning Stack")
 
     page.goto("/app/workspace/core/inbox-tasks")
     page.wait_for_selector("#trunk-panel")
@@ -501,7 +501,7 @@ def _assert_other_user_cannot_access_chore_stack_webui(
     stack: ChoreStack,
 ) -> None:
     page.goto("/app/workspace/apps/chores/stacks")
-    expect(page.locator("#branch-panel")).to_contain_text(
+    expect(page.locator("#trunk-panel")).to_contain_text(
         "There are no chore stacks to show"
     )
     expect(page.locator(f"#chore-stack-{stack.ref_id}")).to_have_count(0)

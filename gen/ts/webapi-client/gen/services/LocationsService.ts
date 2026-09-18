@@ -17,6 +17,7 @@ import type { LocationRemoveArgs } from '../models/LocationRemoveArgs';
 import type { LocationSearchArgs } from '../models/LocationSearchArgs';
 import type { LocationSearchResult } from '../models/LocationSearchResult';
 import type { LocationUpdateArgs } from '../models/LocationUpdateArgs';
+import type { LocationUpdateResult } from '../models/LocationUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class LocationsService {
@@ -248,12 +249,12 @@ export class LocationsService {
     /**
      * Use case for updating a location.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns LocationUpdateResult Successful response
      * @throws ApiError
      */
     public locationUpdate(
         requestBody?: LocationUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<LocationUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/location-update',

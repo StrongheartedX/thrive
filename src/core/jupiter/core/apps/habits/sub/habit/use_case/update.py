@@ -1,20 +1,14 @@
 """The command for updating a habit."""
 
-from typing import Sequence, cast
-
 from jupiter.core.apps.habits.repeats_strategy import (
     HabitRepeatsStrategy,
 )
 from jupiter.core.apps.habits.sub.habit.name import HabitName
 from jupiter.core.apps.habits.sub.habit.root import Habit
-from jupiter.core.apps.habits.sub.habit.service.streak_recorder import (
-    HabitStreakRecorderService,
-)
 from jupiter.core.apps.habits.sub.stack.root import HabitStack
 from jupiter.core.apps.life_plan.sub.aspects.root import Aspect
 from jupiter.core.apps.life_plan.sub.chapters.root import Chapter
 from jupiter.core.apps.life_plan.sub.goals.root import Goal
-from jupiter.core.common import schedules
 from jupiter.core.common.difficulty import Difficulty
 from jupiter.core.common.eisen import Eisen
 from jupiter.core.common.recurring_task_due_at_day import RecurringTaskDueAtDay
@@ -22,15 +16,7 @@ from jupiter.core.common.recurring_task_due_at_month import (
     RecurringTaskDueAtMonth,
 )
 from jupiter.core.common.recurring_task_gen_params import RecurringTaskGenParams
-from jupiter.core.common.recurring_task_period import RecurringTaskPeriod
 from jupiter.core.common.recurring_task_skip_rule import RecurringTaskSkipRule
-from jupiter.core.common.sub.inbox_tasks.collection import (
-    InboxTaskCollection,
-)
-from jupiter.core.common.sub.inbox_tasks.root import (
-    InboxTask,
-    InboxTaskRepository,
-)
 from jupiter.core.config import (
     JupiterLoggedInMutationContext,
 )
@@ -39,13 +25,7 @@ from jupiter.core.crown_entity_support import (
     JupiterUpdateCrownEntityUseCase,
 )
 from jupiter.core.features import WorkspaceFeature
-from jupiter.core.gen.service.gen import GenService
-from jupiter.core.named_entity_tag import NamedEntityTag
-from jupiter.core.sync_target import SyncTarget
-from jupiter.framework.base.adate import ADate
 from jupiter.framework.base.entity_id import EntityId
-from jupiter.framework.base.entity_link import EntityLink
-from jupiter.framework.base.timestamp import Timestamp
 from jupiter.framework.errors import InputValidationError
 from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
@@ -54,7 +34,11 @@ from jupiter.framework.use_case import (
     UnavailableForContextError,
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -68,7 +52,6 @@ class HabitUpdateArgs(JupiterUpdateCrownEntityArgs):
     goal_ref_id: UpdateAction[EntityId | None]
     stack_ref_id: UpdateAction[EntityId | None]
     is_key: UpdateAction[bool]
-    period: UpdateAction[RecurringTaskPeriod]
     eisen: UpdateAction[Eisen]
     difficulty: UpdateAction[Difficulty]
     actionable_from_day: UpdateAction[RecurringTaskDueAtDay | None]
@@ -80,9 +63,22 @@ class HabitUpdateArgs(JupiterUpdateCrownEntityArgs):
     repeats_in_period_count: UpdateAction[int | None]
 
 
+@use_case_result
+class HabitUpdateResult(UseCaseResultBase):
+    """HabitUpdate result."""
+
+    updated_habit: Habit
+
+
 @mutation_use_case(WorkspaceFeature.HABITS)
-class HabitUpdateUseCase(JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, None]):
-    """The command for updating a habit."""
+class HabitUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, HabitUpdateResult]
+):
+    """The command for updating a habit.
+
+    Only the habit itself changes. Its inbox tasks catch up the next time they are
+    generated - via a regen, or the periodic gen run.
+    """
 
     async def _perform_transactional_mutation(
         self,
@@ -90,12 +86,11 @@ class HabitUpdateUseCase(JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, None])
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: HabitUpdateArgs,
-    ) -> None:
+    ) -> HabitUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
         habit = await self.load_entity(uow, context.user.ref_id, Habit, args.ref_id)
-        initial_period = habit.gen_params.period
 
         if not workspace.is_feature_available(WorkspaceFeature.LIFE_PLAN):
             if (
@@ -114,22 +109,8 @@ class HabitUpdateUseCase(JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, None])
             ):
                 raise UnavailableForContextError(WorkspaceFeature.LIFE_PLAN)
 
-        need_to_change_inbox_tasks = (
-            args.name.should_change
-            or args.period.should_change
-            or args.eisen.should_change
-            or args.difficulty.should_change
-            or args.actionable_from_day.should_change
-            or args.actionable_from_month.should_change
-            or args.due_at_day.should_change
-            or args.due_at_month.should_change
-            or args.repeats_strategy.should_change
-            or args.repeats_in_period_count.should_change
-        )
-
         if (
-            args.period.should_change
-            or args.eisen.should_change
+            args.eisen.should_change
             or args.difficulty.should_change
             or args.actionable_from_day.should_change
             or args.actionable_from_month.should_change
@@ -137,10 +118,9 @@ class HabitUpdateUseCase(JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, None])
             or args.due_at_month.should_change
             or args.skip_rule.should_change
         ):
-            need_to_change_inbox_tasks = True
             habit_gen_params = UpdateAction.change_to(
                 RecurringTaskGenParams(
-                    args.period.or_else(habit.gen_params.period),
+                    habit.gen_params.period,
                     args.eisen.or_else(habit.gen_params.eisen),
                     args.difficulty.or_else(habit.gen_params.difficulty),
                     args.actionable_from_day.or_else(
@@ -201,23 +181,15 @@ class HabitUpdateUseCase(JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, None])
                             f"Goal does not belong to aspect '{aspect.name}'"
                         )
 
-        new_period = args.period.or_else(habit.gen_params.period)
-        period_changing = (
-            args.period.should_change and new_period != habit.gen_params.period
-        )
-        stack_ref_id_action = args.stack_ref_id
-        if period_changing and not args.stack_ref_id.should_change:
-            stack_ref_id_action = UpdateAction.change_to(None)
-
-        new_stack_ref_id = stack_ref_id_action.or_else(habit.stack_ref_id)
+        new_stack_ref_id = args.stack_ref_id.or_else(habit.stack_ref_id)
         stack_changing = (
-            stack_ref_id_action.should_change and new_stack_ref_id != habit.stack_ref_id
+            args.stack_ref_id.should_change and new_stack_ref_id != habit.stack_ref_id
         )
         if stack_changing and new_stack_ref_id is not None:
             stack = await self.load_entity(
                 uow, context.user.ref_id, HabitStack, new_stack_ref_id
             )
-            if stack.period != new_period:
+            if stack.period != habit.gen_params.period:
                 raise InputValidationError("Habit period must match the stack period")
 
         habit = habit.update(
@@ -225,7 +197,7 @@ class HabitUpdateUseCase(JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, None])
             aspect_ref_id=args.aspect_ref_id,
             chapter_ref_id=args.chapter_ref_id,
             goal_ref_id=args.goal_ref_id,
-            stack_ref_id=stack_ref_id_action,
+            stack_ref_id=args.stack_ref_id,
             name=args.name,
             is_key=args.is_key,
             gen_params=habit_gen_params,
@@ -233,93 +205,7 @@ class HabitUpdateUseCase(JupiterUpdateCrownEntityUseCase[HabitUpdateArgs, None])
             repeats_in_period_count=args.repeats_in_period_count,
         )
 
-        await uow.get_for(Habit).save(habit)
+        habit = await uow.get_for(Habit).save(habit)
         await progress_reporter.mark_updated(habit)
 
-        if habit.gen_params.period != initial_period:
-            habit_streak_recorder_service = HabitStreakRecorderService()
-            await habit_streak_recorder_service.remove_all(
-                ctx=context.domain_context,
-                uow=uow,
-                habit=habit,
-                today=self._time_provider.get_current_date(),
-                alternative_period=initial_period,
-            )
-
-        if need_to_change_inbox_tasks:
-            await uow.get_for(InboxTaskCollection).load_by_parent(
-                workspace.ref_id,
-            )
-            all_inbox_tasks = await uow.get(
-                InboxTaskRepository
-            ).find_all_for_owner_created_desc(
-                allow_archived=True,
-                owner=EntityLink.std(NamedEntityTag.HABIT.value, habit.ref_id),
-            )
-
-            for inbox_task in all_inbox_tasks:
-                schedule = schedules.get_schedule(
-                    habit.gen_params.period,
-                    habit.name,
-                    cast(Timestamp, inbox_task.recurring_gen_right_now),
-                    habit.gen_params.skip_rule,
-                    habit.gen_params.actionable_from_day,
-                    habit.gen_params.actionable_from_month,
-                    habit.gen_params.due_at_day,
-                    habit.gen_params.due_at_month,
-                )
-
-                task_ranges: Sequence[tuple[ADate | None, ADate]]
-                if habit.repeats_in_period_count is not None:
-                    if habit.repeats_strategy is None:
-                        raise ValueError("Repeats strategy is not set")
-                    task_ranges = habit.repeats_strategy.spread_tasks(
-                        start_date=schedule.first_day,
-                        end_date=schedule.end_day,
-                        repeats_in_period=habit.repeats_in_period_count,
-                    )
-                else:
-                    task_ranges = [(schedule.actionable_date, schedule.due_date)]
-
-                recurring_repeat_index = cast(int, inbox_task.recurring_repeat_index)
-                repeat_index = cast(
-                    int, min(len(task_ranges) - 1, recurring_repeat_index)
-                )
-
-                inbox_task = inbox_task.update_link_to_habit(
-                    ctx=context.domain_context,
-                    name=schedule.full_name,
-                    timeline=schedule.timeline,
-                    is_key=habit.is_key,
-                    repeat_index=recurring_repeat_index,
-                    actionable_date=task_ranges[repeat_index][0],
-                    repeats_in_period_count=habit.repeats_in_period_count,
-                    due_date=task_ranges[repeat_index][1],
-                    eisen=habit.gen_params.eisen,
-                    difficulty=habit.gen_params.difficulty,
-                )
-
-                await uow.get_for(InboxTask).save(inbox_task)
-
-    async def _perform_post_transactional_mutation_work(
-        self,
-        progress_reporter: ProgressReporter,
-        context: JupiterLoggedInMutationContext,
-        args: HabitUpdateArgs,
-        result: None,
-    ) -> None:
-        """Execute the command's post-mutation work."""
-        await GenService(
-            self._ports.domain_storage_engine,
-            self._concept_registry,
-        ).do_it(
-            context.domain_context,
-            progress_reporter=progress_reporter,
-            user=context.user,
-            workspace=context.workspace,
-            gen_even_if_not_modified=False,
-            today=self._time_provider.get_current_date(),
-            gen_targets=[SyncTarget.HABITS],
-            period=None,
-            filter_habit_ref_ids=[args.ref_id],
-        )
+        return HabitUpdateResult(updated_habit=habit)

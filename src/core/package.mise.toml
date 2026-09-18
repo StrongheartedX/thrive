@@ -128,12 +128,26 @@ description = "Check src/core module"
 depends = ["package:src:core:lint:*"]
 run = "true"
 
-["package:src:core:test"]
-description = "Run tests"
+["package:src:core:test:pytest"]
+hide = true
 run = '''
 mkdir -p .build-cache/test
 pytest src/core --html-report=.build-cache/test/test-report.html --title="Jupiter Tests" $@
 '''
+
+["package:src:core:test:vitest"]
+hide = true
+sources = [
+  "src/core/**/*.ts",
+  "src/core/**/*.tsx",
+  "src/core/**/*.json",
+]
+run = "cd src/core && npx vitest run"
+
+["package:src:core:test"]
+description = "Run tests"
+depends = ["package:src:core:test:*"]
+run = "true"
 
 ["package:src:core:audit:pnpm-audit"]
 hide = true

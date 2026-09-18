@@ -9,7 +9,6 @@ import type { Eisen } from './Eisen';
 import type { EntityId } from './EntityId';
 import type { RecurringTaskDueAtDay } from './RecurringTaskDueAtDay';
 import type { RecurringTaskDueAtMonth } from './RecurringTaskDueAtMonth';
-import type { RecurringTaskPeriod } from './RecurringTaskPeriod';
 import type { RecurringTaskSkipRule } from './RecurringTaskSkipRule';
 /**
  * PersonFindArgs.
@@ -39,10 +38,6 @@ export type ChoreUpdateArgs = {
     is_key: {
         should_change: boolean;
         value?: boolean;
-    };
-    period: {
-        should_change: boolean;
-        value?: RecurringTaskPeriod;
     };
     eisen: {
         should_change: boolean;

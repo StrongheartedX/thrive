@@ -16,11 +16,13 @@ import type { SmartListItemLoadPublicFromSmartListArgs } from '../models/SmartLi
 import type { SmartListItemLoadResult } from '../models/SmartListItemLoadResult';
 import type { SmartListItemRemoveArgs } from '../models/SmartListItemRemoveArgs';
 import type { SmartListItemUpdateArgs } from '../models/SmartListItemUpdateArgs';
+import type { SmartListItemUpdateResult } from '../models/SmartListItemUpdateResult';
 import type { SmartListLoadArgs } from '../models/SmartListLoadArgs';
 import type { SmartListLoadPublicArgs } from '../models/SmartListLoadPublicArgs';
 import type { SmartListLoadResult } from '../models/SmartListLoadResult';
 import type { SmartListRemoveArgs } from '../models/SmartListRemoveArgs';
 import type { SmartListUpdateArgs } from '../models/SmartListUpdateArgs';
+import type { SmartListUpdateResult } from '../models/SmartListUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class SmartListsService {
@@ -196,12 +198,12 @@ export class SmartListsService {
     /**
      * The command for updating a smart list item.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns SmartListItemUpdateResult Successful response
      * @throws ApiError
      */
     public smartListItemUpdate(
         requestBody?: SmartListItemUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<SmartListItemUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/smart-list-item-update',
@@ -392,12 +394,12 @@ export class SmartListsService {
     /**
      * The command for updating a smart list.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns SmartListUpdateResult Successful response
      * @throws ApiError
      */
     public smartListUpdate(
         requestBody?: SmartListUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<SmartListUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/smart-list-update',

@@ -9,6 +9,8 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
+    from ..models.big_plan import BigPlan
+    from ..models.inbox_task import InboxTask
     from ..models.record_score_result import RecordScoreResult
 
 
@@ -17,17 +19,28 @@ T = TypeVar("T", bound="BigPlanUpdateResult")
 
 @_attrs_define
 class BigPlanUpdateResult:
-    """InboxTaskUpdate result.
+    """BigPlanUpdate result.
 
     Attributes:
+        updated_big_plan (BigPlan): A big plan.
+        updated_inbox_tasks (list[InboxTask]):
         record_score_result (None | RecordScoreResult | Unset):
     """
 
+    updated_big_plan: BigPlan
+    updated_inbox_tasks: list[InboxTask]
     record_score_result: None | RecordScoreResult | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.record_score_result import RecordScoreResult  # noqa: PLC0415
+
+        updated_big_plan = self.updated_big_plan.to_dict()
+
+        updated_inbox_tasks = []
+        for updated_inbox_tasks_item_data in self.updated_inbox_tasks:
+            updated_inbox_tasks_item = updated_inbox_tasks_item_data.to_dict()
+            updated_inbox_tasks.append(updated_inbox_tasks_item)
 
         record_score_result: dict[str, Any] | None | Unset
         if isinstance(self.record_score_result, Unset):
@@ -39,7 +52,12 @@ class BigPlanUpdateResult:
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({})
+        field_dict.update(
+            {
+                "updated_big_plan": updated_big_plan,
+                "updated_inbox_tasks": updated_inbox_tasks,
+            }
+        )
         if record_score_result is not UNSET:
             field_dict["record_score_result"] = record_score_result
 
@@ -47,9 +65,19 @@ class BigPlanUpdateResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.big_plan import BigPlan  # noqa: PLC0415
+        from ..models.inbox_task import InboxTask  # noqa: PLC0415
         from ..models.record_score_result import RecordScoreResult  # noqa: PLC0415
 
         d = dict(src_dict)
+        updated_big_plan = BigPlan.from_dict(d.pop("updated_big_plan"))
+
+        updated_inbox_tasks = []
+        _updated_inbox_tasks = d.pop("updated_inbox_tasks")
+        for updated_inbox_tasks_item_data in _updated_inbox_tasks:
+            updated_inbox_tasks_item = InboxTask.from_dict(updated_inbox_tasks_item_data)
+
+            updated_inbox_tasks.append(updated_inbox_tasks_item)
 
         def _parse_record_score_result(data: object) -> None | RecordScoreResult | Unset:
             if data is None:
@@ -69,6 +97,8 @@ class BigPlanUpdateResult:
         record_score_result = _parse_record_score_result(d.pop("record_score_result", UNSET))
 
         big_plan_update_result = cls(
+            updated_big_plan=updated_big_plan,
+            updated_inbox_tasks=updated_inbox_tasks,
             record_score_result=record_score_result,
         )
 

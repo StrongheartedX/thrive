@@ -12,6 +12,7 @@ import {
 import type { PanInfo } from "framer-motion";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import type { PropsWithChildren } from "react";
+import type { LinkProps } from "@remix-run/react";
 
 import { useBigScreen } from "#/core/infra/component/use-big-screen";
 import { FakeLink, StandardLink } from "#/core/infra/component/standard-link";
@@ -109,7 +110,7 @@ export function EntityCard(props: PropsWithChildren<EntityCardProps>) {
           position: "relative",
           boxShadow:
             props.allowSelect && props.selected
-              ? `inset 0 0 4px ${theme.palette.primary.main};`
+              ? `inset 0 0 4px ${theme.palette.primary.main}`
               : undefined,
           backgroundColor:
             backgroundHint === "neutral"
@@ -170,6 +171,9 @@ interface EntityLinkProps {
   light?: boolean;
   inline?: boolean;
   singleLine?: boolean;
+  // "intent" loads what the link points at on hover or focus, so opening it
+  // doesn't wait for a round trip.
+  prefetch?: LinkProps["prefetch"];
 }
 
 export function EntityLink(props: PropsWithChildren<EntityLinkProps>) {
@@ -178,6 +182,7 @@ export function EntityLink(props: PropsWithChildren<EntityLinkProps>) {
       <StandardLink
         onMouseDown={(e) => e.preventDefault()}
         to={props.to}
+        prefetch={props.prefetch}
         inline={props.inline === true ? "true" : "false"}
         light={props.light === true ? "true" : "false"}
         singleline={props.singleLine ? "true" : "false"}

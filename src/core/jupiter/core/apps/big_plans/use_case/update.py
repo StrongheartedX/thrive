@@ -70,9 +70,12 @@ class BigPlanUpdateArgs(JupiterUpdateCrownEntityArgs):
 
 @use_case_result
 class BigPlanUpdateResult(UseCaseResultBase):
-    """InboxTaskUpdate result."""
+    """BigPlanUpdate result."""
 
     record_score_result: RecordScoreResult | None
+    updated_big_plan: BigPlan
+    # The big plan's inbox tasks re-linked because its aspect changed.
+    updated_inbox_tasks: list[InboxTask]
 
 
 @mutation_use_case(WorkspaceFeature.BIG_PLANS)
@@ -238,9 +241,10 @@ class BigPlanUpdateUseCase(
                     "The big plan dependencies have cycles."
                 ) from err
 
-        await uow.get_for(BigPlan).save(big_plan)
+        big_plan = await uow.get_for(BigPlan).save(big_plan)
         await progress_reporter.mark_updated(big_plan)
 
+        updated_inbox_tasks: list[InboxTask] = []
         if (
             workspace.is_feature_available(WorkspaceFeature.LIFE_PLAN)
             and args.aspect_ref_id.should_change
@@ -267,7 +271,8 @@ class BigPlanUpdateUseCase(
                     eisen=UpdateAction.do_nothing(),
                     difficulty=UpdateAction.do_nothing(),
                 )
-                await uow.get_for(InboxTask).save(inbox_task)
+                inbox_task = await uow.get_for(InboxTask).save(inbox_task)
+                updated_inbox_tasks.append(inbox_task)
 
         record_score_result = None
         if context.user.is_feature_available(UserFeature.GAMIFICATION):
@@ -275,4 +280,8 @@ class BigPlanUpdateUseCase(
                 context.domain_context, uow, context.user, big_plan
             )
 
-        return BigPlanUpdateResult(record_score_result=record_score_result)
+        return BigPlanUpdateResult(
+            record_score_result=record_score_result,
+            updated_big_plan=big_plan,
+            updated_inbox_tasks=updated_inbox_tasks,
+        )

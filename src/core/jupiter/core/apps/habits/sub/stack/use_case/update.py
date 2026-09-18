@@ -26,7 +26,11 @@ from jupiter.framework.use_case import (
     UnavailableForContextError,
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -41,9 +45,18 @@ class HabitStackUpdateArgs(JupiterUpdateCrownEntityArgs):
     goal_ref_id: UpdateAction[EntityId | None]
 
 
+@use_case_result
+class HabitStackUpdateResult(UseCaseResultBase):
+    """HabitStackUpdate result."""
+
+    updated_habit_stack: HabitStack
+    # The habits that joined or left the stack.
+    updated_habits: list[Habit]
+
+
 @mutation_use_case(WorkspaceFeature.HABITS)
 class HabitStackUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[HabitStackUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[HabitStackUpdateArgs, HabitStackUpdateResult]
 ):
     """The command for updating a habit stack."""
 
@@ -53,7 +66,7 @@ class HabitStackUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: HabitStackUpdateArgs,
-    ) -> None:
+    ) -> HabitStackUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
@@ -128,9 +141,10 @@ class HabitStackUpdateUseCase(
             chapter_ref_id=args.chapter_ref_id,
             goal_ref_id=args.goal_ref_id,
         )
-        await uow.get_for(HabitStack).save(habit_stack)
+        habit_stack = await uow.get_for(HabitStack).save(habit_stack)
         await progress_reporter.mark_updated(habit_stack)
 
+        updated_habits: list[Habit] = []
         if args.habit_ref_ids.should_change:
             habit_ref_ids = args.habit_ref_ids.just_the_value
             if len(habit_ref_ids) != len(set(habit_ref_ids)):
@@ -152,10 +166,14 @@ class HabitStackUpdateUseCase(
                             f"Habit '{habit.name}' does not match the stack period"
                         )
 
-            await HabitStackAssignHabitsService().do_it(
+            updated_habits = await HabitStackAssignHabitsService().do_it(
                 context.domain_context,
                 uow,
                 progress_reporter,
                 habit_stack,
                 habits,
             )
+
+        return HabitStackUpdateResult(
+            updated_habit_stack=habit_stack, updated_habits=updated_habits
+        )

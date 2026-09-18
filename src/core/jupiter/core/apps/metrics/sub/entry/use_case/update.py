@@ -17,7 +17,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -29,9 +33,16 @@ class MetricEntryUpdateArgs(JupiterUpdateCrownEntityArgs):
     value: UpdateAction[float]
 
 
+@use_case_result
+class MetricEntryUpdateResult(UseCaseResultBase):
+    """MetricEntryUpdate result."""
+
+    updated_metric_entry: MetricEntry
+
+
 @mutation_use_case(WorkspaceFeature.METRICS)
 class MetricEntryUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[MetricEntryUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[MetricEntryUpdateArgs, MetricEntryUpdateResult]
 ):
     """The command for updating a metric entry's properties."""
 
@@ -41,7 +52,7 @@ class MetricEntryUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: MetricEntryUpdateArgs,
-    ) -> None:
+    ) -> MetricEntryUpdateResult:
         """Execute the command's action."""
         metric_entry = await self.load_entity(
             uow, context.user.ref_id, MetricEntry, args.ref_id
@@ -53,5 +64,7 @@ class MetricEntryUpdateUseCase(
             value=args.value,
         )
 
-        await uow.get_for(MetricEntry).save(metric_entry)
+        metric_entry = await uow.get_for(MetricEntry).save(metric_entry)
         await progress_reporter.mark_updated(metric_entry)
+
+        return MetricEntryUpdateResult(updated_metric_entry=metric_entry)

@@ -19,6 +19,7 @@ from jupiter.core.common.sub.inbox_tasks.root import (
     InboxTask,
     InboxTaskRepository,
 )
+from jupiter.core.common.sub.inbox_tasks.status import InboxTaskStatus
 from jupiter.core.common.sub.locations.sub.link.root import LocationLinkRepository
 from jupiter.core.common.sub.locations.sub.link.service.load import (
     LoadLocationForLinkService,
@@ -38,6 +39,7 @@ from jupiter.core.named_entity_tag import NamedEntityTag
 from jupiter.core.users.user_light import UserLight
 from jupiter.framework.base.entity_id import EntityId
 from jupiter.framework.base.entity_link import EntityLink
+from jupiter.framework.base.timestamp import Timestamp
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.use_case_io import UseCaseResultBase, use_case_result
 
@@ -78,6 +80,8 @@ class BigPlanLoadService:
         allow_archived: bool = False,
         inbox_task_retrieve_offset: int = 0,
         paginate_inbox_tasks: bool = False,
+        only_active_inbox_tasks: bool = False,
+        inbox_tasks_completed_after: Timestamp | None = None,
         include_publish_entity: bool = True,
     ) -> BigPlanLoadResult:
         """Load a big plan and its dependent entities.
@@ -109,7 +113,33 @@ class BigPlanLoadService:
         )
         owner_link = EntityLink.std(NamedEntityTag.BIG_PLAN.value, big_plan.ref_id)
 
-        if paginate_inbox_tasks:
+        if only_active_inbox_tasks:
+            # For callers that show what's still to do, like the time plan's
+            # activity panel: everything active, plus what was finished
+            # recently, with no paging.
+            inbox_tasks = await uow.get(
+                InboxTaskRepository
+            ).find_all_for_owner_created_desc(
+                allow_archived=False,
+                owner=owner_link,
+                filter_status=InboxTaskStatus.all_workable_statuses(),
+            )
+            if inbox_tasks_completed_after is not None:
+                recently_done = await uow.get(
+                    InboxTaskRepository
+                ).find_all_for_owner_created_desc(
+                    allow_archived=True,
+                    owner=owner_link,
+                    filter_completed_after=inbox_tasks_completed_after,
+                )
+                seen = {it.ref_id for it in inbox_tasks}
+                inbox_tasks = inbox_tasks + [
+                    it for it in recently_done if it.ref_id not in seen
+                ]
+                inbox_tasks.sort(key=lambda it: it.created_time.the_ts, reverse=True)
+            inbox_tasks_total_cnt = len(inbox_tasks)
+            inbox_tasks_page_size = max(inbox_tasks_total_cnt, 1)
+        elif paginate_inbox_tasks:
             inbox_tasks_total_cnt = await uow.get(
                 InboxTaskRepository
             ).count_all_for_owner(

@@ -46,7 +46,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -67,8 +71,18 @@ class MetricUpdateArgs(JupiterUpdateCrownEntityArgs):
     metric_direction: UpdateAction[MetricDirection]
 
 
+@use_case_result
+class MetricUpdateResult(UseCaseResultBase):
+    """MetricUpdate result."""
+
+    updated_metric: Metric
+    updated_inbox_tasks: list[InboxTask]
+
+
 @mutation_use_case(WorkspaceFeature.METRICS)
-class MetricUpdateUseCase(JupiterUpdateCrownEntityUseCase[MetricUpdateArgs, None]):
+class MetricUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[MetricUpdateArgs, MetricUpdateResult]
+):
     """The command for updating a metric's properties."""
 
     async def _perform_transactional_mutation(
@@ -77,7 +91,7 @@ class MetricUpdateUseCase(JupiterUpdateCrownEntityUseCase[MetricUpdateArgs, None
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: MetricUpdateArgs,
-    ) -> None:
+    ) -> MetricUpdateResult:
         """Execute the command's action."""
         workspace = context.workspace
 
@@ -190,9 +204,10 @@ class MetricUpdateUseCase(JupiterUpdateCrownEntityUseCase[MetricUpdateArgs, None
             metric_direction=args.metric_direction,
         )
 
-        await uow.get_for(Metric).save(metric)
+        metric = await uow.get_for(Metric).save(metric)
         await progress_reporter.mark_updated(metric)
 
+        updated_inbox_tasks: list[InboxTask] = []
         # Change the inbox tasks
         if metric.collection_params is None:
             # Situation 1: we need to get rid of any existing collection metrics because there's no collection anymore.
@@ -228,14 +243,19 @@ class MetricUpdateUseCase(JupiterUpdateCrownEntityUseCase[MetricUpdateArgs, None
                     due_time=schedule.due_date,
                 )
 
-                await uow.get_for(InboxTask).save(inbox_task)
+                inbox_task = await uow.get_for(InboxTask).save(inbox_task)
+                updated_inbox_tasks.append(inbox_task)
+
+        return MetricUpdateResult(
+            updated_metric=metric, updated_inbox_tasks=updated_inbox_tasks
+        )
 
     async def _perform_post_transactional_mutation_work(
         self,
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: MetricUpdateArgs,
-        result: None,
+        result: MetricUpdateResult,
     ) -> None:
         """Execute the command's post-mutation work."""
         await GenService(

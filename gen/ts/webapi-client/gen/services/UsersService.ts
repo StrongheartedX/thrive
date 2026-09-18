@@ -6,9 +6,11 @@ import type { UserChangeFeatureFlagsArgs } from '../models/UserChangeFeatureFlag
 import type { UserLoadArgs } from '../models/UserLoadArgs';
 import type { UserLoadResult } from '../models/UserLoadResult';
 import type { UserUpdateArgs } from '../models/UserUpdateArgs';
+import type { UserUpdateResult } from '../models/UserUpdateResult';
 import type { WebUiSettingsLoadArgs } from '../models/WebUiSettingsLoadArgs';
 import type { WebUiSettingsLoadResult } from '../models/WebUiSettingsLoadResult';
 import type { WebUiSettingsUpdateArgs } from '../models/WebUiSettingsUpdateArgs';
+import type { WebUiSettingsUpdateResult } from '../models/WebUiSettingsUpdateResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class UsersService {
@@ -44,12 +46,12 @@ export class UsersService {
     /**
      * The command for updating the web UI settings for the current user.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns WebUiSettingsUpdateResult Successful response
      * @throws ApiError
      */
     public webUiSettingsUpdate(
         requestBody?: WebUiSettingsUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<WebUiSettingsUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/web-ui-settings-update',
@@ -128,12 +130,12 @@ export class UsersService {
     /**
      * The command for updating a user's properties.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns UserUpdateResult Successful response
      * @throws ApiError
      */
     public userUpdate(
         requestBody?: UserUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<UserUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/user-update',

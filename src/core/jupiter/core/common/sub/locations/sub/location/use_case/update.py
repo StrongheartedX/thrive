@@ -18,7 +18,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -33,9 +37,16 @@ class LocationUpdateArgs(JupiterUpdateLeafSupportEntityArgs):
     gps: UpdateAction[GpsCoordinates | None]
 
 
+@use_case_result
+class LocationUpdateResult(UseCaseResultBase):
+    """LocationUpdate result."""
+
+    updated_location: Location
+
+
 @mutation_use_case()
 class LocationUpdateUseCase(
-    JupiterUpdateLeafSupportEntityUseCase[LocationUpdateArgs, None]
+    JupiterUpdateLeafSupportEntityUseCase[LocationUpdateArgs, LocationUpdateResult]
 ):
     """Use case for updating a location."""
 
@@ -45,7 +56,7 @@ class LocationUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: LocationUpdateArgs,
-    ) -> None:
+    ) -> LocationUpdateResult:
         """Execute the command's action."""
         _, location = await self.load_in_parent(
             uow,
@@ -62,4 +73,6 @@ class LocationUpdateUseCase(
             country=args.country,
             gps=args.gps,
         )
-        await uow.get_for(Location).save(location)
+        location = await uow.get_for(Location).save(location)
+
+        return LocationUpdateResult(updated_location=location)

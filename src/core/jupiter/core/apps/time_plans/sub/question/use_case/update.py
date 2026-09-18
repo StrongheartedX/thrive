@@ -17,7 +17,11 @@ from jupiter.framework.progress_reporter.reporter import ProgressReporter
 from jupiter.framework.storage.repository import DomainUnitOfWork
 from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import mutation_use_case
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -28,11 +32,20 @@ class TimePlanQuestionUpdateArgs(JupiterUpdateLeafSupportEntityArgs):
     name: UpdateAction[EntityName]
 
 
+@use_case_result
+class TimePlanQuestionUpdateResult(UseCaseResultBase):
+    """TimePlanQuestionUpdate result."""
+
+    updated_time_plan_question: TimePlanQuestion
+
+
 @mutation_use_case(
     WorkspaceFeature.TIME_PLANS, only_for_component=[AppCore.WEBUI, AppCore.API]
 )
 class TimePlanQuestionUpdateUseCase(
-    JupiterUpdateLeafSupportEntityUseCase[TimePlanQuestionUpdateArgs, None]
+    JupiterUpdateLeafSupportEntityUseCase[
+        TimePlanQuestionUpdateArgs, TimePlanQuestionUpdateResult
+    ]
 ):
     """Use case for updating a time plan question."""
 
@@ -42,7 +55,7 @@ class TimePlanQuestionUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: TimePlanQuestionUpdateArgs,
-    ) -> None:
+    ) -> TimePlanQuestionUpdateResult:
         """Execute the command's action."""
         _, time_plan_question = await self.load_in_parent(
             uow,
@@ -55,4 +68,10 @@ class TimePlanQuestionUpdateUseCase(
             ctx=context.domain_context,
             name=args.name,
         )
-        await uow.get_for(TimePlanQuestion).save(time_plan_question)
+        time_plan_question = await uow.get_for(TimePlanQuestion).save(
+            time_plan_question
+        )
+
+        return TimePlanQuestionUpdateResult(
+            updated_time_plan_question=time_plan_question
+        )

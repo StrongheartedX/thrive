@@ -48,3 +48,13 @@ export function compareBigPlanStatus(
 export function isCompleted(status: BigPlanStatus): boolean {
   return status === BigPlanStatus.DONE || status === BigPlanStatus.NOT_DONE;
 }
+
+export function isWorking(status: BigPlanStatus): boolean {
+  return (
+    status === BigPlanStatus.IN_PROGRESS || status === BigPlanStatus.BLOCKED
+  );
+}
+
+export function isWorkingOrMore(status: BigPlanStatus): boolean {
+  return isWorking(status) || isCompleted(status);
+}

@@ -137,6 +137,10 @@ class Habit(LeafEntity):
         """Update the habit."""
         if gen_params.should_change:
             the_gen_params = gen_params.just_the_value
+            if the_gen_params.period != self.gen_params.period:
+                raise InputValidationError(
+                    "Habit period cannot be changed, create a new habit instead"
+                )
         else:
             the_gen_params = self.gen_params
 

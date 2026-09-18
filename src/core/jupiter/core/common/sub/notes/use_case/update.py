@@ -19,7 +19,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -30,8 +34,17 @@ class NoteUpdateArgs(JupiterUpdateLeafSupportEntityArgs):
     content: UpdateAction[list[OneOfNoteContentBlock]]
 
 
+@use_case_result
+class NoteUpdateResult(UseCaseResultBase):
+    """NoteUpdate result."""
+
+    updated_note: Note
+
+
 @mutation_use_case(exclude_component=[AppCore.CLI])
-class NoteUpdateUseCase(JupiterUpdateLeafSupportEntityUseCase[NoteUpdateArgs, None]):
+class NoteUpdateUseCase(
+    JupiterUpdateLeafSupportEntityUseCase[NoteUpdateArgs, NoteUpdateResult]
+):
     """Update a note use case."""
 
     async def _perform_transactional_mutation(
@@ -40,7 +53,7 @@ class NoteUpdateUseCase(JupiterUpdateLeafSupportEntityUseCase[NoteUpdateArgs, No
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: NoteUpdateArgs,
-    ) -> None:
+    ) -> NoteUpdateResult:
         """Execute the command's action."""
         _, note = await self.load_for_owner(
             uow,
@@ -57,3 +70,5 @@ class NoteUpdateUseCase(JupiterUpdateLeafSupportEntityUseCase[NoteUpdateArgs, No
             content=args.content,
         )
         note = await uow.get_for(Note).save(note)
+
+        return NoteUpdateResult(updated_note=note)

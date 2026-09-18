@@ -11,6 +11,7 @@ import type { HomeTabLoadArgs } from '../models/HomeTabLoadArgs';
 import type { HomeTabLoadResult } from '../models/HomeTabLoadResult';
 import type { HomeTabRemoveArgs } from '../models/HomeTabRemoveArgs';
 import type { HomeTabUpdateArgs } from '../models/HomeTabUpdateArgs';
+import type { HomeTabUpdateResult } from '../models/HomeTabUpdateResult';
 import type { HomeWidgetArchiveArgs } from '../models/HomeWidgetArchiveArgs';
 import type { HomeWidgetCreateArgs } from '../models/HomeWidgetCreateArgs';
 import type { HomeWidgetCreateResult } from '../models/HomeWidgetCreateResult';
@@ -138,12 +139,12 @@ export class HomeService {
     /**
      * The command for updating a home tab's properties.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns HomeTabUpdateResult Successful response
      * @throws ApiError
      */
     public homeTabUpdate(
         requestBody?: HomeTabUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<HomeTabUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/home-tab-update',

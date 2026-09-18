@@ -298,36 +298,35 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       allow_archived: true,
     });
 
-    let bigPlanResult = null;
-    if (response.big_plan) {
-      bigPlanResult = await apiClient.bigPlans.bigPlanLoad({
-        ref_id: response.big_plan.ref_id,
-        allow_archived: true,
-      });
-    }
-
-    let todoTaskResult = null;
-    if (response.todo_task) {
-      todoTaskResult = await apiClient.todo.todoTaskLoad({
-        ref_id: response.todo_task.ref_id,
-        allow_archived: true,
-      });
-    }
-
+    // An event on an activity takes what it shows from the activity's target;
+    // the panel load has the target's details without what this page doesn't
+    // show (streak marks, publish entities).
     const timePlanActivity = response.time_plan_activity ?? null;
     const activityResult = timePlanActivity
-      ? await apiClient.timePlans.timePlanActivityLoad({
+      ? await apiClient.timePlans.timePlanActivityLoadForPanel({
           ref_id: timePlanActivity.ref_id,
           allow_archived: true,
         })
       : null;
 
-    if (activityResult?.target_big_plan_info) {
-      bigPlanResult = activityResult.target_big_plan_info;
-    }
-    if (activityResult?.target_todo_task_info) {
-      todoTaskResult = activityResult.target_todo_task_info;
-    }
+    const [loadedBigPlanResult, loadedTodoTaskResult] = await Promise.all([
+      response.big_plan && !activityResult?.target_big_plan_info
+        ? apiClient.bigPlans.bigPlanLoad({
+            ref_id: response.big_plan.ref_id,
+            allow_archived: true,
+          })
+        : Promise.resolve(null),
+      response.todo_task && !activityResult?.target_todo_task_info
+        ? apiClient.todo.todoTaskLoad({
+            ref_id: response.todo_task.ref_id,
+            allow_archived: true,
+          })
+        : Promise.resolve(null),
+    ]);
+    const bigPlanResult =
+      activityResult?.target_big_plan_info ?? loadedBigPlanResult;
+    const todoTaskResult =
+      activityResult?.target_todo_task_info ?? loadedTodoTaskResult;
 
     const inboxTaskResult = activityResult?.target_inbox_task_info ?? null;
     const habit = response.habit ?? activityResult?.target_habit ?? null;

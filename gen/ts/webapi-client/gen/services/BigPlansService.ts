@@ -19,6 +19,7 @@ import type { BigPlanMilestoneLoadArgs } from '../models/BigPlanMilestoneLoadArg
 import type { BigPlanMilestoneLoadResult } from '../models/BigPlanMilestoneLoadResult';
 import type { BigPlanMilestoneRemoveArgs } from '../models/BigPlanMilestoneRemoveArgs';
 import type { BigPlanMilestoneUpdateArgs } from '../models/BigPlanMilestoneUpdateArgs';
+import type { BigPlanMilestoneUpdateResult } from '../models/BigPlanMilestoneUpdateResult';
 import type { BigPlanRefreshStatsArgs } from '../models/BigPlanRefreshStatsArgs';
 import type { BigPlanRemoveArgs } from '../models/BigPlanRemoveArgs';
 import type { BigPlanUpdateArgs } from '../models/BigPlanUpdateArgs';
@@ -142,12 +143,12 @@ export class BigPlansService {
     /**
      * The command for updating a big plan milestone.
      * @param requestBody The input data
-     * @returns any Successful response / Empty body
+     * @returns BigPlanMilestoneUpdateResult Successful response
      * @throws ApiError
      */
     public bigPlanMilestoneUpdate(
         requestBody?: BigPlanMilestoneUpdateArgs,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<BigPlanMilestoneUpdateResult> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/big-plan-milestone-update',

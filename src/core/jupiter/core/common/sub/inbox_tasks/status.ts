@@ -33,3 +33,13 @@ export function inboxTaskStatusName(status: InboxTaskStatus): string {
 export function isCompleted(status: InboxTaskStatus): boolean {
   return status === InboxTaskStatus.DONE || status === InboxTaskStatus.NOT_DONE;
 }
+
+export function isWorking(status: InboxTaskStatus): boolean {
+  return (
+    status === InboxTaskStatus.IN_PROGRESS || status === InboxTaskStatus.BLOCKED
+  );
+}
+
+export function isWorkingOrMore(status: InboxTaskStatus): boolean {
+  return isWorking(status) || isCompleted(status);
+}

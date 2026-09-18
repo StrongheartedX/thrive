@@ -20,7 +20,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -33,9 +37,16 @@ class SmartListItemUpdateArgs(JupiterUpdateCrownEntityArgs):
     url: UpdateAction[URL | None]
 
 
+@use_case_result
+class SmartListItemUpdateResult(UseCaseResultBase):
+    """SmartListItemUpdate result."""
+
+    updated_smart_list_item: SmartListItem
+
+
 @mutation_use_case(WorkspaceFeature.SMART_LISTS)
 class SmartListItemUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[SmartListItemUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[SmartListItemUpdateArgs, SmartListItemUpdateResult]
 ):
     """The command for updating a smart list item."""
 
@@ -45,7 +56,7 @@ class SmartListItemUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: SmartListItemUpdateArgs,
-    ) -> None:
+    ) -> SmartListItemUpdateResult:
         """Execute the command's action."""
         smart_list_item = await self.load_entity(
             uow, context.user.ref_id, SmartListItem, args.ref_id
@@ -58,5 +69,7 @@ class SmartListItemUpdateUseCase(
             url=args.url,
         )
 
-        await uow.get_for(SmartListItem).save(smart_list_item)
+        smart_list_item = await uow.get_for(SmartListItem).save(smart_list_item)
         await progress_reporter.mark_updated(smart_list_item)
+
+        return SmartListItemUpdateResult(updated_smart_list_item=smart_list_item)

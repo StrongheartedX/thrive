@@ -19,7 +19,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -31,9 +35,18 @@ class ScheduleExportUpdateArgs(JupiterUpdateCrownEntityArgs):
     schedule_stream_ref_ids: UpdateAction[list[EntityId]]
 
 
+@use_case_result
+class ScheduleExportUpdateResult(UseCaseResultBase):
+    """ScheduleExportUpdate result."""
+
+    updated_schedule_export: ScheduleExport
+
+
 @mutation_use_case(WorkspaceFeature.SCHEDULE)
 class ScheduleExportUpdateUseCase(
-    JupiterUpdateCrownEntityUseCase[ScheduleExportUpdateArgs, None]
+    JupiterUpdateCrownEntityUseCase[
+        ScheduleExportUpdateArgs, ScheduleExportUpdateResult
+    ]
 ):
     """Use case for updating a schedule export."""
 
@@ -43,7 +56,7 @@ class ScheduleExportUpdateUseCase(
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: ScheduleExportUpdateArgs,
-    ) -> None:
+    ) -> ScheduleExportUpdateResult:
         """Execute the command's action."""
         schedule_export = await self.load_entity(
             uow, context.user.ref_id, ScheduleExport, args.ref_id
@@ -80,5 +93,7 @@ class ScheduleExportUpdateUseCase(
             schedule_stream_ref_ids=args.schedule_stream_ref_ids,
         )
 
-        await uow.get_for(ScheduleExport).save(schedule_export)
+        schedule_export = await uow.get_for(ScheduleExport).save(schedule_export)
         await progress_reporter.mark_updated(schedule_export)
+
+        return ScheduleExportUpdateResult(updated_schedule_export=schedule_export)

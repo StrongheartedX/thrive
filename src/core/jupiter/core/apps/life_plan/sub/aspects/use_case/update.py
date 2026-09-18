@@ -33,7 +33,11 @@ from jupiter.framework.update_action import UpdateAction
 from jupiter.framework.use_case import (
     mutation_use_case,
 )
-from jupiter.framework.use_case_io import use_case_args
+from jupiter.framework.use_case_io import (
+    UseCaseResultBase,
+    use_case_args,
+    use_case_result,
+)
 
 
 @use_case_args
@@ -45,8 +49,17 @@ class AspectUpdateArgs(JupiterUpdateCrownEntityArgs):
     parent_aspect_ref_id: UpdateAction[EntityId | None] = UpdateAction.do_nothing()
 
 
+@use_case_result
+class AspectUpdateResult(UseCaseResultBase):
+    """AspectUpdate result."""
+
+    updated_aspect: Aspect
+
+
 @mutation_use_case(WorkspaceFeature.LIFE_PLAN)
-class AspectUpdateUseCase(JupiterUpdateCrownEntityUseCase[AspectUpdateArgs, None]):
+class AspectUpdateUseCase(
+    JupiterUpdateCrownEntityUseCase[AspectUpdateArgs, AspectUpdateResult]
+):
     """The command for updating a aspect."""
 
     async def _perform_transactional_mutation(
@@ -55,7 +68,7 @@ class AspectUpdateUseCase(JupiterUpdateCrownEntityUseCase[AspectUpdateArgs, None
         progress_reporter: ProgressReporter,
         context: JupiterLoggedInMutationContext,
         args: AspectUpdateArgs,
-    ) -> None:
+    ) -> AspectUpdateResult:
         """Execute the command's action."""
         aspect = await self.load_entity(uow, context.user.ref_id, Aspect, args.ref_id)
 
@@ -96,13 +109,13 @@ class AspectUpdateUseCase(JupiterUpdateCrownEntityUseCase[AspectUpdateArgs, None
                     current_parent = current_parent.remove_child_aspect(
                         context.domain_context, aspect.ref_id
                     )
-                    await uow.get_for(Aspect).save(current_parent)
+                    current_parent = await uow.get_for(Aspect).save(current_parent)
                     await progress_reporter.mark_updated(current_parent)
 
                     new_parent = new_parent.add_child_aspect(
                         context.domain_context, aspect.ref_id
                     )
-                    await uow.get_for(Aspect).save(new_parent)
+                    new_parent = await uow.get_for(Aspect).save(new_parent)
                     await progress_reporter.mark_updated(new_parent)
 
         parent_changed = (
@@ -129,3 +142,5 @@ class AspectUpdateUseCase(JupiterUpdateCrownEntityUseCase[AspectUpdateArgs, None
             await ReplicateAspectHierarchyRightsService().refresh_for_aspect_and_descendants(
                 context.domain_context, uow, aspect
             )
+
+        return AspectUpdateResult(updated_aspect=aspect)

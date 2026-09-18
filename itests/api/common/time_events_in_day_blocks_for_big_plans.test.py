@@ -236,6 +236,11 @@ def test_api_common_time_event_in_day_block_update_for_big_plan(
     )
     assert response.status_code == 200
 
+    updated = response.json()["updated_time_event_in_day_block"]
+    assert updated["ref_id"] == block.ref_id
+    assert updated["start_date"] == "2024-07-01"
+    assert updated["duration_mins"] == 90
+
     response2 = requests.get(
         f"{api_url}/v1/common/time-events/in-day-blocks/{block.ref_id}?allow_archived=false",
         headers=_headers(api_key),
