@@ -31,6 +31,7 @@ import { aDateToDate, dateToAdate } from "#/core/common/adate";
 import { DifficultySelect } from "#/core/common/component/difficulty-select";
 import { EisenhowerSelect } from "#/core/common/component/eisenhower-select";
 import { IsKeySelect } from "#/core/common/component/is-key-select";
+import { SchedulingParamsBlock } from "#/core/common/component/scheduling-params-block";
 import {
   getSuggestedDatesForTodoTaskActionableDate,
   getSuggestedDatesForTodoTaskDueDate,
@@ -81,6 +82,9 @@ export function TodoTaskCreateForm(props: TodoTaskCreateFormProps) {
 
   const [selectedAspectRefId, setSelectedAspectRefId] = useState(
     props.rootAspect?.ref_id ?? "",
+  );
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(
+    Difficulty.EASY,
   );
   const chaptersForSuggestions = useMemo(
     () =>
@@ -206,6 +210,7 @@ export function TodoTaskCreateForm(props: TodoTaskCreateFormProps) {
             name="difficulty"
             defaultValue={Difficulty.EASY}
             inputsEnabled={inputsEnabled}
+            onChange={setSelectedDifficulty}
           />
           <FieldError actionResult={actionResult} fieldName="/difficulty" />
         </FormControl>
@@ -248,6 +253,12 @@ export function TodoTaskCreateForm(props: TodoTaskCreateFormProps) {
           />
           <FieldError actionResult={actionResult} fieldName="/due_date" />
         </FormControl>
+
+        <SchedulingParamsBlock
+          inputsEnabled={inputsEnabled}
+          difficulty={selectedDifficulty}
+          actionData={actionResult}
+        />
 
         {props.timePlan !== null && (
           <>

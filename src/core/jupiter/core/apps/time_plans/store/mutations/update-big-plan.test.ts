@@ -1,5 +1,10 @@
 import type { BigPlan, InboxTask } from "@jupiter/webapi-client";
-import { BigPlanStatus, Difficulty, Eisen } from "@jupiter/webapi-client";
+import {
+  BigPlanStatus,
+  Difficulty,
+  Eisen,
+  Schedulability,
+} from "@jupiter/webapi-client";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,6 +16,10 @@ import {
   seedTimePlanSource,
   selectTimePlanEntities,
 } from "#/core/apps/time_plans/store/store";
+import {
+  DEFAULT_SCHEDULING_EVENT_COUNT,
+  DEFAULT_SCHEDULING_EVENT_DURATION_MINS,
+} from "#/core/common/scheduling-params";
 
 const MODIFIED = "2026-09-14T10:00:00Z";
 
@@ -73,6 +82,11 @@ describe("updateBigPlanArgsFromForm", () => {
       difficulty: Difficulty.HARD,
       actionableDate: null,
       dueDate: "2026-09-30",
+      schedulingParams: {
+        schedulability: Schedulability.SCHEDULABLE,
+        eventDurationMins: DEFAULT_SCHEDULING_EVENT_DURATION_MINS,
+        eventCount: DEFAULT_SCHEDULING_EVENT_COUNT,
+      },
       dependencyRefIds: [],
       modifiedTime: MODIFIED,
     });
@@ -104,6 +118,11 @@ describe("UPDATE_BIG_PLAN", () => {
     actionableDate: null,
     dueDate: "2026-09-30",
     dependencyRefIds: ["7", "8"],
+    schedulingParams: {
+      schedulability: Schedulability.SCHEDULABLE,
+      eventDurationMins: DEFAULT_SCHEDULING_EVENT_DURATION_MINS,
+      eventCount: DEFAULT_SCHEDULING_EVENT_COUNT,
+    },
     modifiedTime: MODIFIED,
   };
 

@@ -57,6 +57,9 @@ from jupiter.core.common.difficulty import Difficulty
 from jupiter.core.common.eisen import Eisen
 from jupiter.core.common.email_address import EmailAddress
 from jupiter.core.common.recurring_task_period import RecurringTaskPeriod
+from jupiter.core.common.scheduling_params import (
+    SchedulingParams,
+)
 from jupiter.core.common.search.domain import SearchDomain
 from jupiter.core.common.sub.access.access_level import AccessLevel
 from jupiter.core.common.sub.access.sub.grant.service.grant_rights_to_user import (
@@ -65,6 +68,9 @@ from jupiter.core.common.sub.access.sub.grant.service.grant_rights_to_user impor
 from jupiter.core.common.sub.contacts.root import ContactDomain
 from jupiter.core.common.sub.inbox_tasks.collection import (
     InboxTaskCollection,
+)
+from jupiter.core.common.sub.inbox_tasks.root import (
+    WORKING_MEM_CLEANUP_TASK_DIFFICULTY,
 )
 from jupiter.core.common.sub.locations.root import LocationDomain
 from jupiter.core.common.sub.notes.collection import NoteCollection
@@ -334,6 +340,9 @@ class InitUseCase(JupiterGuestMutationUseCase[InitArgs, InitResult]):
                     ctx=context.domain_context,
                     workspace_ref_id=new_workspace.ref_id,
                     generation_period=RecurringTaskPeriod.DAILY,
+                    cleanup_task_scheduling_params=SchedulingParams.default_for(
+                        WORKING_MEM_CLEANUP_TASK_DIFFICULTY
+                    ),
                 )
             )
             new_working_mem_collection = await uow.get_for(WorkingMemCollection).create(
@@ -368,6 +377,9 @@ class InitUseCase(JupiterGuestMutationUseCase[InitArgs, InitResult]):
                 },
                 planning_task_eisen=Eisen.IMPORTANT,
                 planning_task_difficulty=Difficulty.MEDIUM,
+                planning_task_scheduling_params=SchedulingParams.default_for(
+                    Difficulty.MEDIUM
+                ),
                 include_aspects_in_note=False,
                 include_goals_in_note=False,
             )
@@ -452,6 +464,9 @@ class InitUseCase(JupiterGuestMutationUseCase[InitArgs, InitResult]):
                 },
                 writing_task_eisen=Eisen.IMPORTANT,
                 writing_task_difficulty=Difficulty.MEDIUM,
+                writing_task_scheduling_params=SchedulingParams.default_for(
+                    Difficulty.MEDIUM
+                ),
                 include_aspects_in_note=False,
                 include_goals_in_note=False,
             )

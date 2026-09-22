@@ -8,7 +8,10 @@ import { useActionData, useFetcher, useNavigation } from "@remix-run/react";
 import { useContext } from "react";
 import { z } from "zod";
 import { parseForm } from "zodix";
-import { sortInboxTasksNaturally } from "#/core/common/sub/inbox_tasks/root";
+import {
+  WORKING_MEM_CLEANUP_TASK_DIFFICULTY,
+  sortInboxTasksNaturally,
+} from "#/core/common/sub/inbox_tasks/root";
 import { InboxTaskStack } from "@jupiter/core/common/sub/inbox_tasks/component/stack";
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { FieldError, GlobalError } from "@jupiter/core/infra/component/errors";
@@ -22,6 +25,11 @@ import {
 } from "@jupiter/core/infra/component/section-actions";
 import { SectionCard } from "@jupiter/core/infra/component/section-card";
 import { handleActionApiError } from "@jupiter/core/infra/errors.server";
+import {
+  SchedulingParamsFormFields,
+  schedulingParamsUpdateArgs,
+} from "@jupiter/core/common/scheduling-params-form";
+import { SchedulingParamsBlock } from "@jupiter/core/common/component/scheduling-params-block";
 
 import { useLoaderDataSafeForAnimation } from "~/rendering/use-loader-data-for-animation";
 import { standardShouldRevalidate } from "~/rendering/standard-should-revalidate";
@@ -31,6 +39,7 @@ const UpdateFormSchema = z.discriminatedUnion("intent", [
   z.object({
     intent: z.literal("update"),
     generationPeriod: z.nativeEnum(RecurringTaskPeriod),
+    ...SchedulingParamsFormFields,
   }),
 ]);
 
@@ -47,6 +56,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   return json({
     generationPeriod: response.generation_period,
+    cleanupTaskSchedulingParams: response.cleanup_task_scheduling_params,
     cleanUpInboxTasks: response.clean_up_inbox_tasks,
   });
 }
@@ -63,6 +73,7 @@ export async function action({ request }: ActionFunctionArgs) {
             should_change: true,
             value: form.generationPeriod,
           },
+          ...schedulingParamsUpdateArgs(form),
         });
 
         return redirect(`/app/workspace/apps/working-mem/settings`);
@@ -169,6 +180,13 @@ export default function WorkingMemSettings() {
             fieldName="/generation_period"
           />
         </FormControl>
+
+        <SchedulingParamsBlock
+          inputsEnabled={inputsEnabled}
+          schedulingParams={loaderData.cleanupTaskSchedulingParams}
+          difficulty={WORKING_MEM_CLEANUP_TASK_DIFFICULTY}
+          actionData={actionData}
+        />
       </SectionCard>
 
       <SectionCard title="Cleanup Tasks">

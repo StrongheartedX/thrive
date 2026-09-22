@@ -5,6 +5,11 @@ from jupiter.core.apps.prm.sub.person.sub.occasion.kind import OccasionKind
 from jupiter.core.apps.prm.sub.person.sub.occasion.name import OccasionName
 from jupiter.core.apps.prm.sub.person.sub.occasion.root import Occasion
 from jupiter.core.common.birthday import Birthday
+from jupiter.core.common.scheduling_params import (
+    Schedulability,
+    build_scheduling_params,
+)
+from jupiter.core.common.sub.inbox_tasks.root import OCCASION_TASK_DIFFICULTY
 from jupiter.core.config import (
     JupiterLoggedInMutationContext,
 )
@@ -34,6 +39,9 @@ class OccasionCreateArgs(JupiterCreateCrownEntityArgs):
     kind: OccasionKind
     name: OccasionName
     date: Birthday
+    schedulability: Schedulability | None
+    scheduling_event_duration_mins: int | None
+    scheduling_event_count: int | None
 
 
 @use_case_result
@@ -65,6 +73,12 @@ class OccasionCreateUseCase(
             kind=args.kind,
             name=args.name,
             date=args.date,
+            scheduling_params=build_scheduling_params(
+                args.schedulability,
+                args.scheduling_event_duration_mins,
+                args.scheduling_event_count,
+                OCCASION_TASK_DIFFICULTY,
+            ),
         )
         new_occasion = await uow.get_for(Occasion).create(new_occasion)
         await progress_reporter.mark_created(new_occasion)

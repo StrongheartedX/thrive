@@ -28,6 +28,7 @@ import { TimePlanActivitKindSelect } from "#/core/apps/time_plans/sub/activity/c
 import { aDateToDate } from "#/core/common/adate";
 import { IsKeySelect } from "#/core/common/component/is-key-select";
 import { RecurringTaskGenParamsBlock } from "#/core/common/component/recurring-task-gen-params-block";
+import { SchedulingParamsBlock } from "#/core/common/component/scheduling-params-block";
 import type { ActionResult } from "#/core/infra/action-result";
 import { FieldError, GlobalError } from "#/core/infra/component/errors";
 import {
@@ -78,6 +79,9 @@ export function HabitCreateForm(props: HabitCreateFormProps) {
   const [selectedStackRefId, setSelectedStackRefId] = useState<
     string | undefined
   >(undefined);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(
+    Difficulty.EASY,
+  );
   const [selectedRepeatsStrategy, setSelectedRepeatsStrategy] = useState<
     HabitRepeatsStrategy | "none"
   >("none");
@@ -197,12 +201,19 @@ export function HabitCreateForm(props: HabitCreateFormProps) {
             }
           }}
           eisen={Eisen.REGULAR}
-          difficulty={Difficulty.EASY}
+          difficulty={selectedDifficulty}
+          onChangeDifficulty={setSelectedDifficulty}
           actionableFromDay={null}
           actionableFromMonth={null}
           dueAtDay={null}
           dueAtMonth={null}
           skipRule={null}
+          actionData={actionResult}
+        />
+
+        <SchedulingParamsBlock
+          inputsEnabled={inputsEnabled}
+          difficulty={selectedDifficulty}
           actionData={actionResult}
         />
 

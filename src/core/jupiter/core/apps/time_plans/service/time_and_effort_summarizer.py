@@ -1,5 +1,8 @@
 """The domain service which constructs a time and effort summary."""
 
+from jupiter.core.apps.time_plans.service.scheduling_params_loader import (
+    SchedulingParamsLoader,
+)
 from jupiter.core.apps.time_plans.sub.activity.feasability import (
     TimePlanActivityFeasability,
 )
@@ -109,6 +112,13 @@ class TimeAndEffortSummarizer:
             for inbox_task in chore_owned_inbox_tasks:
                 target_inbox_tasks_by_ref_id[inbox_task.ref_id] = inbox_task
 
+        # The scheduling params of an inbox task are those of whatever
+        # generated it, so the owners of the target inbox tasks are needed too.
+        scheduling_params_by_owner = await SchedulingParamsLoader.load_for_owners(
+            uow,
+            [inbox_task.owner for inbox_task in target_inbox_tasks_by_ref_id.values()],
+        )
+
         # Compute summary
         total_activities = 0
         activities_by_feasability = {f: 0 for f in TimePlanActivityFeasability}
@@ -151,6 +161,14 @@ class TimeAndEffortSummarizer:
             if target_inbox_task is None:
                 continue
 
+            scheduling_params = scheduling_params_by_owner.get(
+                (target_inbox_task.owner.the_type, target_inbox_task.owner.ref_id)
+            )
+            # Something that cannot be scheduled - a habit like "no sweets
+            # today" - takes up no time, and so doesn't weigh on the plan.
+            if scheduling_params is not None and not scheduling_params.is_schedulable:
+                continue
+
             total_activities += 1
             activities_by_feasability[activity.feasability] += 1
 
@@ -160,12 +178,16 @@ class TimeAndEffortSummarizer:
             total_score += task_score
             score_by_feasability[activity.feasability] += task_score
 
-            duration_hours = (
+            # Nothing owns this that carries scheduling params - a metric
+            # collection task, say - so the difficulty is all there is to go on.
+            duration_mins = (
                 TimeAndEffortSummarizer._infer_duration_mins_from_inbox_task(
                     target_inbox_task
                 )
-                / 60.0
+                if scheduling_params is None
+                else scheduling_params.total_duration_mins
             )
+            duration_hours = duration_mins / 60.0
             total_hours += duration_hours
             hours_by_feasability[activity.feasability] += duration_hours
 
@@ -195,11 +217,4 @@ class TimeAndEffortSummarizer:
     @staticmethod
     def _infer_duration_mins_from_inbox_task(inbox_task: InboxTask) -> int:
         """Infer the duration in minutes from an inbox task."""
-        if inbox_task.difficulty == Difficulty.EASY:
-            return 15
-        elif inbox_task.difficulty == Difficulty.MEDIUM:
-            return 30
-        elif inbox_task.difficulty == Difficulty.HARD:
-            return 60
-        else:
-            raise Exception(f"Unknown difficulty: {inbox_task.difficulty}")
+        return inbox_task.difficulty.default_event_duration_mins

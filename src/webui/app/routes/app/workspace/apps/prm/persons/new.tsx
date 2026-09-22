@@ -7,7 +7,7 @@ import type { ShouldRevalidateFunction } from "@remix-run/react";
 import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 import { z } from "zod";
 import { parseForm } from "zodix";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { makeLeafErrorBoundary } from "@jupiter/core/infra/component/error-boundary";
 import { FieldError, GlobalError } from "@jupiter/core/infra/component/errors";
 import { LeafPanel } from "@jupiter/core/infra/component/layout/leaf-panel";
@@ -37,6 +37,11 @@ import {
   createAnotherLocation,
   isCreateAndAnother,
 } from "@jupiter/core/infra/create-and-another";
+import {
+  SchedulingParamsFormFields,
+  schedulingParamsCreateArgs,
+} from "@jupiter/core/common/scheduling-params-form";
+import { SchedulingParamsBlock } from "@jupiter/core/common/component/scheduling-params-block";
 
 import { standardShouldRevalidate } from "~/rendering/standard-should-revalidate";
 import { getLoggedInApiClient } from "~/api-clients.server";
@@ -54,6 +59,7 @@ const CreateFormSchema = z.object({
   catchUpActionableFromMonth: z.string().optional(),
   catchUpDueAtDay: z.string().optional(),
   catchUpDueAtMonth: z.string().optional(),
+  ...SchedulingParamsFormFields,
 });
 
 export const handle = {
@@ -125,6 +131,7 @@ export async function action({ request }: ActionFunctionArgs) {
               form.catchUpDueAtMonth === ""
             ? undefined
             : parseInt(form.catchUpDueAtMonth),
+      ...schedulingParamsCreateArgs(form),
     });
 
     if (isCreateAndAnother(form.intent)) {
@@ -148,6 +155,12 @@ export default function NewPerson() {
   const navigation = useNavigation();
   const topLevelInfo = useContext(TopLevelInfoContext);
   const inputsEnabled = navigation.state === "idle";
+  const [catchUpPeriod, setCatchUpPeriod] = useState<
+    RecurringTaskPeriod | "none"
+  >("none");
+  const [catchUpDifficulty, setCatchUpDifficulty] = useState<Difficulty>(
+    Difficulty.EASY,
+  );
 
   return (
     <LeafPanel
@@ -207,13 +220,21 @@ export default function NewPerson() {
           fieldsPrefix="catch_up"
           allowNonePeriod
           period={"none"}
+          onChangePeriod={setCatchUpPeriod}
           eisen={null}
           difficulty={null}
+          onChangeDifficulty={setCatchUpDifficulty}
           actionableFromDay={null}
           actionableFromMonth={null}
           dueAtDay={null}
           dueAtMonth={null}
           inputsEnabled={inputsEnabled}
+          actionData={actionData}
+        />
+
+        <SchedulingParamsBlock
+          inputsEnabled={inputsEnabled}
+          difficulty={catchUpPeriod === "none" ? null : catchUpDifficulty}
           actionData={actionData}
         />
       </SectionCard>

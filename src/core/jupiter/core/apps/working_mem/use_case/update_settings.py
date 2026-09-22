@@ -7,10 +7,15 @@ from jupiter.core.apps.working_mem.collection import (
 )
 from jupiter.core.common import schedules
 from jupiter.core.common.recurring_task_period import RecurringTaskPeriod
+from jupiter.core.common.scheduling_params import (
+    Schedulability,
+    build_scheduling_params_update,
+)
 from jupiter.core.common.sub.inbox_tasks.collection import (
     InboxTaskCollection,
 )
 from jupiter.core.common.sub.inbox_tasks.root import (
+    WORKING_MEM_CLEANUP_TASK_DIFFICULTY,
     InboxTask,
     InboxTaskRepository,
 )
@@ -38,6 +43,9 @@ class WorkingMemUpdateSettingsArgs(UseCaseArgsBase):
     """PersonFindArgs."""
 
     generation_period: UpdateAction[RecurringTaskPeriod]
+    schedulability: UpdateAction[Schedulability]
+    scheduling_event_duration_mins: UpdateAction[int | None]
+    scheduling_event_count: UpdateAction[int | None]
 
 
 @mutation_use_case([WorkspaceFeature.WORKING_MEM, WorkspaceFeature.LIFE_PLAN])
@@ -62,9 +70,18 @@ class WorkingMemUpdateSettingsUseCase(
 
         # First save the working mem collection
 
+        scheduling_params = build_scheduling_params_update(
+            working_mem_collection.cleanup_task_scheduling_params,
+            args.schedulability,
+            args.scheduling_event_duration_mins,
+            args.scheduling_event_count,
+            WORKING_MEM_CLEANUP_TASK_DIFFICULTY,
+        )
+
         working_mem_collection = working_mem_collection.update(
             context.domain_context,
             generation_period=args.generation_period,
+            cleanup_task_scheduling_params=scheduling_params,
         )
         await uow.get_for(WorkingMemCollection).save(working_mem_collection)
 
